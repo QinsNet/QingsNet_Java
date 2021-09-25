@@ -5,6 +5,8 @@ import Core.Event.LogEvent;
 import Net.Interface.INet;
 import Old.Model.ClientRequestModel;
 import Old.Model.ClientResponseModel;
+import Server.Abstract.Server;
+import Service.Abstract.Service;
 
 import java.util.HashMap;
 
@@ -12,9 +14,9 @@ public abstract class Net implements INet {
 
     public enum NetType{WebSocket}
     //service映射表
-    protected HashMap<String, Service> services = new ConcurrentDictionary<String, Service.Abstract.Service>();
+    protected HashMap<String, Service> services = new HashMap<>();
     //request映射表
-    protected HashMap<String, Object> requests = new Dictionary<String, Request.Abstract.Request>();
+    protected HashMap<String, Object> requests = new HashMap<>();
     protected NetConfig config;
     protected Server server;
     //net网关名

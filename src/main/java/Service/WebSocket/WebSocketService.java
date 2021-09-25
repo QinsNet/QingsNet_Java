@@ -2,6 +2,7 @@ package Service.WebSocket;
 
 import Core.Model.AbstractType;
 import Core.Model.TrackException;
+import Server.Abstract.Token;
 import Service.Abstract.ServiceConfig;
 
 import java.lang.reflect.Method;
@@ -14,7 +15,7 @@ public class WebSocketService extends Service.Abstract.Service{
     }
 
     @Override
-    public void Register(String netName, String service_name, Object instance, ServiceConfig config) {
+    public void Register(String netName, String service_name, Object instance, ServiceConfig config) throws TrackException {
         this.config = config;
         this.instance = instance;
         this.netName = netName;
@@ -29,16 +30,17 @@ public class WebSocketService extends Service.Abstract.Service{
                 if(!Modifier.isInterface(modifier)){
                     methodId.append(method.getName());
                     if(annotation.parameters().length == 0){
-                        for(Class<?> parameter_type : method.getParameterTypes()){
-                            AbstractType rpcType = config.getTypes().getTypesByType().get(parameter_type);
+                        Class<?>[] parameters = method.getParameterTypes();
+                        int start_idx = 1;
+                        if(parameters.length>0 && (Token.class.isAssignableFrom(parameters[0]))){
+                            start_idx = 0;
+                        }
+                        for(int i = start_idx;i<parameters.length;i++){
+                            AbstractType rpcType = config.getTypes().getTypesByType().get(parameters[i]);
                             if(rpcType != null) {
                                 methodId.append("-").append(rpcType.getName());
                             }
-                            else try {
-                                throw new TrackException(TrackException.ErrorCode.Runtime,String.format("Java中的%s类型参数尚未注册,请注意是否是泛型导致！",parameter_type.getName()));
-                            } catch (TrackException e) {
-                                e.printStackTrace();
-                            }
+                            else throw new TrackException(TrackException.ErrorCode.Runtime,String.format("Java中的%s类型参数尚未注册,请注意是否是泛型导致！",parameters[i].getName()));
                         }
                     }
                     else {
@@ -47,11 +49,7 @@ public class WebSocketService extends Service.Abstract.Service{
                             if(config.getTypes().getTypesByName().containsKey(type_name)){
                                 methodId.append("-").append(type_name);
                             }
-                            else try {
-                                throw new TrackException(TrackException.ErrorCode.Runtime,String.format("Java中的%s抽象类型参数尚未注册,请注意是否是泛型导致！",type_name));
-                            } catch (TrackException e) {
-                                e.printStackTrace();
-                            }
+                            else throw new TrackException(TrackException.ErrorCode.Runtime,String.format("Java中的%s抽象类型参数尚未注册,请注意是否是泛型导致！",type_name));
                         }
                     }
                     methods.put(methodId.toString(),method);
@@ -62,4 +60,4 @@ public class WebSocketService extends Service.Abstract.Service{
     }
 }
 
-}
+

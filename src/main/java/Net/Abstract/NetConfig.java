@@ -4,6 +4,7 @@ import Net.Event.Delegate.InterceptorDelegate;
 import Net.Event.InterceptorEvent;
 import Net.Interface.INetConfig;
 
+import Service.Abstract.Service;
 import sun.management.MethodInfo;
 
 public class NetConfig implements INetConfig {

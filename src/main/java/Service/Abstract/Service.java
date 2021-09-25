@@ -7,12 +7,13 @@ import Core.Model.TrackLog;
 import Service.Interface.IService;
 import sun.management.MethodInfo;
 
+import java.lang.reflect.Method;
 import java.util.HashMap;
 
 public abstract class Service implements IService {
     private ExceptionEvent exceptionEvent;
     private LogEvent logEvent;
-    protected HashMap<String, MethodInfo> methods = new HashMap<>();
+    protected HashMap<String, Method> methods = new HashMap<>();
     protected ServiceConfig config;
     protected Object instance;
     protected String netName;
@@ -34,11 +35,11 @@ public abstract class Service implements IService {
         this.logEvent = logEvent;
     }
 
-    public HashMap<String, MethodInfo> getMethods() {
+    public HashMap<String, Method> getMethods() {
         return methods;
     }
 
-    public void setMethods(HashMap<String, MethodInfo> methods) {
+    public void setMethods(HashMap<String, Method> methods) {
         this.methods = methods;
     }
 
@@ -73,7 +74,7 @@ public abstract class Service implements IService {
     public void setName(String name) {
         this.name = name;
     }
-    public abstract void Register(String netName, String service_name, Object instance, ServiceConfig config);
+    public abstract void Register(String netName, String service_name, Object instance, ServiceConfig config) throws TrackException;
     public void OnException(TrackException.ErrorCode code,String message){
         OnException(new TrackException(code,message));
     }
