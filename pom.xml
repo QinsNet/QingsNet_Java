@@ -26,6 +26,19 @@
             <artifactId>gson</artifactId>
             <version>2.8.6</version>
         </dependency>
+        <!-- https://mvnrepository.com/artifact/cglib/cglib -->
+        <dependency>
+            <groupId>cglib</groupId>
+            <artifactId>cglib</artifactId>
+            <version>3.3.0</version>
+        </dependency>
+        <dependency>
+            <groupId>ethereal</groupId>
+            <artifactId>com.ethereal.client</artifactId>
+            <version>0.0.1</version>
+            <scope>system</scope>
+            <systemPath>C:/Users/mzh/IdeaProjects/EtherealC_Java/out/artifacts/EtherealC_jar/EtherealC.jar</systemPath>
+        </dependency>
     </dependencies>
     <properties>
         <maven.compiler.source>8</maven.compiler.source>
