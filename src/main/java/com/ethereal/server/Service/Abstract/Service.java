@@ -20,17 +20,14 @@ import java.util.HashMap;
 
 public abstract class Service implements IService {
     protected HashMap<String,Method> methods = new HashMap<>();
-    protected AbstractTypes types;
+    protected AbstractTypes types = new AbstractTypes();
     protected String netName;
     protected String name;
     protected ServiceConfig config;
     protected ExceptionEvent exceptionEvent = new ExceptionEvent();
     protected LogEvent logEvent = new LogEvent();
     protected InterceptorEvent interceptorEvent = new InterceptorEvent();
-    public Service(String name,AbstractTypes types){
-        this.name = name;
-        this.types = types;
-    }
+
     public String getNetName() {
         return netName;
     }
@@ -128,8 +125,7 @@ public abstract class Service implements IService {
         else return true;
     }
 
-    public static void register(Service instance, String netName) throws Exception {
-        instance.netName = netName;
+    public static void register(Service instance) throws TrackException {
         //反射 获取类信息=>字段、属性、方法
         StringBuilder methodId = new StringBuilder();
         for(Method method : instance.getClass().getMethods())

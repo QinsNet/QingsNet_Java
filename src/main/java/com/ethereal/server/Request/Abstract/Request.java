@@ -20,12 +20,7 @@ public abstract class Request implements IRequest {
     protected Server server;//连接体
     protected ExceptionEvent exceptionEvent = new ExceptionEvent();
     protected LogEvent logEvent = new LogEvent();
-    protected AbstractTypes types;
-
-    public Request(String name,AbstractTypes types){
-        this.name = name;
-        this.types = types;
-    }
+    protected AbstractTypes types = new AbstractTypes();
 
     public AbstractTypes getTypes() {
         return types;
@@ -35,10 +30,10 @@ public abstract class Request implements IRequest {
         this.types = types;
     }
 
-    public static Request register(Class<Request> instance_class, String serviceName,AbstractTypes types){
+    public static Request register(Class<Request> instance_class){
         Enhancer enhancer = new Enhancer();
         enhancer.setSuperclass(instance_class);
-        RequestMethodInterceptor  interceptor = new RequestMethodInterceptor();
+        RequestMethodInterceptor interceptor = new RequestMethodInterceptor();
         Callback noOp= NoOp.INSTANCE;
         enhancer.setCallbacks(new Callback[]{noOp,interceptor});
         enhancer.setCallbackFilter(method -> {
@@ -49,8 +44,6 @@ public abstract class Request implements IRequest {
         });
         Request instance = (Request)enhancer.create();
         interceptor.setInstance(instance);
-        if(serviceName != null)instance.setName(serviceName);
-        if(types != null)instance.setTypes(types);
         return instance;
     }
     public Server getServer() {

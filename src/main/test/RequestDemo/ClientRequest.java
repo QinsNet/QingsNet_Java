@@ -11,7 +11,7 @@ import com.ethereal.server.Service.Annotation.Service;
 
 public class ClientRequest extends WebSocketRequest {
     public ClientRequest() throws TrackException {
-        super("Client", new AbstractTypes());
+        name="Client";
         types.add(Integer.class,"Int");
         types.add(Long.class,"Long");
         types.add(String.class,"String");

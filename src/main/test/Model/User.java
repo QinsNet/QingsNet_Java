@@ -25,13 +25,4 @@ public class User extends WebSocketBaseToken {
         this.username = username;
     }
 
-    @Override
-    public Object getKey() {
-        return id;
-    }
-
-    @Override
-    public void setKey(Object key) {
-        id = (int)key;
-    }
 }

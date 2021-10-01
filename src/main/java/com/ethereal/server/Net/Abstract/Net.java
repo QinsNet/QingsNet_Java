@@ -19,6 +19,7 @@ import com.ethereal.server.Service.Event.InterceptorEvent;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
+import java.util.Arrays;
 import java.util.HashMap;
 
 public abstract class Net implements INet {
@@ -153,7 +154,7 @@ public abstract class Net implements INet {
             else return new ClientResponseModel(null,null,new Error(Error.ErrorCode.Intercepted, String.format("未找到服务%s-%s",name,request.getService()),null),request.getId(),request.getService());
         }
         catch (Exception e){
-            return new ClientResponseModel(null,null,new Error(Error.ErrorCode.Intercepted, String.format("%s\n",e.getMessage()),null),request.getId(),request.getService());
+            return new ClientResponseModel(null,null,new Error(Error.ErrorCode.Intercepted, String.format("%s\n%s",e.getMessage(), Arrays.toString(e.getStackTrace())),null),request.getId(),request.getService());
         }
     }
 

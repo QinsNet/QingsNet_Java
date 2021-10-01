@@ -6,6 +6,8 @@ import com.ethereal.server.Server.Delegate.CreateInstanceDelegate;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
@@ -64,13 +66,21 @@ public class WebSocketServer extends Server {
                             ch.pipeline().addLast(new CustomWebSocketHandler((WebSocketBaseToken) createMethod.createInstance(),netName,config,es, wsFactory));
                         }
                     });
-            channel = bootstrap.bind(uri.getPort()).sync().channel();
-            onListenerSuccess();
+            channel = bootstrap.bind(uri.getPort()).addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(ChannelFuture future) throws Exception {
+                    if (future.isSuccess()){
+                        onListenerSuccess();
+                    }
+                    else {
+                        onListenerFailEvent();
+                    }
+                }
+            }).channel();
             channel.closeFuture().sync();
         }
         catch (Exception e){
             onException(new TrackException(e));
-            onListenerFailEvent();
         }
         finally {
             boss.shutdownGracefully();

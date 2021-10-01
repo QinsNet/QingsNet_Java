@@ -22,26 +22,22 @@ public class RequestCore {
         Object request = net.getRequests().get(serviceName);
         return (T)request;
     }
+
     public static <T> T register(Net net, Class<?> requestClass) throws TrackException {
         return register(net,requestClass,null,null);
     }
-
-    public static <T> T register(Net net,Class<?> requestClass, String serviceName, AbstractTypes types) throws TrackException {
-        Request request = null;
-        if(!net.getRequests().containsKey(serviceName)){
-            try{
-                request = Request.register((Class<Request>) requestClass,serviceName, types);
-                request.setNetName(net.getName());
-                request.getExceptionEvent().register(net::onException);
-                request.getLogEvent().register(net::onLog);
-                net.getRequests().put(serviceName, request);
-            }
-            catch (Exception err){
-                throw new TrackException(TrackException.ErrorCode.Core,serviceName + "异常报错，销毁注册\n" + err.getMessage());
-            }
+    public static <T> T register(Net net, Class<?> requestClass, String serviceName, AbstractTypes types) throws TrackException {
+        Request request = Request.register((Class<Request>) requestClass);
+        if(serviceName!=null)request.setName(serviceName);
+        if(types!=null)request.setTypes(types);
+        if(!net.getRequests().containsKey(request.getName())){
+            request.setNetName(net.getName());
+            request.getExceptionEvent().register(net::onException);
+            request.getLogEvent().register(net::onLog);
+            net.getRequests().put(request.getName(), request);
+            return (T)request;
         }
         else throw new TrackException(TrackException.ErrorCode.Core,String.format("%s-%s已注册,无法重复注册！", net.getName(),serviceName));
-        return (T)request;
     }
 
     public static boolean unregister(String netName,String serviceName)  {

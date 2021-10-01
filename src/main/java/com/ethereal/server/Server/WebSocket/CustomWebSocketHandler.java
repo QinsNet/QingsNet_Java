@@ -46,6 +46,7 @@ public class CustomWebSocketHandler extends SimpleChannelInboundHandler<Object> 
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        token.onDisconnectEvent();
         token.setCtx(null);
         token = null;
     }
@@ -126,6 +127,7 @@ public class CustomWebSocketHandler extends SimpleChannelInboundHandler<Object> 
                     .sendUnsupportedVersionResponse(ctx.channel());
         } else {
             handshaker.handshake(ctx.channel(), req);
+            token.onConnect();
         }
     }
     /**

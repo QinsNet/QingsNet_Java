@@ -12,7 +12,7 @@ import com.ethereal.server.Service.WebSocket.WebSocketService;
 public class ServerService extends WebSocketService {
 
     public ServerService() throws TrackException {
-        super("Server", new AbstractTypes());
+        name = "Server";
         types.add(Integer.class,"Int");
         types.add(Long.class,"Long");
         types.add(String.class,"String");

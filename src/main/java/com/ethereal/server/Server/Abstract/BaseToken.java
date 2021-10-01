@@ -22,10 +22,7 @@ public abstract class BaseToken implements IBaseToken {
     protected String netName;
     protected ServerConfig config;
     protected boolean canRequest = true;
-
-    public abstract Object getKey();
-
-    public abstract void setKey(Object key);
+    public Object key;
 
     public ExceptionEvent getExceptionEvent() {
         return exceptionEvent;
@@ -86,7 +83,7 @@ public abstract class BaseToken implements IBaseToken {
     public boolean Register()
     {
         Net net = NetCore.get(netName);
-        net.getTokens().put(getKey(), this);
+        net.getTokens().put(key, this);
         return true;
     }
 
@@ -95,9 +92,9 @@ public abstract class BaseToken implements IBaseToken {
         Net net = NetCore.get(netName);
         if (replace)
         {
-            net.getTokens().remove(getKey());
+            net.getTokens().remove(key);
         }
-        net.getTokens().put(getKey(), this);
+        net.getTokens().put(key, this);
         return true;
     }
     /// <summary>
@@ -106,9 +103,9 @@ public abstract class BaseToken implements IBaseToken {
     /// <returns></returns>
     public Boolean UnRegister()
     {
-        if (getKey() == null) return true;
+        if (key == null) return true;
         Net net = NetCore.get(netName);
-        net.getTokens().remove(getKey());
+        net.getTokens().remove(key);
         return true;
     }
     public HashMap<Object, BaseToken> GetTokens()

@@ -16,20 +16,19 @@ public class ServiceCore {
     public static <T> T get(Net net,String serviceName)  {
         return (T)net.getServices().get(serviceName);
     }
-
-    public static <T> T register(Net net,Service service) throws TrackException {
+    public static <T> T register(Net net,Service service) throws TrackException{
+        return register(net,service,null,null);
+    }
+    public static <T> T register(Net net,Service service,String serviceName,AbstractTypes types) throws TrackException {
+        if(serviceName!=null)service.setName(serviceName);
+        if(types!=null)service.setTypes(types);
+        Service.register(service);
         if(!net.getServices().containsKey(service.getName())){
-            try{
-                Service.register(service,net.getName());
-                service.setNetName(net.getName());
-                net.getServices().put(service.getName(),service);
-                service.getExceptionEvent().register(net::onException);
-                service.getLogEvent().register(net::onLog);
-                return (T) service;
-            }
-            catch (Exception err){
-                throw new TrackException(TrackException.ErrorCode.Core,service.getName() + "异常报错，销毁注册\n" + err.getMessage());
-            }
+            service.setNetName(net.getName());
+            service.getExceptionEvent().register(net::onException);
+            service.getLogEvent().register(net::onLog);
+            net.getServices().put(service.getName(),service);
+            return (T) service;
         }
         else throw new TrackException(TrackException.ErrorCode.Core,String.format("%s已注册,无法重复注册！",net.getName(),service.getName()));
     }
