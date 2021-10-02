@@ -51,7 +51,7 @@ public class WebSocketServer extends Server {
         NioEventLoopGroup boss=new NioEventLoopGroup();
         NioEventLoopGroup work=new NioEventLoopGroup();
         try {
-            URI uri = new URI("ws://" + prefixes.get(0));
+            URI uri = new URI(prefixes.get(0).replace("ethereal://","ws://"));
             WebSocketServerHandshakerFactory wsFactory = new WebSocketServerHandshakerFactory(uri.toString(),null, false);
             ServerBootstrap bootstrap = new ServerBootstrap();
             bootstrap.group(boss,work)                                //2

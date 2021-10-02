@@ -2,82 +2,86 @@ package com.ethereal.server.Core.Model;
 
 import com.google.gson.annotations.Expose;
 
+import java.util.Arrays;
+
 public class ClientRequestModel {
     @Expose(serialize = false,deserialize = false)
-    private ClientResponseModel Result;
+    private ClientResponseModel result;
     @Expose
-    private String Type = "ER-1.0-ClientRequest";
+    private String type = "ER-1.0-ClientRequest";
     @Expose
-    private String MethodId;
+    private String methodId;
     @Expose
-    private Object[] Params;
+    private Object[] params;
     @Expose
-    private String Id;
+    private String id;
     @Expose
-    private String Service;
-
-    public String getType() {
-        return Type;
-    }
-
-    public void setType(String type) {
-        Type = type;
-    }
-
-    public String getMethodId() {
-        return MethodId;
-    }
-
-    public void setMethodId(String methodId) {
-        MethodId = methodId;
-    }
-
-    public Object[] getParams() {
-        return Params;
-    }
-
-    public void setParams(Object[] params) {
-        Params = params;
-    }
-
-    public String getId() {
-        return Id;
-    }
-
-    public void setId(String id) {
-        Id = id;
-    }
-
-    public String getService() {
-        return Service;
-    }
-
-    public void setService(String service) {
-        Service = service;
-    }
+    private String service;
 
     public ClientRequestModel(String jsonRpc, String service, String methodId, String[] params) {
-        Type = jsonRpc;
-        MethodId = methodId;
-        Params = params;
-        Service = service;
+        type = jsonRpc;
+        methodId = methodId;
+        params = params;
+        service = service;
+    }
+
+    public ClientResponseModel getResult() {
+        return result;
     }
 
     public void setResult(ClientResponseModel result) {
-        this.Result = result;
+        this.result = result;
     }
 
-    public ClientResponseModel getResult()  {
-        return this.Result;
+    public String getType() {
+        return type;
+    }
+
+    public void setType(String type) {
+        this.type = type;
+    }
+
+    public String getMethodId() {
+        return methodId;
+    }
+
+    public void setMethodId(String methodId) {
+        this.methodId = methodId;
+    }
+
+    public Object[] getParams() {
+        return params;
+    }
+
+    public void setParams(Object[] params) {
+        this.params = params;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public String getService() {
+        return service;
+    }
+
+    public void setService(String service) {
+        this.service = service;
     }
 
     @Override
     public String toString() {
         return "ClientRequestModel{" +
-                "Type='" + Type + '\'' +
-                ", MethodId='" + MethodId + '\'' +
-                ", Params=" + com.ethereal.server.Utils.Utils.gson.toJson(Params) +
-                ", com.ethereal.server.Service='" + Service + '\'' +
+                "result=" + result +
+                ", type='" + type + '\'' +
+                ", methodId='" + methodId + '\'' +
+                ", params=" + Arrays.toString(params) +
+                ", id='" + id + '\'' +
+                ", service='" + service + '\'' +
                 '}';
     }
 }

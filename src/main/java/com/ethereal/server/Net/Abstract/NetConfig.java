@@ -29,7 +29,7 @@ public abstract class NetConfig {
     /// <summary>
     /// 服务注册心跳间隔
     /// </summary>
-    protected int netNodeHeartInterval = 30000;
+    protected int netNodeHeartInterval = 20000;
 
     public Boolean getNetNodeMode() {
         return netNodeMode;

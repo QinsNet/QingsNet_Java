@@ -40,11 +40,11 @@ public class ServerNodeService extends WebSocketService {
             @Override
             public void onDisConnect(BaseToken token) {
                 netNodes.remove(token.key);
-                onLog(TrackLog.LogCode.Runtime,String.format("{%s}节点已断开", token.key));
+                onLog(TrackLog.LogCode.Runtime,String.format("节点已断开:{%s}", token.key));
                 PrintNetNodes();
             }
         });
-        onLog(TrackLog.LogCode.Runtime,String.format("{%s}节点注册成功", token.key));
+        onLog(TrackLog.LogCode.Runtime,String.format("节点注册成功:{%s}", token.key));
         PrintNetNodes();
         return true;
     }
@@ -65,7 +65,7 @@ public class ServerNodeService extends WebSocketService {
     public void PrintNetNodes(){
         StringBuilder sb = new StringBuilder();
         for(Pair<BaseToken,NetNode> pair:netNodes.values()){
-            sb.append(pair.getValue0().key).append("\n");
+            sb.append(String.join("&&",pair.getValue1().getPrefixes())).append("\n");
         }
         onLog(TrackLog.LogCode.Runtime,sb.toString());
     }

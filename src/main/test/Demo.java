@@ -52,14 +52,14 @@ public class Demo {
         //向网关注册请求
         service.userRequest = RequestCore.register(net, ClientRequest.class);
         Server server = ServerCore.register(net,new WebSocketServer(new ArrayList<>(), User::new));
-        server.getPrefixes().add("127.0.0.1:28015/NetDemo/".replace("28015",port));
+        server.getPrefixes().add("ethereal://127.0.0.1:28015/NetDemo/".replace("28015",port));
         //开启集群
         net.getConfig().setNetNodeMode(true);
         net.getConfig().setNetNodeIps(new ArrayList<>());
-        net.getConfig().getNetNodeIps().add(new Pair<>("127.0.0.1:28015/NetDemo/",null));
-        net.getConfig().getNetNodeIps().add(new Pair<>("127.0.0.1:28016/NetDemo/",null));
-        net.getConfig().getNetNodeIps().add(new Pair<>("127.0.0.1:28017/NetDemo/",null));
-        net.getConfig().getNetNodeIps().add(new Pair<>("127.0.0.1:28018/NetDemo/",null));
+        net.getConfig().getNetNodeIps().add(new Pair<>("ethereal://127.0.0.1:28015/NetDemo/",null));
+        net.getConfig().getNetNodeIps().add(new Pair<>("ethereal://127.0.0.1:28016/NetDemo/",null));
+        net.getConfig().getNetNodeIps().add(new Pair<>("ethereal://127.0.0.1:28017/NetDemo/",null));
+        net.getConfig().getNetNodeIps().add(new Pair<>("ethereal://127.0.0.1:28018/NetDemo/",null));
         //启动服务
         net.publish();
         server.getListenerSuccessEvent().register((value)->System.out.println(value.getPrefixes() + "启动成功"));

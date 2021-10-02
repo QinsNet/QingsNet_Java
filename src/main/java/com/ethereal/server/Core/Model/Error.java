@@ -1,7 +1,9 @@
 package com.ethereal.server.Core.Model;
 
 import com.google.gson.annotations.Expose;
+import com.sun.xml.internal.ws.developer.Serialization;
 
+@Serialization
 public class Error {
     public enum ErrorCode { Intercepted,NotFoundService,NotFoundMethod,NotFoundNet,BufferFlow,Common,MaxConnects }
     @Expose

@@ -6,61 +6,61 @@ import java.util.Arrays;
 
 public class ServerRequestModel {
     @Expose
-    private String Type = "ER-1.0-ServerRequest";
+    private String type = "ER-1.0-ServerRequest";
     @Expose
-    private String MethodId;
+    private String methodId;
     @Expose
-    private Object[] Params;
+    private Object[] params;
     @Expose
-    private String Service;
+    private String service;
 
 
     public ServerRequestModel(String jsonRpc, String methodId, Object[] params, String service) {
-        this.Type = jsonRpc;
-        this.MethodId = methodId;
-        this.Params = params;
-        this.Service = service;
+        this.type = jsonRpc;
+        this.methodId = methodId;
+        this.params = params;
+        this.service = service;
     }
 
     public String getType() {
-        return Type;
+        return type;
     }
 
     public void setType(String type) {
-        this.Type = type;
+        this.type = type;
     }
 
     public String getMethodId() {
-        return MethodId;
+        return methodId;
     }
 
     public void setMethodId(String methodId) {
-        this.MethodId = methodId;
+        this.methodId = methodId;
     }
 
     public Object[] getParams() {
-        return Params;
+        return params;
     }
 
     public void setParams(Object[] params) {
-        this.Params = params;
+        this.params = params;
     }
 
     public String getService() {
-        return Service;
+        return service;
     }
 
     public void setService(String service) {
-        this.Service = service;
+        this.service = service;
     }
 
     @Override
     public String toString() {
         return "ServerRequestModel{" +
-                "Type='" + Type + '\'' +
-                ", MethodId='" + MethodId + '\'' +
-                ", Params=" + Arrays.toString(Params) +
-                ", com.ethereal.server.Service='" + Service + '\'' +
+                "type='" + type + '\'' +
+                ", methodId='" + methodId + '\'' +
+                ", params=" + Arrays.toString(params) +
+                ", service='" + service + '\'' +
                 '}';
     }
 }

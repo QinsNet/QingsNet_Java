@@ -95,7 +95,7 @@ public class CustomWebSocketHandler extends SimpleChannelInboundHandler<Object> 
     private void handleHttpRequest(ChannelHandlerContext ctx,
                                    FullHttpRequest req) throws ExecutionException, InterruptedException, TimeoutException {
         //要求Upgrade为websocket，过滤掉get/Post
-        if ((!"websocket".equals(req.headers().get("Upgrade")))) {
+        if (!(("websocket".equals(req.headers().get("Upgrade"))) || ("WebSocket".equals(req.headers().get("Upgrade"))))) {
             try {
                 String data = req.content().toString(token.getConfig().getCharset());
                 ClientRequestModel clientRequestModel = token.getConfig().getClientRequestModelDeserialize().Deserialize(data);
@@ -123,6 +123,7 @@ public class CustomWebSocketHandler extends SimpleChannelInboundHandler<Object> 
 
         handshaker = handshakerFactory.newHandshaker(req);
         if (handshaker == null) {
+            System.out.println("空");
             WebSocketServerHandshakerFactory
                     .sendUnsupportedVersionResponse(ctx.channel());
         } else {
@@ -134,8 +135,9 @@ public class CustomWebSocketHandler extends SimpleChannelInboundHandler<Object> 
      * 拒绝不合法的请求，并返回错误信息
      * */
     private void sendHttpToClient(ChannelHandlerContext ctx, ClientResponseModel responseModel) {
-        DefaultFullHttpResponse res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_0,HttpResponseStatus.BAD_REQUEST);
-        res.setProtocolVersion(HttpVersion.HTTP_1_0);
+        DefaultFullHttpResponse res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,HttpResponseStatus.OK);
+        res.setProtocolVersion(HttpVersion.HTTP_1_1);
+        System.out.println("啦啦啦啦啦啦啦啦绿绿");
         res.content().writeBytes(token.getConfig().getClientResponseModelSerialize().Serialize(responseModel).getBytes(token.getConfig().getCharset()));
         ctx.channel().writeAndFlush(res);
     }

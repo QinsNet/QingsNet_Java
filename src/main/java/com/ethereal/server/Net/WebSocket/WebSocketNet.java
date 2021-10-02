@@ -50,16 +50,6 @@ public class WebSocketNet extends Net {
                 ServiceCore.register(this,new ServerNodeService());
                 RequestCore.register(this,ClientNodeRequest.class);
                 //客户端
-                for(Pair<String, ClientConfig> item : config.getNetNodeIps()){
-                    String prefixes = item.getValue0();
-                    ClientConfig clientConfig = item.getValue1();
-                    com.ethereal.client.Net.Abstract.Net net = com.ethereal.client.Net.NetCore.register(new com.ethereal.client.Net.WebSocket.WebSocketNet(String.format("NetNodeClient-%s", prefixes)));
-                    net.getConfig().setNetNodeMode(false);
-                    com.ethereal.client.Service.ServiceCore.register(net,new ClientNodeService());
-                    com.ethereal.client.Request.RequestCore.register(net,ServerNodeRequest.class);
-                    net.getLogEvent().register((log)->onLog(TrackLog.LogCode.Runtime,"来自NetNode搜寻节点客户端的日志:\n" + log.getMessage()));
-                    net.getExceptionEvent().register((exception)->onException(TrackException.ErrorCode.Runtime,"来自NetNode搜寻节点客户端的异常:\n" + exception.getException().getMessage()));
-                }
                 new Thread(()->{
                     while (NetCore.get(name)!=null){
                         try {
@@ -68,59 +58,66 @@ public class WebSocketNet extends Net {
                                 ClientConfig clientConfig = pair.getValue1();
                                 com.ethereal.client.Net.Abstract.Net net = com.ethereal.client.Net.NetCore.get(String.format("NetNodeClient-%s", prefixes));
                                 if(net == null){
-                                    throw new TrackException(TrackException.ErrorCode.Runtime, String.format("NetNode-Client-未找到Net:NetNodeClient-%s", prefixes));
+                                    net = com.ethereal.client.Net.NetCore.register(new com.ethereal.client.Net.WebSocket.WebSocketNet(String.format("NetNodeClient-%s", prefixes)));
+                                    net.getConfig().setNetNodeMode(false);
+                                    net.getLogEvent().register((log)->onLog(TrackLog.LogCode.Runtime,"来自NetNode搜寻节点客户端的日志:\n" + log.getMessage()));
+                                    net.getExceptionEvent().register((exception)->onException(TrackException.ErrorCode.Runtime,"来自NetNode搜寻节点客户端的异常:\n" + exception.getException().getMessage()));
                                 }
                                 com.ethereal.client.Request.Abstract.Request serverNodeRequest = com.ethereal.client.Request.RequestCore.get(net,"ServerNetNodeService");
                                 if(serverNodeRequest == null){
-                                    throw new TrackException(TrackException.ErrorCode.Runtime, String.format("NetNode-Client-未找到Request:NetNodeClient-%s-%s", prefixes,"ServerNetNodeService"));
+                                    serverNodeRequest = com.ethereal.client.Request.RequestCore.register(net,ServerNodeRequest.class);
                                 }
-                                if(serverNodeRequest.getClient() != null){
-                                    continue;
+                                com.ethereal.client.Service.Abstract.Service clientNodeService = com.ethereal.client.Service.ServiceCore.get(net,"ClientNetNodeService");
+                                if(clientNodeService == null){
+                                    com.ethereal.client.Service.ServiceCore.register(net,new ClientNodeService());
                                 }
-                                Client client = new WebSocketClient(prefixes);
-                                if(clientConfig!=null)client.setConfig(clientConfig);
-                                //注册连接
-                                ClientCore.register(serverNodeRequest,client);
-                                client.getConnectSuccessEvent().register(new OnConnectSuccessDelegate() {
-                                    @Override
-                                    public void OnConnectSuccess(Client client) {
-                                        ServerNodeRequest serverNodeRequest = com.ethereal.client.Request.RequestCore.get(String.format("NetNodeClient-%s",client.getPrefixes()),"ServerNetNodeService");
-                                        if(serverNodeRequest == null){
-                                            client.onException(com.ethereal.client.Core.Model.TrackException.ErrorCode.Runtime,String.format("EtherealC中未找到 NetNodeClient-%s-ServerNodeService", client.getPrefixes()));
-                                        }
-                                        NetNode node = new NetNode();
-                                        node.setPrefixes(new String[]{prefixes});
-                                        node.setName(name);
-                                        node.setServices(new HashMap<>());
-                                        node.setRequests(new HashMap<>());
-                                        for(Service service : services.values()){
-                                            ServiceNode serviceNode = new ServiceNode();
-                                            serviceNode.setName(service.getName());
-                                            node.getServices().put(serviceNode.getName(),serviceNode);
-                                        }
-                                        for(Request request : requests.values()){
-                                            ServiceNode requestNode = new ServiceNode();
-                                            requestNode.setName(request.getName());
-                                            node.getServices().put(requestNode.getName(),requestNode);
+                                Client client = serverNodeRequest.getClient();
+                                if(client == null){
+                                    client = new WebSocketClient(prefixes);
+                                    if(clientConfig!=null)client.setConfig(clientConfig);
+                                    //注册连接
+                                    ClientCore.register(serverNodeRequest,client);
+                                    client.getConnectSuccessEvent().register(new OnConnectSuccessDelegate() {
+                                        @Override
+                                        public void OnConnectSuccess(Client client) {
+                                            ServerNodeRequest serverNodeRequest = com.ethereal.client.Request.RequestCore.get(String.format("NetNodeClient-%s",client.getPrefixes()),"ServerNetNodeService");
+                                            if(serverNodeRequest == null){
+                                                client.onException(com.ethereal.client.Core.Model.TrackException.ErrorCode.Runtime,String.format("EtherealC中未找到 NetNodeClient-%s-ServerNodeService", client.getPrefixes()));
+                                            }
+                                            NetNode node = new NetNode();
+                                            node.setPrefixes(server.getPrefixes().toArray(new String[0]));
+                                            node.setName(name);
+                                            node.setServices(new HashMap<>());
+                                            node.setRequests(new HashMap<>());
+                                            for(Service service : services.values()){
+                                                ServiceNode serviceNode = new ServiceNode();
+                                                serviceNode.setName(service.getName());
+                                                node.getServices().put(serviceNode.getName(),serviceNode);
+                                            }
+                                            for(Request request : requests.values()){
+                                                ServiceNode requestNode = new ServiceNode();
+                                                requestNode.setName(request.getName());
+                                                node.getServices().put(requestNode.getName(),requestNode);
 
+                                            }
+                                            serverNodeRequest.Register(node);
                                         }
-                                        serverNodeRequest.Register(node);
-                                    }
-                                });
-                                client.getConnectFailEvent().register(new OnConnectFailDelegate() {
-                                    @Override
-                                    public void OnConnectFail(Client client) {
-                                        ClientCore.unregister(client.getNetName(),client.getServiceName());
-                                        onLog(TrackLog.LogCode.Runtime,String.format("NetNode-%s 连接失败，等待下一轮重连.", client.getPrefixes()));
-                                    }
-                                });
-                                client.getDisConnectEvent().register(new OnDisConnectDelegate() {
-                                    @Override
-                                    public void OnDisConnect(Client client) {
-                                        ClientCore.unregister(client.getNetName(),client.getServiceName());
-                                    }
-                                });
-                                client.connect();
+                                    });
+                                    client.getConnectFailEvent().register(new OnConnectFailDelegate() {
+                                        @Override
+                                        public void OnConnectFail(Client client) {
+                                            ClientCore.unregister(client.getNetName(),client.getServiceName());
+                                            onLog(TrackLog.LogCode.Runtime,String.format("NetNode-%s 连接失败，等待下一轮重连.", client.getPrefixes()));
+                                        }
+                                    });
+                                    client.getDisConnectEvent().register(new OnDisConnectDelegate() {
+                                        @Override
+                                        public void OnDisConnect(Client client) {
+                                            ClientCore.unregister(client.getNetName(),client.getServiceName());
+                                        }
+                                    });
+                                    client.connect();
+                                }
                             }
                         }
                         catch (Exception e){
