@@ -18,10 +18,10 @@ import java.util.concurrent.TimeoutException;
 
 public class CustomWebSocketHandler extends SimpleChannelInboundHandler<Object> {
     protected WebSocketServerHandshaker handshaker;
-    protected WebSocketBaseToken token;
+    protected WebSocketToken token;
     protected WebSocketServerHandshakerFactory handshakerFactory;
     protected ExecutorService es;
-    public CustomWebSocketHandler(WebSocketBaseToken token, String netName, ServerConfig config, ExecutorService executorService, WebSocketServerHandshakerFactory handshakerFactory){
+    public CustomWebSocketHandler(WebSocketToken token, String netName, ServerConfig config, ExecutorService executorService, WebSocketServerHandshakerFactory handshakerFactory){
         this.handshakerFactory = handshakerFactory;
         this.token = token;
         this.token.setConfig(config);

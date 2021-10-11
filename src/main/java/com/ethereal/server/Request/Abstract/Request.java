@@ -42,9 +42,7 @@ public abstract class Request implements IRequest {
             }
             else return 0;
         });
-        Request instance = (Request)enhancer.create();
-        interceptor.setInstance(instance);
-        return instance;
+        return (Request)enhancer.create();
     }
     public Server getServer() {
         return server;

@@ -5,7 +5,7 @@ import com.sun.xml.internal.ws.developer.Serialization;
 
 @Serialization
 public class Error {
-    public enum ErrorCode { Intercepted,NotFoundService,NotFoundMethod,NotFoundNet,BufferFlow,Common,MaxConnects }
+    public enum ErrorCode { Intercepted,NotFoundService,NotFoundMethod,NotFoundNet,BufferFlow,Common,MaxConnects,NotFoundAbstractType }
     @Expose
     private ErrorCode Code;
     @Expose

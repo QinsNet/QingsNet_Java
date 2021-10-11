@@ -3,7 +3,6 @@ package com.ethereal.server.Server.WebSocket;
 import com.ethereal.server.Core.Model.TrackException;
 import com.ethereal.server.Server.Abstract.Server;
 import com.ethereal.server.Server.Delegate.CreateInstanceDelegate;
-import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -12,7 +11,6 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.websocketx.*;
@@ -63,7 +61,7 @@ public class WebSocketServer extends Server {
                             ch.pipeline().addLast(new HttpServerCodec());
                             ch.pipeline().addLast(new HttpObjectAggregator(getConfig().getMaxBufferSize()));
                             ch.pipeline().addLast(new ChunkedWriteHandler());
-                            ch.pipeline().addLast(new CustomWebSocketHandler((WebSocketBaseToken) createMethod.createInstance(),netName,config,es, wsFactory));
+                            ch.pipeline().addLast(new CustomWebSocketHandler((WebSocketToken) createMethod.createInstance(),netName,config,es, wsFactory));
                         }
                     });
             channel = bootstrap.bind(uri.getPort()).addListener(new ChannelFutureListener() {

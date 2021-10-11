@@ -3,11 +3,8 @@ package com.ethereal.server.Core.Model;
 import com.ethereal.server.Net.Abstract.Net;
 import com.ethereal.server.Request.Abstract.Request;
 import com.ethereal.server.Service.Abstract.Service;
-import com.ethereal.server.Net.Abstract.Net;
-import com.ethereal.server.Request.Abstract.Request;
-import com.ethereal.server.Server.Abstract.BaseToken;
+import com.ethereal.server.Server.Abstract.Token;
 import com.ethereal.server.Server.Abstract.Server;
-import com.ethereal.server.Service.Abstract.Service;
 
 public class TrackLog {
     public enum LogCode { Core, Runtime }
@@ -17,13 +14,13 @@ public class TrackLog {
     private Service service;
     private Request request;
     private Net net;
-    private BaseToken token;
+    private Token token;
 
-    public BaseToken getToken() {
+    public Token getToken() {
         return token;
     }
 
-    public void setToken(BaseToken token) {
+    public void setToken(Token token) {
         this.token = token;
     }
 

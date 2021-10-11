@@ -1,6 +1,6 @@
 package com.ethereal.server.Server.Event;
 
-import com.ethereal.server.Server.Abstract.BaseToken;
+import com.ethereal.server.Server.Abstract.Token;
 import com.ethereal.server.Server.Event.Delegate.ConnectDelegate;
 
 import java.util.Iterator;
@@ -30,7 +30,7 @@ public class ConnectEvent {
             }
         }
     }
-    public void onEvent(BaseToken token){
+    public void onEvent(Token token){
         synchronized (listeners){
             for (ConnectDelegate delegate:listeners) {
                 delegate.onConnect(token);

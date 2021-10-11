@@ -1,9 +1,9 @@
 package Model;
 
-import com.ethereal.server.Server.WebSocket.WebSocketBaseToken;
+import com.ethereal.server.Server.WebSocket.WebSocketToken;
 import com.google.gson.annotations.Expose;
 
-public class User extends WebSocketBaseToken {
+public class User extends WebSocketToken {
     @Expose
     private long id;
     @Expose

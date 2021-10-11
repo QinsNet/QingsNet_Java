@@ -12,7 +12,7 @@ public class ClientRequestModel {
     @Expose
     private String methodId;
     @Expose
-    private Object[] params;
+    private String[] params;
     @Expose
     private String id;
     @Expose
@@ -49,11 +49,11 @@ public class ClientRequestModel {
         this.methodId = methodId;
     }
 
-    public Object[] getParams() {
+    public String[] getParams() {
         return params;
     }
 
-    public void setParams(Object[] params) {
+    public void setParams(String[] params) {
         this.params = params;
     }
 

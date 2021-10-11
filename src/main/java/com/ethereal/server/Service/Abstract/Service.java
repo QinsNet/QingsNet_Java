@@ -7,8 +7,7 @@ import com.ethereal.server.Core.Model.TrackException;
 import com.ethereal.server.Core.Model.TrackLog;
 import com.ethereal.server.Core.Model.AbstractTypes;
 import com.ethereal.server.Net.Abstract.Net;
-import com.ethereal.server.Request.Abstract.Request;
-import com.ethereal.server.Server.Abstract.BaseToken;
+import com.ethereal.server.Server.Abstract.Token;
 import com.ethereal.server.Service.Event.Delegate.InterceptorDelegate;
 import com.ethereal.server.Service.Event.InterceptorEvent;
 import com.ethereal.server.Service.Interface.IService;
@@ -16,6 +15,7 @@ import com.ethereal.server.Service.Interface.IService;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Parameter;
+import java.util.ArrayList;
 import java.util.HashMap;
 
 public abstract class Service implements IService {
@@ -112,7 +112,7 @@ public abstract class Service implements IService {
         logEvent.onEvent(log);
     }
 
-    public boolean OnInterceptor(Net net,Method method, BaseToken token)
+    public boolean OnInterceptor(Net net,Method method, Token token)
     {
         if (interceptorEvent != null)
         {
@@ -135,27 +135,16 @@ public abstract class Service implements IService {
             if(annotation!=null){
                 if(!Modifier.isInterface(modifier)){
                     methodId.append(method.getName());
-                    int startIdx = 1;
-                    if(annotation.parameters().length == 0){
-                        Class<?>[] parameters = method.getParameterTypes();
-                        if(parameters.length > 0 && !BaseToken.class.isAssignableFrom(parameters[0])){
-                            startIdx = 0;
+                    Parameter[] parameterInfos = method.getParameters();
+                    for(Parameter parameterInfo : parameterInfos){
+                        if(parameterInfo.getAnnotation(com.ethereal.server.Server.Annotation.Token.class) != null){
+                            continue;
                         }
-                        for(int i=startIdx;i<parameters.length;i++){
-                            AbstractType rpcType = instance.types.getTypesByType().get(parameters[i]);
-                            if(rpcType != null) {
-                                methodId.append("-").append(rpcType.getName());
-                            }
-                            else throw new TrackException(TrackException.ErrorCode.Runtime,String.format("Java中的%s类型参数尚未注册,请注意是否是泛型导致！",parameters[i].getName()));
-                        }
-                    }
-                    else {
-                        String[] types_name = annotation.parameters();
-                        for(String type_name : types_name){
-                            if(instance.types.getTypesByName().containsKey(type_name)){
-                                methodId.append("-").append(type_name);
-                            }
-                            else throw new TrackException(TrackException.ErrorCode.Runtime,String.format("Java中的%s抽象类型参数尚未注册,请注意是否是泛型导致！",type_name));
+                        else {
+                            AbstractType type = instance.getTypes().getTypesByType().get(parameterInfo.getParameterizedType());
+                            if(type == null)type = instance.getTypes().getTypesByName().get(method.getAnnotation(com.ethereal.server.Core.Annotation.AbstractType.class).abstractName());
+                            if(type == null)throw new TrackException(TrackException.ErrorCode.Runtime,String.format("RPC中的%s类型参数尚未被注册！",parameterInfo.getParameterizedType()));
+                            methodId.append("-").append(type.getName());
                         }
                     }
                     instance.methods.put(methodId.toString(),method);

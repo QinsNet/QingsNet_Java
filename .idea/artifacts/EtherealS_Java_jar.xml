@@ -1,8 +1,0 @@
-<component name="ArtifactManager">
-  <artifact type="jar" name="EtherealS_Java:jar">
-    <output-path>$PROJECT_DIR$/out/artifacts/EtherealS_Java_jar</output-path>
-    <root id="archive" name="EtherealS_Java.jar">
-      <element id="module-output" name="EtherealS_Java" />
-    </root>
-  </artifact>
-</component>

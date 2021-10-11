@@ -10,12 +10,12 @@ public class ServerRequestModel {
     @Expose
     private String methodId;
     @Expose
-    private Object[] params;
+    private String[] params;
     @Expose
     private String service;
 
 
-    public ServerRequestModel(String jsonRpc, String methodId, Object[] params, String service) {
+    public ServerRequestModel(String jsonRpc, String methodId, String[] params, String service) {
         this.type = jsonRpc;
         this.methodId = methodId;
         this.params = params;
@@ -38,11 +38,11 @@ public class ServerRequestModel {
         this.methodId = methodId;
     }
 
-    public Object[] getParams() {
+    public String[] getParams() {
         return params;
     }
 
-    public void setParams(Object[] params) {
+    public void setParams(String[] params) {
         this.params = params;
     }
 

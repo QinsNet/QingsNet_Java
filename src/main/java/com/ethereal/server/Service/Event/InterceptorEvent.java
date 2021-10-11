@@ -1,7 +1,7 @@
 package com.ethereal.server.Service.Event;
 
 import com.ethereal.server.Net.Abstract.Net;
-import com.ethereal.server.Server.Abstract.BaseToken;
+import com.ethereal.server.Server.Abstract.Token;
 import com.ethereal.server.Service.Abstract.Service;
 import com.ethereal.server.Service.Event.Delegate.InterceptorDelegate;
 
@@ -33,7 +33,7 @@ public class InterceptorEvent {
             }
         }
     }
-    public void onEvent(Net net, Service service, Method method, BaseToken token){
+    public void onEvent(Net net, Service service, Method method, Token token){
         synchronized (listeners){
             for (InterceptorDelegate delegate:listeners) {
                 delegate.onInterceptor(net,service,method,token);

@@ -1,7 +1,7 @@
 package com.ethereal.server.Server.Event.Delegate;
 
-import com.ethereal.server.Server.Abstract.BaseToken;
+import com.ethereal.server.Server.Abstract.Token;
 
 public interface ConnectDelegate {
-    void onConnect(BaseToken token);
+    void onConnect(Token token);
 }

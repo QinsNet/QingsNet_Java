@@ -1,10 +1,9 @@
 package com.ethereal.server.Net.NetNode.NetNodeServer.Service;
 
-import com.ethereal.server.Core.Model.AbstractTypes;
 import com.ethereal.server.Core.Model.TrackException;
 import com.ethereal.server.Core.Model.TrackLog;
 import com.ethereal.server.Net.NetNode.Model.NetNode;
-import com.ethereal.server.Server.Abstract.BaseToken;
+import com.ethereal.server.Server.Abstract.Token;
 import com.ethereal.server.Server.Event.Delegate.DisConnectDelegate;
 import com.ethereal.server.Service.Annotation.Service;
 import com.ethereal.server.Service.WebSocket.WebSocketService;
@@ -15,7 +14,7 @@ import java.util.HashMap;
 import java.util.Random;
 
 public class ServerNodeService extends WebSocketService {
-    private HashMap<Object, Pair<BaseToken,NetNode>> netNodes = new HashMap<>();
+    private HashMap<Object, Pair<Token,NetNode>> netNodes = new HashMap<>();
     private Random random = new Random();
     public ServerNodeService() throws TrackException {
         name = "ServerNetNodeService";
@@ -28,9 +27,9 @@ public class ServerNodeService extends WebSocketService {
     }
 
     @Service
-    public Boolean Register(BaseToken token, NetNode netNode){
+    public Boolean Register(@com.ethereal.server.Server.Annotation.Token Token token, NetNode netNode){
         token.key = (String.format("%s-%s", netNode.getName(),String.join("::",netNode.getPrefixes())));
-        Pair<BaseToken,NetNode> pair = netNodes.get(token.key);
+        Pair<Token,NetNode> pair = netNodes.get(token.key);
         if(pair != null){
             pair.getValue0().getDisConnectEvent().getListeners().clear();
             netNodes.remove(token.key);
@@ -38,7 +37,7 @@ public class ServerNodeService extends WebSocketService {
         netNodes.put(token.key,new Pair<>(token,netNode));
         token.getDisConnectEvent().register(new DisConnectDelegate() {
             @Override
-            public void onDisConnect(BaseToken token) {
+            public void onDisConnect(Token token) {
                 netNodes.remove(token.key);
                 onLog(TrackLog.LogCode.Runtime,String.format("节点已断开:{%s}", token.key));
                 PrintNetNodes();
@@ -49,9 +48,9 @@ public class ServerNodeService extends WebSocketService {
         return true;
     }
     @Service
-    public NetNode GetNetNode(BaseToken sender, String serviceName){
+    public NetNode GetNetNode(@com.ethereal.server.Server.Annotation.Token Token sender, String serviceName){
         ArrayList<NetNode> nodes = new ArrayList<>();
-        for(Pair<BaseToken,NetNode> pair:netNodes.values()){
+        for(Pair<Token,NetNode> pair:netNodes.values()){
             if(pair.getValue1().getServices().containsKey(serviceName)){
                 nodes.add(pair.getValue1());
             }
@@ -64,7 +63,7 @@ public class ServerNodeService extends WebSocketService {
 
     public void PrintNetNodes(){
         StringBuilder sb = new StringBuilder();
-        for(Pair<BaseToken,NetNode> pair:netNodes.values()){
+        for(Pair<Token,NetNode> pair:netNodes.values()){
             sb.append(String.join("&&",pair.getValue1().getPrefixes())).append("\n");
         }
         onLog(TrackLog.LogCode.Runtime,sb.toString());
