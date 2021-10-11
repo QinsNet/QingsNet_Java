@@ -10,7 +10,7 @@
     <description>Ethereal Server</description>
     <url>https://github.com/Ethereal-RPC/</url>
     <packaging>pom</packaging>
-    <version>1.0</version>
+    <version>1.0.2</version>
     <dependencies>
         <!-- https://mvnrepository.com/artifact/io.netty/netty-all -->
         <dependency>
@@ -36,12 +36,12 @@
             <artifactId>cglib</artifactId>
             <version>3.3.0</version>
         </dependency>
+        <!-- https://mvnrepository.com/artifact/io.github.ethereal-rpc/EtherealC -->
         <dependency>
-            <groupId>ethereal</groupId>
-            <artifactId>com.ethereal.client</artifactId>
-            <version>0.0.1</version>
-            <scope>system</scope>
-            <systemPath>C:/Users/mzh/IdeaProjects/EtherealC_Java/out/artifacts/EtherealC_jar/EtherealC.jar</systemPath>
+            <groupId>io.github.ethereal-rpc</groupId>
+            <artifactId>EtherealC</artifactId>
+            <version>1.0.2</version>
+            <type>pom</type>
         </dependency>
     </dependencies>
 
