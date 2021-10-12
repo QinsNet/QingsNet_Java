@@ -10,11 +10,11 @@ import com.ethereal.server.Net.Abstract.Net;
 import com.ethereal.server.Net.NetCore;
 import com.ethereal.server.Server.Event.ConnectEvent;
 import com.ethereal.server.Server.Event.DisConnectEvent;
-import com.ethereal.server.Server.Interface.IBaseToken;
+import com.ethereal.server.Server.Interface.IToken;
 
 import java.util.HashMap;
 
-public abstract class Token implements IBaseToken {
+public abstract class Token implements IToken {
     protected ExceptionEvent exceptionEvent = new ExceptionEvent();
     protected LogEvent logEvent = new LogEvent();
     protected ConnectEvent connectEvent = new ConnectEvent();

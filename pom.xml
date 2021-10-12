@@ -9,8 +9,8 @@
     <name>EtherealS</name>
     <description>Ethereal Server</description>
     <url>https://github.com/Ethereal-RPC/</url>
-    <packaging>pom</packaging>
-    <version>1.0.2</version>
+    <packaging>jar</packaging>
+    <version>1.0.5</version>
     <dependencies>
         <!-- https://mvnrepository.com/artifact/io.netty/netty-all -->
         <dependency>
@@ -36,12 +36,32 @@
             <artifactId>cglib</artifactId>
             <version>3.3.0</version>
         </dependency>
-        <!-- https://mvnrepository.com/artifact/io.github.ethereal-rpc/EtherealC -->
         <dependency>
             <groupId>io.github.ethereal-rpc</groupId>
             <artifactId>EtherealC</artifactId>
-            <version>1.0.2</version>
-            <type>pom</type>
+            <version>1.0.5</version>
+            <exclusions>
+                <!-- https://mvnrepository.com/artifact/io.netty/netty-all -->
+                <exclusion>
+                    <groupId>io.netty</groupId>
+                    <artifactId>netty-all</artifactId>
+                </exclusion>
+                <!-- https://mvnrepository.com/artifact/org.javatuples/javatuples -->
+                <exclusion>
+                    <groupId>org.javatuples</groupId>
+                    <artifactId>javatuples</artifactId>
+                </exclusion>
+                <!-- https://mvnrepository.com/artifact/com.google.code.gson/gson -->
+                <exclusion>
+                    <groupId>com.google.code.gson</groupId>
+                    <artifactId>gson</artifactId>
+                </exclusion>
+                <!-- https://mvnrepository.com/artifact/cglib/cglib -->
+                <exclusion>
+                    <groupId>cglib</groupId>
+                    <artifactId>cglib</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
     </dependencies>
 
@@ -153,6 +173,11 @@
                                 </goals>
                             </execution>
                         </executions>
+                        <configuration>
+                            <encoding>UTF-8</encoding>
+                            <charset>UTF-8</charset>
+                            <additionalparam>-Xdoclint:none</additionalparam>
+                        </configuration>
                     </plugin>
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>

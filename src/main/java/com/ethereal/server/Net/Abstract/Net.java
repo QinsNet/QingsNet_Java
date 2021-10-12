@@ -132,7 +132,7 @@ public abstract class Net implements INet {
                                 type = service.getTypes().getTypesByType().get(parameterInfo.getParameterizedType());
                                 if(type == null)type = service.getTypes().getTypesByName().get(parameterInfo.getAnnotation(com.ethereal.server.Core.Annotation.AbstractType.class).abstractName());
                                 if(type == null)return new ClientResponseModel(null,null,new Error(Error.ErrorCode.NotFoundAbstractType,String.format("RPC中的%s类型参数尚未被注册！",parameterInfo.getParameterizedType()),null),request.getId(),request.getService());
-                                parameters.add(type.getDeserialize().Deserialize(request.getParams()[i]));
+                                parameters.add(type.getDeserialize().Deserialize(request.getParams()[i++]));
                             }
                         }
                         Object result = method.invoke(service,parameters.toArray(new Object[]{}));

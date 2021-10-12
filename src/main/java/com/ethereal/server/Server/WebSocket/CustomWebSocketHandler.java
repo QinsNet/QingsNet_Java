@@ -137,7 +137,6 @@ public class CustomWebSocketHandler extends SimpleChannelInboundHandler<Object> 
     private void sendHttpToClient(ChannelHandlerContext ctx, ClientResponseModel responseModel) {
         DefaultFullHttpResponse res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,HttpResponseStatus.OK);
         res.setProtocolVersion(HttpVersion.HTTP_1_1);
-        System.out.println("啦啦啦啦啦啦啦啦绿绿");
         res.content().writeBytes(token.getConfig().getClientResponseModelSerialize().Serialize(responseModel).getBytes(token.getConfig().getCharset()));
         ctx.channel().writeAndFlush(res);
     }
