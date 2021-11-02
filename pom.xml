@@ -10,7 +10,7 @@
     <description>Ethereal Server</description>
     <url>https://github.com/Ethereal-RPC/</url>
     <packaging>jar</packaging>
-    <version>1.0.5</version>
+    <version>1.0.6</version>
     <dependencies>
         <!-- https://mvnrepository.com/artifact/io.netty/netty-all -->
         <dependency>
