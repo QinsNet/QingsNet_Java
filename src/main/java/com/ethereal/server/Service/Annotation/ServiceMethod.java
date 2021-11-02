@@ -3,8 +3,8 @@ package com.ethereal.server.Service.Annotation;
 import java.lang.annotation.*;
 
 @Documented
-@Target(ElementType.TYPE)
+@Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface Service {
+public @interface ServiceMethod {
         String[] parameters() default {};
 }

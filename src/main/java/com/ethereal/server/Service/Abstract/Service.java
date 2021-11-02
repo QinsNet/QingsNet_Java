@@ -8,6 +8,7 @@ import com.ethereal.server.Core.Model.TrackLog;
 import com.ethereal.server.Core.Model.AbstractTypes;
 import com.ethereal.server.Net.Abstract.Net;
 import com.ethereal.server.Server.Abstract.Token;
+import com.ethereal.server.Service.Annotation.ServiceMethod;
 import com.ethereal.server.Service.Event.Delegate.InterceptorDelegate;
 import com.ethereal.server.Service.Event.InterceptorEvent;
 import com.ethereal.server.Service.Interface.IService;
@@ -15,9 +16,8 @@ import com.ethereal.server.Service.Interface.IService;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Parameter;
-import java.util.ArrayList;
 import java.util.HashMap;
-
+@com.ethereal.server.Service.Annotation.Service
 public abstract class Service implements IService {
     protected HashMap<String,Method> methods = new HashMap<>();
     protected AbstractTypes types = new AbstractTypes();
@@ -131,7 +131,7 @@ public abstract class Service implements IService {
         for(Method method : instance.getClass().getMethods())
         {
             int modifier = method.getModifiers();
-            com.ethereal.server.Service.Annotation.Service annotation = method.getAnnotation(com.ethereal.server.Service.Annotation.Service.class);
+            ServiceMethod annotation = method.getAnnotation(ServiceMethod.class);
             if(annotation!=null){
                 if(!Modifier.isInterface(modifier)){
                     methodId.append(method.getName());

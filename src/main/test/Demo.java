@@ -1,7 +1,6 @@
 import Model.User;
 import RequestDemo.ClientRequest;
 import ServiceDemo.ServerService;
-import com.ethereal.client.Client.Abstract.ClientConfig;
 import com.ethereal.server.Core.Event.Delegate.ExceptionEventDelegate;
 import com.ethereal.server.Core.Model.TrackException;
 import com.ethereal.server.Net.Abstract.Net;
@@ -11,9 +10,7 @@ import com.ethereal.server.Request.RequestCore;
 import com.ethereal.server.Server.Abstract.Server;
 import com.ethereal.server.Server.ServerCore;
 import com.ethereal.server.Server.WebSocket.WebSocketServer;
-import com.ethereal.server.Service.Abstract.Service;
 import com.ethereal.server.Service.ServiceCore;
-import org.javatuples.Pair;
 
 import java.util.ArrayList;
 import java.util.Scanner;
@@ -53,13 +50,6 @@ public class Demo {
         service.userRequest = RequestCore.register(net, ClientRequest.class);
         Server server = ServerCore.register(net,new WebSocketServer(new ArrayList<>(), User::new));
         server.getPrefixes().add("ethereal://127.0.0.1:28015/NetDemo/".replace("28015",port));
-        //开启集群
-        net.getConfig().setNetNodeMode(true);
-        net.getConfig().setNetNodeIps(new ArrayList<>());
-        net.getConfig().getNetNodeIps().add(new Pair<>("ethereal://127.0.0.1:28015/NetDemo/",null));
-        net.getConfig().getNetNodeIps().add(new Pair<>("ethereal://127.0.0.1:28016/NetDemo/",null));
-        net.getConfig().getNetNodeIps().add(new Pair<>("ethereal://127.0.0.1:28017/NetDemo/",null));
-        net.getConfig().getNetNodeIps().add(new Pair<>("ethereal://127.0.0.1:28018/NetDemo/",null));
         //启动服务
         net.publish();
         server.getListenerSuccessEvent().register((value)->System.out.println(value.getPrefixes() + "启动成功"));

@@ -6,12 +6,13 @@ import com.ethereal.server.Core.Model.AbstractTypes;
 import com.ethereal.server.Core.Model.ClientRequestModel;
 import com.ethereal.server.Core.Model.TrackException;
 import com.ethereal.server.Core.Model.TrackLog;
+import com.ethereal.server.Request.Annotation.RequestMethod;
 import com.ethereal.server.Request.Interface.IRequest;
 import com.ethereal.server.Server.Abstract.Server;
 import net.sf.cglib.proxy.*;
 
 import java.util.concurrent.ConcurrentHashMap;
-
+@com.ethereal.server.Request.Annotation.Request
 public abstract class Request implements IRequest {
     protected final ConcurrentHashMap<Integer,ClientRequestModel> tasks = new ConcurrentHashMap<>();
     protected String name;
@@ -37,7 +38,7 @@ public abstract class Request implements IRequest {
         Callback noOp= NoOp.INSTANCE;
         enhancer.setCallbacks(new Callback[]{noOp,interceptor});
         enhancer.setCallbackFilter(method -> {
-            if(method.getAnnotation(com.ethereal.server.Request.Annotation.Request.class) != null){
+            if(method.getAnnotation(RequestMethod.class) != null){
                 return 1;
             }
             else return 0;

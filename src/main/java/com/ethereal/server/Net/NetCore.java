@@ -14,7 +14,6 @@ public class NetCore {
 
     private final static HashMap<String, Net> nets = new HashMap<>();
 
-
     public static Net get(String name)
     {
         return nets.get(name);

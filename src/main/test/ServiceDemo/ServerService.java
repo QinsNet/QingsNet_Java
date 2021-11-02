@@ -2,12 +2,9 @@ package ServiceDemo;
 
 import Model.User;
 import RequestDemo.ClientRequest;
-import com.ethereal.server.Core.Model.AbstractTypes;
 import com.ethereal.server.Core.Model.TrackException;
-import com.ethereal.server.Request.Annotation.InvokeTypeFlags;
-import com.ethereal.server.Request.Annotation.Request;
 import com.ethereal.server.Server.Annotation.Token;
-import com.ethereal.server.Service.Annotation.Service;
+import com.ethereal.server.Service.Annotation.ServiceMethod;
 import com.ethereal.server.Service.WebSocket.WebSocketService;
 
 public class ServerService extends WebSocketService {
@@ -21,13 +18,13 @@ public class ServerService extends WebSocketService {
         types.add(User.class,"User");
     }
     public ClientRequest userRequest;
-    @Service
+    @ServiceMethod
     public Boolean Register(@Token User user,String username, Long id){
         user.setUsername(username);
         user.setId(id);
         return user.Register();
     }
-    @Service
+    @ServiceMethod
     public Boolean SendSay(@Token User sender, Long listener_id, String message){
         User listener = sender.GetToken(listener_id);
         if(listener!= null){
@@ -35,13 +32,23 @@ public class ServerService extends WebSocketService {
         }
         return false;
     }
-    @Service
+    @ServiceMethod
     public Integer Add(Integer a, Integer b){
         return a+b;
     }
-    @Service
+    @ServiceMethod
     public Boolean Login(String username,String password){
         System.out.println(username + ":" + password);
         return true;
+    }
+
+    @Override
+    public void initialize() {
+
+    }
+
+    @Override
+    public void unInitialize() {
+
     }
 }

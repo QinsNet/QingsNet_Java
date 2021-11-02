@@ -1,8 +1,8 @@
 package com.ethereal.server.Request.Abstract;
 
 import com.ethereal.server.Core.Model.*;
-import com.ethereal.server.Core.Model.Error;
 import com.ethereal.server.Request.Annotation.InvokeTypeFlags;
+import com.ethereal.server.Request.Annotation.RequestMethod;
 import com.ethereal.server.Server.Abstract.Token;
 import net.sf.cglib.proxy.MethodInterceptor;
 import net.sf.cglib.proxy.MethodProxy;
@@ -18,7 +18,7 @@ public class RequestMethodInterceptor implements MethodInterceptor {
     @Override
     public Object intercept(Object o, Method method, Object[] args, MethodProxy methodProxy) throws Throwable {
         Request instance = (Request) o;
-        com.ethereal.server.Request.Annotation.Request annotation = method.getAnnotation(com.ethereal.server.Request.Annotation.Request.class);
+        RequestMethod annotation = method.getAnnotation(RequestMethod.class);
         Object localResult = null;
         if((annotation.invokeType() & InvokeTypeFlags.Local) == 0){
             Token token = null;

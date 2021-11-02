@@ -36,33 +36,6 @@
             <artifactId>cglib</artifactId>
             <version>3.3.0</version>
         </dependency>
-        <dependency>
-            <groupId>io.github.ethereal-rpc</groupId>
-            <artifactId>EtherealC</artifactId>
-            <version>1.0.5</version>
-            <exclusions>
-                <!-- https://mvnrepository.com/artifact/io.netty/netty-all -->
-                <exclusion>
-                    <groupId>io.netty</groupId>
-                    <artifactId>netty-all</artifactId>
-                </exclusion>
-                <!-- https://mvnrepository.com/artifact/org.javatuples/javatuples -->
-                <exclusion>
-                    <groupId>org.javatuples</groupId>
-                    <artifactId>javatuples</artifactId>
-                </exclusion>
-                <!-- https://mvnrepository.com/artifact/com.google.code.gson/gson -->
-                <exclusion>
-                    <groupId>com.google.code.gson</groupId>
-                    <artifactId>gson</artifactId>
-                </exclusion>
-                <!-- https://mvnrepository.com/artifact/cglib/cglib -->
-                <exclusion>
-                    <groupId>cglib</groupId>
-                    <artifactId>cglib</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
     </dependencies>
 
     <properties>

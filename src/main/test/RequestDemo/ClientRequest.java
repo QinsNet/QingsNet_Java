@@ -2,12 +2,9 @@ package RequestDemo;
 
 
 import Model.User;
-import com.ethereal.server.Core.Model.AbstractTypes;
 import com.ethereal.server.Core.Model.TrackException;
-import com.ethereal.server.Request.Annotation.InvokeTypeFlags;
-import com.ethereal.server.Request.Annotation.Request;
+import com.ethereal.server.Request.Annotation.RequestMethod;
 import com.ethereal.server.Request.WebSocket.WebSocketRequest;
-import com.ethereal.server.Service.Annotation.Service;
 
 public class ClientRequest extends WebSocketRequest {
     public ClientRequest() throws TrackException {
@@ -18,9 +15,19 @@ public class ClientRequest extends WebSocketRequest {
         types.add(Boolean.class,"Bool");
         types.add(User.class,"User");
     }
-    @Request
+    @RequestMethod
     public void Say(User user, User sender, String message)
     {
         System.out.println(sender.getUsername() + ":" + message);
+    }
+
+    @Override
+    public void initialize() {
+
+    }
+
+    @Override
+    public void unInitialize() {
+
     }
 }
