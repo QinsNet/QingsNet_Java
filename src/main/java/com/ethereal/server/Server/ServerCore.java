@@ -25,14 +25,10 @@ public class ServerCore {
         return server;
     }
 
-    public static boolean unregister(String netName)  {
-        Net net = NetCore.get(netName);
-        return unregister(net);
-    }
-
-    public static boolean unregister(Net net)  {
-        net.getServer().Close();
-        net.getServer().setNet(null);
+    public static boolean unregister(Server server)  {
+        server.getNet().setServer(null);
+        server.setNet(null);
+        server.Close();
         return true;
     }
 }
