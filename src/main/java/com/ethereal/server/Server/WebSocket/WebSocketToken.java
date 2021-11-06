@@ -19,9 +19,9 @@ public abstract class WebSocketToken extends Token {
     @Override
     public void sendClientResponse(ClientResponseModel response) {
         if(ctx.channel() !=null && ctx.channel().isActive()){
-            String json = config.getClientResponseModelSerialize().Serialize(response);
+            String json = server.getConfig().getClientResponseModelSerialize().Serialize(response);
             //多转一次格式，用户可能使用非Config的编码.
-            json = new String(json.getBytes(config.getCharset()));
+            json = new String(json.getBytes(server.getConfig().getCharset()));
             ctx.channel().writeAndFlush(new TextWebSocketFrame(json));
         }
         else ctx.close();
@@ -30,9 +30,9 @@ public abstract class WebSocketToken extends Token {
     @Override
     public void sendServerRequest(ServerRequestModel request) {
         if(ctx.channel() !=null && ctx.channel().isActive()){
-            String json = config.getServerRequestModelSerialize().Serialize(request);
+            String json = server.getConfig().getServerRequestModelSerialize().Serialize(request);
             //多转一次格式，用户可能使用非Config的编码.
-            json = new String(json.getBytes(config.getCharset()));
+            json = new String(json.getBytes(server.getConfig().getCharset()));
             ctx.channel().writeAndFlush(new TextWebSocketFrame(json));
         }
         else ctx.close();

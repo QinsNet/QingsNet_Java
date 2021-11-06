@@ -5,6 +5,7 @@ import com.ethereal.server.Core.Model.Error;
 import com.ethereal.server.Core.Model.TrackException;
 import com.ethereal.server.Net.Abstract.Net;
 import com.ethereal.server.Net.NetCore;
+import com.ethereal.server.Server.Abstract.Server;
 import com.ethereal.server.Server.Abstract.ServerConfig;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -21,11 +22,10 @@ public class CustomWebSocketHandler extends SimpleChannelInboundHandler<Object> 
     protected WebSocketToken token;
     protected WebSocketServerHandshakerFactory handshakerFactory;
     protected ExecutorService es;
-    public CustomWebSocketHandler(WebSocketToken token, String netName, ServerConfig config, ExecutorService executorService, WebSocketServerHandshakerFactory handshakerFactory){
+    public CustomWebSocketHandler(WebSocketToken token, Server server, ExecutorService executorService, WebSocketServerHandshakerFactory handshakerFactory){
         this.handshakerFactory = handshakerFactory;
         this.token = token;
-        this.token.setConfig(config);
-        token.setNetName(netName);
+        token.setServer(server);
         this.es = executorService;
     }
     @Override
@@ -47,6 +47,7 @@ public class CustomWebSocketHandler extends SimpleChannelInboundHandler<Object> 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         token.onDisconnectEvent();
+        token.setServer(null);
         token.setCtx(null);
         token = null;
     }
@@ -72,16 +73,10 @@ public class CustomWebSocketHandler extends SimpleChannelInboundHandler<Object> 
                     "%s frame types not supported", frame.getClass().getName()));
         }
         try {
-            String data = frame.content().toString(token.getConfig().getCharset());
-            ClientRequestModel clientRequestModel = token.getConfig().getClientRequestModelDeserialize().Deserialize(data);
-            Net net = NetCore.get(token.getNetName());
-            if(net == null){
-                token.sendClientResponse(new ClientResponseModel(null,null,new Error(Error.ErrorCode.NotFoundNet,String.format("未找到net%s", token.getNetName())),clientRequestModel.getId(),clientRequestModel.getService()));
-                token.disConnect("未找到Net");
-                return;
-            }
+            String data = frame.content().toString(token.getServer().getConfig().getCharset());
+            ClientRequestModel clientRequestModel = token.getServer().getConfig().getClientRequestModelDeserialize().Deserialize(data);
             ClientResponseModel responseModel = null;
-            responseModel = es.submit(() -> net.clientRequestReceiveProcess(token,clientRequestModel)).get(token.getConfig().getProcessTimeout(), TimeUnit.MILLISECONDS);
+            responseModel = es.submit(() -> token.getServer().getNet().clientRequestReceiveProcess(token,clientRequestModel)).get(token.getServer().getConfig().getProcessTimeout(), TimeUnit.MILLISECONDS);
             if(responseModel == null)throw new TrackException(TrackException.ErrorCode.Runtime, String.format("%s-%s-执行超时", clientRequestModel.getMethodId(),clientRequestModel.getService()));
             token.sendClientResponse(responseModel);
         }
@@ -97,23 +92,17 @@ public class CustomWebSocketHandler extends SimpleChannelInboundHandler<Object> 
         //要求Upgrade为websocket，过滤掉get/Post
         if (!(("websocket".equals(req.headers().get("Upgrade"))) || ("WebSocket".equals(req.headers().get("Upgrade"))))) {
             try {
-                String data = req.content().toString(token.getConfig().getCharset());
-                ClientRequestModel clientRequestModel = token.getConfig().getClientRequestModelDeserialize().Deserialize(data);
-                Net net = NetCore.get(token.getNetName());
-                if(net == null){
-                    sendHttpToClient(ctx,new ClientResponseModel(null,null,new Error(Error.ErrorCode.NotFoundNet, "未找到节点{netName}")
-                            ,clientRequestModel.getId(),clientRequestModel.getService()));
-                    return;
-                }
+                String data = req.content().toString(token.getServer().getConfig().getCharset());
+                ClientRequestModel clientRequestModel = token.getServer().getConfig().getClientRequestModelDeserialize().Deserialize(data);
                 token.setCanRequest(false);
                 token.onConnect();
                 ClientResponseModel responseModel = null;
-                responseModel = es.submit(() -> net.clientRequestReceiveProcess(token,clientRequestModel)).get(token.getConfig().getProcessTimeout(), TimeUnit.MILLISECONDS);
+                responseModel = es.submit(() -> token.getServer().getNet().clientRequestReceiveProcess(token,clientRequestModel)).get(token.getServer().getConfig().getProcessTimeout(), TimeUnit.MILLISECONDS);
                 sendHttpToClient(ctx,responseModel);
                 return;
             }
             catch (Exception e){
-                sendHttpToClient(ctx,new ClientResponseModel(null,null,new Error(Error.ErrorCode.NotFoundNet, "未找到节点{netName}")
+                sendHttpToClient(ctx,new ClientResponseModel(null,null,new Error(Error.ErrorCode.NotFoundNet, "未找到节点{net}")
                         ,null,null));
             }
             finally {
@@ -137,7 +126,7 @@ public class CustomWebSocketHandler extends SimpleChannelInboundHandler<Object> 
     private void sendHttpToClient(ChannelHandlerContext ctx, ClientResponseModel responseModel) {
         DefaultFullHttpResponse res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,HttpResponseStatus.OK);
         res.setProtocolVersion(HttpVersion.HTTP_1_1);
-        res.content().writeBytes(token.getConfig().getClientResponseModelSerialize().Serialize(responseModel).getBytes(token.getConfig().getCharset()));
+        res.content().writeBytes(token.getServer().getConfig().getClientResponseModelSerialize().Serialize(responseModel).getBytes(token.getServer().getConfig().getCharset()));
         ctx.channel().writeAndFlush(res);
     }
 }

@@ -24,25 +24,18 @@ public class ServiceCore {
         if(types!=null)service.setTypes(types);
         Service.register(service);
         if(!net.getServices().containsKey(service.getName())){
-            service.setNetName(net.getName());
+            service.setNet(net);
             service.getExceptionEvent().register(net::onException);
             service.getLogEvent().register(net::onLog);
             net.getServices().put(service.getName(),service);
             return (T) service;
         }
-        else throw new TrackException(TrackException.ErrorCode.Core,String.format("%s已注册,无法重复注册！",net.getName(),service.getName()));
+        else throw new TrackException(TrackException.ErrorCode.Core,String.format("%s-%s已注册,无法重复注册！",net.getName(),service.getName()));
     }
 
-    public static boolean unregister(String netName,String serviceName) throws TrackException {
-        Net net = NetCore.get(netName);
-        return unregister(net,serviceName);
-    }
-    public static boolean unregister(Net net,String serviceName) {
-        if(net != null){
-            if(net.getServices().containsKey(serviceName)){
-                net.getServices().remove(serviceName);
-            }
-        }
+    public static boolean unregister(Service service) {
+        service.getNet().getServices().remove(service.getName());
+        service.setNet(null);
         return true;
     }
 }

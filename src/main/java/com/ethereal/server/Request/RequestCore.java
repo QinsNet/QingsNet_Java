@@ -5,8 +5,6 @@ import com.ethereal.server.Core.Model.TrackException;
 import com.ethereal.server.Net.Abstract.Net;
 import com.ethereal.server.Net.NetCore;
 import com.ethereal.server.Request.Abstract.Request;
-import com.ethereal.server.Server.ServerCore;
-import com.ethereal.server.Service.ServiceCore;
 
 public class RequestCore {
     //获取Request实体
@@ -31,7 +29,7 @@ public class RequestCore {
         if(serviceName!=null)request.setName(serviceName);
         if(types!=null)request.setTypes(types);
         if(!net.getRequests().containsKey(request.getName())){
-            request.setNetName(net.getName());
+            request.setNet(net);
             request.getExceptionEvent().register(net::onException);
             request.getLogEvent().register(net::onLog);
             net.getRequests().put(request.getName(), request);
@@ -39,18 +37,9 @@ public class RequestCore {
         }
         else throw new TrackException(TrackException.ErrorCode.Core,String.format("%s-%s已注册,无法重复注册！", net.getName(),serviceName));
     }
-
-    public static boolean unregister(String netName,String serviceName)  {
-        Net net = NetCore.get(netName);
-        if (net == null)
-            return true;
-        return unregister(net, serviceName);
-    }
-    public static boolean unregister(Net net,String serviceName)  {
-        Request request = get(net,serviceName);
-        if(request != null){
-            net.getRequests().remove(serviceName);
-        }
+    public static boolean unregister(Request request)  {
+        request.getNet().getServices().remove(request.getName());
+        request.setNet(null);
         return true;
     }
 

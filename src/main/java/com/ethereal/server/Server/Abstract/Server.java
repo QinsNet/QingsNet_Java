@@ -4,6 +4,7 @@ import com.ethereal.server.Core.Event.ExceptionEvent;
 import com.ethereal.server.Core.Event.LogEvent;
 import com.ethereal.server.Core.Model.TrackException;
 import com.ethereal.server.Core.Model.TrackLog;
+import com.ethereal.server.Net.Abstract.Net;
 import com.ethereal.server.Server.Delegate.CreateInstanceDelegate;
 import com.ethereal.server.Server.Event.ListenerFailEvent;
 import com.ethereal.server.Server.Event.ListenerSuccessEvent;
@@ -18,7 +19,7 @@ public abstract class Server implements IServer {
     protected LogEvent logEvent = new LogEvent();
     protected ListenerFailEvent listenerFailEvent = new ListenerFailEvent();
     protected ListenerSuccessEvent listenerSuccessEvent = new ListenerSuccessEvent();
-    protected String netName;
+    protected Net net;
     protected ServerConfig config;
     protected List<String> prefixes;
     protected CreateInstanceDelegate createMethod;
@@ -69,12 +70,12 @@ public abstract class Server implements IServer {
         this.listenerSuccessEvent = listenerSuccessEvent;
     }
 
-    public String getNetName() {
-        return netName;
+    public Net getNet() {
+        return net;
     }
 
-    public void setNetName(String netName) {
-        this.netName = netName;
+    public void setNet(Net net) {
+        this.net = net;
     }
 
     public ServerConfig getConfig() {

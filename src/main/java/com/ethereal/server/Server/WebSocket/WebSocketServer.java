@@ -61,7 +61,7 @@ public class WebSocketServer extends Server {
                             ch.pipeline().addLast(new HttpServerCodec());
                             ch.pipeline().addLast(new HttpObjectAggregator(getConfig().getMaxBufferSize()));
                             ch.pipeline().addLast(new ChunkedWriteHandler());
-                            ch.pipeline().addLast(new CustomWebSocketHandler((WebSocketToken) createMethod.createInstance(),netName,config,es, wsFactory));
+                            ch.pipeline().addLast(new CustomWebSocketHandler((WebSocketToken) createMethod.createInstance(),WebSocketServer.this,es, wsFactory));
                         }
                     });
             channel = bootstrap.bind(uri.getPort()).addListener(new ChannelFutureListener() {

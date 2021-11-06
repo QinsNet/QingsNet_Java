@@ -19,8 +19,7 @@ public abstract class Token implements IToken {
     protected LogEvent logEvent = new LogEvent();
     protected ConnectEvent connectEvent = new ConnectEvent();
     protected DisConnectEvent disConnectEvent = new DisConnectEvent();
-    protected String netName;
-    protected ServerConfig config;
+    protected Server server;
     protected boolean canRequest = true;
     public Object key;
 
@@ -56,20 +55,12 @@ public abstract class Token implements IToken {
         this.disConnectEvent = disConnectEvent;
     }
 
-    public String getNetName() {
-        return netName;
+    public Server getServer() {
+        return server;
     }
 
-    public void setNetName(String netName) {
-        this.netName = netName;
-    }
-
-    public ServerConfig getConfig() {
-        return config;
-    }
-
-    public void setConfig(ServerConfig config) {
-        this.config = config;
+    public void setServer(Server server) {
+        this.server = server;
     }
 
     public boolean getCanRequest() {
@@ -82,19 +73,17 @@ public abstract class Token implements IToken {
 
     public boolean Register()
     {
-        Net net = NetCore.get(netName);
-        net.getTokens().put(key, this);
+        server.getNet().getTokens().put(key, this);
         return true;
     }
 
     public boolean Register(Boolean replace)
     {
-        Net net = NetCore.get(netName);
         if (replace)
         {
-            net.getTokens().remove(key);
+            server.getNet().getTokens().remove(key);
         }
-        net.getTokens().put(key, this);
+        server.getNet().getTokens().put(key, this);
         return true;
     }
     /// <summary>
@@ -104,20 +93,17 @@ public abstract class Token implements IToken {
     public Boolean UnRegister()
     {
         if (key == null) return true;
-        Net net = NetCore.get(netName);
-        net.getTokens().remove(key);
+        server.getNet().getTokens().remove(key);
         return true;
     }
     public HashMap<Object, Token> GetTokens()
     {
-        Net net = NetCore.get(netName);
-        return net.getTokens();
+        return server.getNet().getTokens();
     }
 
     public <T> T GetToken(Object key)
     {
-        Net net = NetCore.get(netName);
-        Token token = net.getTokens().get(key);
+        Token token = server.getNet().getTokens().get(key);
         return (T)token;
     }
 

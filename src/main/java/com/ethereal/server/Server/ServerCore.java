@@ -18,7 +18,7 @@ public class ServerCore {
     public static Server register(Net net,Server server) throws TrackException {
         if(net.getServer() == null){
             net.setServer(server);
-            server.setNetName(net.getName());
+            server.setNet(net);
             server.getLogEvent().register(net::onLog);//日志系统
             server.getExceptionEvent().register(net::onException);//异常系统
         }
@@ -31,10 +31,8 @@ public class ServerCore {
     }
 
     public static boolean unregister(Net net)  {
-        if(net.getServer() != null){
-            net.getServer().Close();
-            return true;
-        }
-        else return true;
+        net.getServer().Close();
+        net.getServer().setNet(null);
+        return true;
     }
 }
