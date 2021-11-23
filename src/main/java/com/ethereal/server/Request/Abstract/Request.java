@@ -1,48 +1,57 @@
 package com.ethereal.server.Request.Abstract;
 
-import com.ethereal.server.Core.Event.ExceptionEvent;
-import com.ethereal.server.Core.Event.LogEvent;
-import com.ethereal.server.Core.Model.AbstractTypes;
-import com.ethereal.server.Core.Model.ClientRequestModel;
-import com.ethereal.server.Core.Model.TrackException;
-import com.ethereal.server.Core.Model.TrackLog;
-import com.ethereal.server.Net.Abstract.Net;
-import com.ethereal.server.Request.Annotation.RequestMethod;
+import com.ethereal.server.Core.Annotation.BaseParam;
+import com.ethereal.server.Core.BaseCore.MZCore;
+import com.ethereal.server.Core.Manager.AbstractType.AbstractTypeManager;
+import com.ethereal.server.Core.Manager.AbstractType.Param;
+import com.ethereal.server.Core.Model.*;
+import com.ethereal.server.Request.Annotation.RequestMapping;
 import com.ethereal.server.Request.Interface.IRequest;
-import net.sf.cglib.proxy.*;
+import com.ethereal.server.Service.Abstract.Service;
+import com.ethereal.server.Utils.AnnotationUtils;
+import com.ethereal.server.Utils.Utils;
 
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
 import java.util.concurrent.ConcurrentHashMap;
 @com.ethereal.server.Request.Annotation.Request
-public abstract class Request implements IRequest {
+public abstract class Request extends MZCore implements IRequest {
     protected final ConcurrentHashMap<Integer,ClientRequestModel> tasks = new ConcurrentHashMap<>();
     protected String name;
-    protected Net net;
+    protected Service service;
     protected RequestConfig config;
-    protected ExceptionEvent exceptionEvent = new ExceptionEvent();
-    protected LogEvent logEvent = new LogEvent();
-    protected AbstractTypes types = new AbstractTypes();
+    protected AbstractTypeManager types = new AbstractTypeManager();
 
-    public AbstractTypes getTypes() {
+    public AbstractTypeManager getTypes() {
         return types;
     }
 
-    public void setTypes(AbstractTypes types) {
+    public void setTypes(AbstractTypeManager types) {
         this.types = types;
     }
 
-    public static Request register(Class<Request> instance_class){
-        Enhancer enhancer = new Enhancer();
-        enhancer.setSuperclass(instance_class);
-        RequestMethodInterceptor interceptor = new RequestMethodInterceptor();
-        Callback noOp= NoOp.INSTANCE;
-        enhancer.setCallbacks(new Callback[]{noOp,interceptor});
-        enhancer.setCallbackFilter(method -> {
-            if(method.getAnnotation(RequestMethod.class) != null){
-                return 1;
+    public static void register(Request instance) throws TrackException {
+        for (Method method : instance.getClass().getMethods()){
+            RequestMapping requestAnnotation = method.getAnnotation(RequestMapping.class);
+            if(requestAnnotation !=null){
+                for (Parameter parameter : method.getParameters()){
+                    if(AnnotationUtils.getAnnotation(parameter,BaseParam.class) != null){
+                        continue;
+                    }
+                    Param paramAnnotation = method.getAnnotation(Param.class);
+                    if(paramAnnotation != null){
+                        String typeName = paramAnnotation.type();
+                        if(instance.getTypes().get(typeName) == null){
+                            throw new TrackException(TrackException.ErrorCode.Core, String.format("%s-%s-%s抽象类型未找到",instance.getName() ,method.getName(),paramAnnotation.type()));
+                        }
+                    }
+                    else if(instance.getTypes().get(parameter.getParameterizedType()) == null){
+                        throw new TrackException(TrackException.ErrorCode.Core, String.format("%s-%s-%s类型映射抽象类型",instance.getName() ,method.getName(),parameter.getParameterizedType()));
+                    }
+                }
             }
-            else return 0;
-        });
-        return (Request)enhancer.create();
+        }
     }
 
     public RequestConfig getConfig() {
@@ -63,48 +72,12 @@ public abstract class Request implements IRequest {
         this.name = name;
     }
 
-    public Net getNet() {
-        return net;
+    public Service getService() {
+        return service;
     }
 
-    public void setNet(Net net) {
-        this.net = net;
-    }
-
-    public ExceptionEvent getExceptionEvent() {
-        return exceptionEvent;
-    }
-
-    public void setExceptionEvent(ExceptionEvent exceptionEvent) {
-        this.exceptionEvent = exceptionEvent;
-    }
-
-    public LogEvent getLogEvent() {
-        return logEvent;
-    }
-
-    public void setLogEvent(LogEvent logEvent) {
-        this.logEvent = logEvent;
-    }
-    @Override
-
-    public void onException(TrackException.ErrorCode code, String message) {
-        onException(new TrackException(code,message));
-    }
-    @Override
-    public void onException(TrackException exception)  {
-        exception.setRequest(this);
-        exceptionEvent.onEvent(exception);
-    }
-    @Override
-
-    public void onLog(TrackLog.LogCode code, String message){
-        onLog(new TrackLog(code,message));
-    }
-    @Override
-    public void onLog(TrackLog log){
-        log.setRequest(this);
-        logEvent.onEvent(log);
+    public void setService(Service service) {
+        this.service = service;
     }
 
 }

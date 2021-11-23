@@ -2,9 +2,10 @@ package ServiceDemo;
 
 import Model.User;
 import RequestDemo.ClientRequest;
+import com.ethereal.server.Core.Manager.Event.Annotation.AfterEvent;
 import com.ethereal.server.Core.Model.TrackException;
-import com.ethereal.server.Server.Annotation.Token;
-import com.ethereal.server.Service.Annotation.ServiceMethod;
+import com.ethereal.server.Service.Annotation.Token;
+import com.ethereal.server.Service.Annotation.ServiceMapping;
 import com.ethereal.server.Service.WebSocket.WebSocketService;
 
 public class ServerService extends WebSocketService {
@@ -16,15 +17,16 @@ public class ServerService extends WebSocketService {
         types.add(String.class,"String");
         types.add(Boolean.class,"Bool");
         types.add(User.class,"User");
+        createMethod = User::new;
     }
     public ClientRequest userRequest;
-    @ServiceMethod
+    @ServiceMapping(mapping = "Register")
     public Boolean Register(@Token User user,String username, Long id){
         user.setUsername(username);
         user.setId(id);
         return user.Register();
     }
-    @ServiceMethod
+    @ServiceMapping(mapping = "SendSay")
     public Boolean SendSay(@Token User sender, Long listener_id, String message){
         User listener = sender.GetToken(listener_id);
         if(listener!= null){
@@ -32,18 +34,33 @@ public class ServerService extends WebSocketService {
         }
         return false;
     }
-    @ServiceMethod
+    @ServiceMapping(mapping = "Add")
     public Integer Add(Integer a, Integer b){
         return a+b;
     }
-    @ServiceMethod
+    @ServiceMapping(mapping = "Login")
     public Boolean Login(String username,String password){
         System.out.println(username + ":" + password);
         return true;
     }
+    @ServiceMapping(mapping = "test")
+    @AfterEvent(function = "instance.after(ddd:d,s:s)")
+    public Boolean test(String s,Integer d,Integer k){
+        System.out.println("test");
+        return true;
+    }
+    @Override
+    public void initialize() throws TrackException {
+        iocManager.register("instance",new EventClass());
+    }
 
     @Override
-    public void initialize() {
+    public void register() {
+
+    }
+
+    @Override
+    public void unregister() {
 
     }
 
@@ -51,4 +68,5 @@ public class ServerService extends WebSocketService {
     public void unInitialize() {
 
     }
+
 }

@@ -1,35 +1,11 @@
 package com.ethereal.server.Core.Model;
 
-import com.ethereal.server.Net.Abstract.Net;
-import com.ethereal.server.Request.Abstract.Request;
-import com.ethereal.server.Service.Abstract.Service;
-import com.ethereal.server.Server.Abstract.Token;
-import com.ethereal.server.Server.Abstract.Server;
-
 public class TrackException extends Exception {
     public enum ErrorCode {Core, Runtime, NotEthereal}
     private Exception exception;
     private ErrorCode errorCode;
-    private Server server;
-    private Service service;
-    private Request request;
-    private Net net;
-    private Token token;
 
-    public Token getToken() {
-        return token;
-    }
-
-    public void setToken(Token token) {
-        this.token = token;
-    }
-    public Server getServer() {
-        return server;
-    }
-
-    public void setServer(Server server) {
-        this.server = server;
-    }
+    private Object sender;
 
     public Exception getException() {
         return exception;
@@ -38,28 +14,13 @@ public class TrackException extends Exception {
     public void setException(Exception exception) {
         this.exception = exception;
     }
-    public Service getService() {
-        return service;
+
+    public Object getSender() {
+        return sender;
     }
 
-    public void setService(Service service) {
-        this.service = service;
-    }
-
-    public Request getRequest() {
-        return request;
-    }
-
-    public void setRequest(Request request) {
-        this.request = request;
-    }
-
-    public Net getNet() {
-        return net;
-    }
-
-    public void setNet(Net net) {
-        this.net = net;
+    public void setSender(Object sender) {
+        this.sender = sender;
     }
 
     public ErrorCode getErrorCode() {

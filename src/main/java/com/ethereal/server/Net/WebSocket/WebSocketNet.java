@@ -28,13 +28,4 @@ public class WebSocketNet extends Net {
         netType = NetType.WebSocket;
         config = new WebSocketNetConfig();
     }
-    @Override
-    public boolean publish() throws Exception {
-        try {
-            new Thread(()->server.Start()).start();
-        } catch (Exception e){
-            onException(new TrackException(e));
-        }
-        return true;
-    }
 }

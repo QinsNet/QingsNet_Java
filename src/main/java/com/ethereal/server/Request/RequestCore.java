@@ -1,46 +1,64 @@
 package com.ethereal.server.Request;
 
-import com.ethereal.server.Core.Model.AbstractTypes;
 import com.ethereal.server.Core.Model.TrackException;
-import com.ethereal.server.Net.Abstract.Net;
-import com.ethereal.server.Net.NetCore;
 import com.ethereal.server.Request.Abstract.Request;
+import com.ethereal.server.Request.Abstract.RequestMethodInterceptor;
+import com.ethereal.server.Request.Annotation.RequestMapping;
+import com.ethereal.server.Service.Abstract.Service;
+import com.ethereal.server.Service.ServiceCore;
+import net.sf.cglib.proxy.Callback;
+import net.sf.cglib.proxy.Enhancer;
+import net.sf.cglib.proxy.NoOp;
 
 public class RequestCore {
     //获取Request实体
-    public static <T> T get(String netName,String serviceName)  {
-        Net net = NetCore.get(netName);
-        if (net == null){
+    public static <T> T get(String netName,String serviceName,String requestName)  {
+        Service service = ServiceCore.get(netName,serviceName);
+        if(service == null){
             return null;
         }
-        else return (T)net.getRequests().get(serviceName);
+        return get(service,requestName);
     }
     //获取Request实体
-    public static <T> T get(Net net,String serviceName)  {
-        Object request = net.getRequests().get(serviceName);
+    public static <T> T get(Service service,String requestName)  {
+        Object request = service.getRequests().get(requestName);
         return (T)request;
     }
 
-    public static <T> T register(Net net, Class<?> requestClass) throws TrackException {
-        return register(net,requestClass,null,null);
+    public static <T> T register(Service service, Class<?> requestClass) throws TrackException {
+        return register(service,requestClass,null);
     }
-    public static <T> T register(Net net, Class<?> requestClass, String serviceName, AbstractTypes types) throws TrackException {
-        Request request = Request.register((Class<Request>) requestClass);
+    public static <T> T register(Service service, Class<?> requestClass, String serviceName) throws TrackException {
+        Enhancer enhancer = new Enhancer();
+        enhancer.setSuperclass(requestClass);
+        RequestMethodInterceptor interceptor = new RequestMethodInterceptor();
+        Callback noOp= NoOp.INSTANCE;
+        enhancer.setCallbacks(new Callback[]{noOp,interceptor});
+        enhancer.setCallbackFilter(method -> {
+            if(method.getAnnotation(RequestMapping.class) != null){
+                return 1;
+            }
+            else return 0;
+        });
+        Request request = (Request)enhancer.create();
+        request.initialize();
         if(serviceName!=null)request.setName(serviceName);
-        if(types!=null)request.setTypes(types);
-        if(!net.getRequests().containsKey(request.getName())){
-            request.setNet(net);
-            request.getExceptionEvent().register(net::onException);
-            request.getLogEvent().register(net::onLog);
-            net.getRequests().put(request.getName(), request);
+        if(!service.getRequests().containsKey(request.getName())){
+            Request.register(request);
+            request.setService(service);
+            request.getExceptionEvent().register(service::onException);
+            request.getLogEvent().register(service::onLog);
+            service.getRequests().put(request.getName(), request);
+            request.register();
             return (T)request;
         }
-        else throw new TrackException(TrackException.ErrorCode.Core,String.format("%s-%s已注册,无法重复注册！", net.getName(),serviceName));
+        else throw new TrackException(TrackException.ErrorCode.Core,String.format("%s-%s已注册,无法重复注册！", service.getName(),serviceName));
     }
     public static boolean unregister(Request request)  {
-        request.getNet().getServices().remove(request.getName());
-        request.setNet(null);
+        request.unregister();
+        request.getService().getRequests().remove(request.getName());
+        request.setService(null);
+        request.unInitialize();
         return true;
     }
-
 }

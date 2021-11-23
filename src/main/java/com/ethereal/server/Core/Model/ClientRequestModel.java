@@ -3,6 +3,7 @@ package com.ethereal.server.Core.Model;
 import com.google.gson.annotations.Expose;
 
 import java.util.Arrays;
+import java.util.HashMap;
 
 public class ClientRequestModel {
     @Expose(serialize = false,deserialize = false)
@@ -10,20 +11,11 @@ public class ClientRequestModel {
     @Expose
     private String type = "ER-1.0-ClientRequest";
     @Expose
-    private String methodId;
+    private String mapping;
     @Expose
-    private String[] params;
+    private HashMap<String ,String > params;
     @Expose
     private String id;
-    @Expose
-    private String service;
-
-    public ClientRequestModel(String jsonRpc, String service, String methodId, String[] params) {
-        type = jsonRpc;
-        methodId = methodId;
-        params = params;
-        service = service;
-    }
 
     public ClientResponseModel getResult() {
         return result;
@@ -41,19 +33,19 @@ public class ClientRequestModel {
         this.type = type;
     }
 
-    public String getMethodId() {
-        return methodId;
+    public String getMapping() {
+        return mapping;
     }
 
-    public void setMethodId(String methodId) {
-        this.methodId = methodId;
+    public void setMapping(String mapping) {
+        this.mapping = mapping;
     }
 
-    public String[] getParams() {
+    public HashMap<String, String> getParams() {
         return params;
     }
 
-    public void setParams(String[] params) {
+    public void setParams(HashMap<String, String> params) {
         this.params = params;
     }
 
@@ -65,23 +57,13 @@ public class ClientRequestModel {
         this.id = id;
     }
 
-    public String getService() {
-        return service;
-    }
-
-    public void setService(String service) {
-        this.service = service;
-    }
-
     @Override
     public String toString() {
         return "ClientRequestModel{" +
                 "result=" + result +
                 ", type='" + type + '\'' +
-                ", methodId='" + methodId + '\'' +
-                ", params=" + Arrays.toString(params) +
+                ", mapping='" + mapping + '\'' +
                 ", id='" + id + '\'' +
-                ", service='" + service + '\'' +
                 '}';
     }
 }

@@ -1,6 +1,6 @@
 package com.ethereal.server.Server.Delegate;
 
-import com.ethereal.server.Server.Abstract.Token;
+import com.ethereal.server.Service.Abstract.Token;
 
 public interface CreateInstanceDelegate {
     Token createInstance();

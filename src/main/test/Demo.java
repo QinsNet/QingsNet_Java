@@ -1,7 +1,7 @@
 import Model.User;
 import RequestDemo.ClientRequest;
 import ServiceDemo.ServerService;
-import com.ethereal.server.Core.Event.Delegate.ExceptionEventDelegate;
+import com.ethereal.server.Core.EventRegister.Delegate.ExceptionEventDelegate;
 import com.ethereal.server.Core.Model.TrackException;
 import com.ethereal.server.Net.Abstract.Net;
 import com.ethereal.server.Net.NetCore;
@@ -47,11 +47,10 @@ public class Demo {
         //向网关注册服务
         ServerService service = ServiceCore.register(net,new ServerService());
         //向网关注册请求
-        service.userRequest = RequestCore.register(net, ClientRequest.class);
-        Server server = ServerCore.register(net,new WebSocketServer(new ArrayList<>(), User::new));
+        service.userRequest = RequestCore.register(service, ClientRequest.class);
+        Server server = ServerCore.register(net,new WebSocketServer(new ArrayList<>()));
         server.getPrefixes().add("ethereal://127.0.0.1:28015/NetDemo/".replace("28015",port));
-        //启动服务
-        net.publish();
         server.getListenerSuccessEvent().register((value)->System.out.println(value.getPrefixes() + "启动成功"));
+        server.start();
     }
 }

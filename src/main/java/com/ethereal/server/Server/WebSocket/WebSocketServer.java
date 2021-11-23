@@ -25,8 +25,8 @@ public class WebSocketServer extends Server {
     protected boolean isClose = false;
     protected ExecutorService es;
     private Channel channel;
-    public WebSocketServer(List<String> prefixes, CreateInstanceDelegate createMethod) {
-        super(prefixes,createMethod);
+    public WebSocketServer(List<String> prefixes) {
+        super(prefixes);
         config = new WebSocketServerConfig();
         this.es= Executors.newFixedThreadPool(getConfig().threadCount);
     }
@@ -45,49 +45,53 @@ public class WebSocketServer extends Server {
     }
 
     @Override
-    public void Start() {
-        NioEventLoopGroup boss=new NioEventLoopGroup();
-        NioEventLoopGroup work=new NioEventLoopGroup();
+    public void start() {
         try {
-            URI uri = new URI(prefixes.get(0).replace("ethereal://","ws://"));
-            WebSocketServerHandshakerFactory wsFactory = new WebSocketServerHandshakerFactory(uri.toString(),null, false);
-            ServerBootstrap bootstrap = new ServerBootstrap();
-            bootstrap.group(boss,work)                                //2
-                    .channel(NioServerSocketChannel.class)            //3
-                    .childHandler(new ChannelInitializer<SocketChannel>() {    //5
-                        @Override
-                        public void initChannel(SocketChannel ch) {
-                            //数据处理
-                            ch.pipeline().addLast(new HttpServerCodec());
-                            ch.pipeline().addLast(new HttpObjectAggregator(getConfig().getMaxBufferSize()));
-                            ch.pipeline().addLast(new ChunkedWriteHandler());
-                            ch.pipeline().addLast(new CustomWebSocketHandler((WebSocketToken) createMethod.createInstance(),WebSocketServer.this,es, wsFactory));
+            NioEventLoopGroup boss=new NioEventLoopGroup();
+            NioEventLoopGroup work=new NioEventLoopGroup();
+            try {
+                URI uri = new URI(prefixes.get(0).replace("ethereal://","ws://"));
+                WebSocketServerHandshakerFactory wsFactory = new WebSocketServerHandshakerFactory(uri.toString(),null, false);
+                ServerBootstrap bootstrap = new ServerBootstrap();
+                bootstrap.group(boss,work)                                //2
+                        .channel(NioServerSocketChannel.class)            //3
+                        .childHandler(new ChannelInitializer<SocketChannel>() {    //5
+                            @Override
+                            public void initChannel(SocketChannel ch) {
+                                //数据处理
+                                ch.pipeline().addLast(new HttpServerCodec());
+                                ch.pipeline().addLast(new HttpObjectAggregator(getConfig().getMaxBufferSize()));
+                                ch.pipeline().addLast(new ChunkedWriteHandler());
+                                ch.pipeline().addLast(new CustomWebSocketHandler(net.getName(),es, wsFactory));
+                            }
+                        });
+                channel = bootstrap.bind(uri.getPort()).addListener(new ChannelFutureListener() {
+                    @Override
+                    public void operationComplete(ChannelFuture future) throws Exception {
+                        if (future.isSuccess()){
+                            onListenerSuccess();
                         }
-                    });
-            channel = bootstrap.bind(uri.getPort()).addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
-                    if (future.isSuccess()){
-                        onListenerSuccess();
+                        else {
+                            onListenerFailEvent();
+                        }
                     }
-                    else {
-                        onListenerFailEvent();
-                    }
-                }
-            }).channel();
-            channel.closeFuture().sync();
-        }
-        catch (Exception e){
+                }).channel();
+                channel.closeFuture().sync();
+            }
+            catch (Exception e){
+                onException(new TrackException(e));
+            }
+            finally {
+                boss.shutdownGracefully();
+                work.shutdownGracefully();
+            }
+        } catch (Exception e){
             onException(new TrackException(e));
-        }
-        finally {
-            boss.shutdownGracefully();
-            work.shutdownGracefully();
         }
     }
 
     @Override
-    public void Close() {
+    public void close() {
         if(!isClose){
             channel.close();
         }

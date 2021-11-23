@@ -28,7 +28,7 @@ public class ServerCore {
     public static boolean unregister(Server server)  {
         server.getNet().setServer(null);
         server.setNet(null);
-        server.Close();
+        server.close();
         return true;
     }
 }

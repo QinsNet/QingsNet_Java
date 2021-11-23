@@ -1,59 +1,17 @@
 package com.ethereal.server.Core.Model;
 
-import com.ethereal.server.Net.Abstract.Net;
-import com.ethereal.server.Request.Abstract.Request;
-import com.ethereal.server.Service.Abstract.Service;
-import com.ethereal.server.Server.Abstract.Token;
-import com.ethereal.server.Server.Abstract.Server;
-
 public class TrackLog {
     public enum LogCode { Core, Runtime }
     private String message;
     private LogCode code;
-    private Server server;
-    private Service service;
-    private Request request;
-    private Net net;
-    private Token token;
+    private Object sender;
 
-    public Token getToken() {
-        return token;
+    public Object getSender() {
+        return sender;
     }
 
-    public void setToken(Token token) {
-        this.token = token;
-    }
-
-    public Server getServer() {
-        return server;
-    }
-
-    public void setServer(Server server) {
-        this.server = server;
-    }
-
-    public Service getService() {
-        return service;
-    }
-
-    public void setService(Service service) {
-        this.service = service;
-    }
-
-    public Request getRequest() {
-        return request;
-    }
-
-    public void setRequest(Request request) {
-        this.request = request;
-    }
-
-    public Net getNet() {
-        return net;
-    }
-
-    public void setNet(Net net) {
-        this.net = net;
+    public void setSender(Object sender) {
+        this.sender = sender;
     }
 
     public String getMessage() {

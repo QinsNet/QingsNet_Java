@@ -1,6 +1,5 @@
 package com.ethereal.server.Service.WebSocket;
 
-import com.ethereal.server.Core.Model.AbstractTypes;
 import com.ethereal.server.Service.Abstract.ServiceConfig;
 
 /**

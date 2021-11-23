@@ -2,30 +2,27 @@ package com.ethereal.server.Server.WebSocket;
 import com.ethereal.server.Core.Model.ClientRequestModel;
 import com.ethereal.server.Core.Model.ClientResponseModel;
 import com.ethereal.server.Core.Model.Error;
-import com.ethereal.server.Core.Model.TrackException;
-import com.ethereal.server.Net.Abstract.Net;
-import com.ethereal.server.Net.NetCore;
-import com.ethereal.server.Server.Abstract.Server;
-import com.ethereal.server.Server.Abstract.ServerConfig;
+import com.ethereal.server.Service.Abstract.Service;
+import com.ethereal.server.Service.ServiceCore;
+import com.ethereal.server.Service.WebSocket.WebSocketToken;
+import com.ethereal.server.Utils.Utils;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.*;
 import io.netty.handler.codec.http.websocketx.*;
 
-import java.util.concurrent.ExecutionException;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 public class CustomWebSocketHandler extends SimpleChannelInboundHandler<Object> {
     protected WebSocketServerHandshaker handshaker;
-    protected WebSocketToken token;
     protected WebSocketServerHandshakerFactory handshakerFactory;
     protected ExecutorService es;
-    public CustomWebSocketHandler(WebSocketToken token, Server server, ExecutorService executorService, WebSocketServerHandshakerFactory handshakerFactory){
+    protected WebSocketToken token;
+    protected String net_name;
+    public CustomWebSocketHandler(String net_name,ExecutorService executorService, WebSocketServerHandshakerFactory handshakerFactory){
+        this.net_name = net_name;
         this.handshakerFactory = handshakerFactory;
-        this.token = token;
-        token.setServer(server);
         this.es = executorService;
     }
     @Override
@@ -41,15 +38,17 @@ public class CustomWebSocketHandler extends SimpleChannelInboundHandler<Object> 
     }
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        token.setCtx(ctx);
+
     }
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        token.onDisconnectEvent();
-        token.setServer(null);
-        token.setCtx(null);
-        token = null;
+        if(token != null){
+            token.onDisconnect();
+            token.setService(null);
+            token.setCtx(null);
+            token = null;
+        }
     }
     @Override
     public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
@@ -73,37 +72,53 @@ public class CustomWebSocketHandler extends SimpleChannelInboundHandler<Object> 
                     "%s frame types not supported", frame.getClass().getName()));
         }
         try {
-            String data = frame.content().toString(token.getServer().getConfig().getCharset());
-            ClientRequestModel clientRequestModel = token.getServer().getConfig().getClientRequestModelDeserialize().Deserialize(data);
+            String data = frame.content().toString(token.getService().getConfig().getCharset());
+            ClientRequestModel clientRequestModel = token.getService().getConfig().getClientRequestModelDeserialize().Deserialize(data);
             ClientResponseModel responseModel = null;
-            responseModel = es.submit(() -> token.getServer().getNet().clientRequestReceiveProcess(token,clientRequestModel)).get(token.getServer().getConfig().getProcessTimeout(), TimeUnit.MILLISECONDS);
-            if(responseModel == null)throw new TrackException(TrackException.ErrorCode.Runtime, String.format("%s-%s-执行超时", clientRequestModel.getMethodId(),clientRequestModel.getService()));
-            token.sendClientResponse(responseModel);
+            responseModel = es.submit(() -> token.getService().clientRequestReceiveProcess(token,clientRequestModel)).get();
+            if(responseModel != null)token.sendClientResponse(responseModel);
         }
         catch (Exception e){
-            token.sendClientResponse(new ClientResponseModel(null,null,new Error(Error.ErrorCode.NotFoundNet,String.format("%s", e.getMessage())),null,null));
+            token.sendClientResponse(new ClientResponseModel(null,null,new Error(Error.ErrorCode.NotFoundNet,String.format("%s", e.getMessage()))));
         }
     }
     /**
      * 唯一的一次http请求，用于创建websocket
      * */
     private void handleHttpRequest(ChannelHandlerContext ctx,
-                                   FullHttpRequest req) throws ExecutionException, InterruptedException, TimeoutException {
+                                   FullHttpRequest req) {
+        String[] urls = req.uri().split("/");
+        if(urls.length == 0){
+            sendHttpToClient(ctx,new ClientResponseModel(null,null,new Error(Error.ErrorCode.NotFoundNet,   "URL路径有误:"+ req.uri())));
+            return;
+        }
+        String service_name = null;
+        if(urls[urls.length-1].equals("")){
+            service_name = urls[urls.length-2];
+        }
+        else service_name = urls[urls.length-1];
+        Service service = ServiceCore.get(net_name,service_name);
+        if(service == null){
+            sendHttpToClient(ctx,new ClientResponseModel(null,null,new Error(Error.ErrorCode.NotFoundNet,   "未找到Service:"+ service_name,null)));
+            return;
+        }
+        token =(WebSocketToken)service.getCreateMethod().createInstance();
+        token.setService(service);
+        token.setCtx(ctx);
         //要求Upgrade为websocket，过滤掉get/Post
         if (!(("websocket".equals(req.headers().get("Upgrade"))) || ("WebSocket".equals(req.headers().get("Upgrade"))))) {
             try {
-                String data = req.content().toString(token.getServer().getConfig().getCharset());
-                ClientRequestModel clientRequestModel = token.getServer().getConfig().getClientRequestModelDeserialize().Deserialize(data);
+                String data = req.content().toString(token.getService().getConfig().getCharset());
+                ClientRequestModel clientRequestModel = token.getService().getConfig().getClientRequestModelDeserialize().Deserialize(data);
                 token.setCanRequest(false);
                 token.onConnect();
                 ClientResponseModel responseModel = null;
-                responseModel = es.submit(() -> token.getServer().getNet().clientRequestReceiveProcess(token,clientRequestModel)).get(token.getServer().getConfig().getProcessTimeout(), TimeUnit.MILLISECONDS);
-                sendHttpToClient(ctx,responseModel);
+                responseModel = es.submit(() -> token.getService().clientRequestReceiveProcess(token,clientRequestModel)).get();
+                if(responseModel!=null)sendHttpToClient(ctx,responseModel);
                 return;
             }
             catch (Exception e){
-                sendHttpToClient(ctx,new ClientResponseModel(null,null,new Error(Error.ErrorCode.NotFoundNet, "未找到节点{net}")
-                        ,null,null));
+                sendHttpToClient(ctx,new ClientResponseModel(null,null,new Error(Error.ErrorCode.NotFoundNet, "未找到节点{net}")));
             }
             finally {
                 ctx.close();
@@ -123,10 +138,12 @@ public class CustomWebSocketHandler extends SimpleChannelInboundHandler<Object> 
     /**
      * 拒绝不合法的请求，并返回错误信息
      * */
-    private void sendHttpToClient(ChannelHandlerContext ctx, ClientResponseModel responseModel) {
-        DefaultFullHttpResponse res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,HttpResponseStatus.OK);
-        res.setProtocolVersion(HttpVersion.HTTP_1_1);
-        res.content().writeBytes(token.getServer().getConfig().getClientResponseModelSerialize().Serialize(responseModel).getBytes(token.getServer().getConfig().getCharset()));
+    private void sendHttpToClient(ChannelHandlerContext ctx ,ClientResponseModel responseModel) {
+        DefaultFullHttpResponse res = null;
+        if(responseModel.getError()==null)res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,HttpResponseStatus.OK);
+        else res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,HttpResponseStatus.OK);
+        if(token == null)res.content().writeBytes(Utils.gson.toJson(responseModel).getBytes(StandardCharsets.UTF_8));
+        else res.content().writeBytes(token.getService().getConfig().getClientResponseModelSerialize().Serialize(responseModel).getBytes(token.getService().getConfig().getCharset()));
         ctx.channel().writeAndFlush(res);
     }
 }

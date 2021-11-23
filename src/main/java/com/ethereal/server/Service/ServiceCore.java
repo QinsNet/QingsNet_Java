@@ -1,6 +1,6 @@
 package com.ethereal.server.Service;
 
-import com.ethereal.server.Core.Model.AbstractTypes;
+import com.ethereal.server.Core.Manager.AbstractType.AbstractTypeManager;
 import com.ethereal.server.Core.Model.TrackException;
 import com.ethereal.server.Net.Abstract.Net;
 import com.ethereal.server.Net.NetCore;
@@ -19,23 +19,27 @@ public class ServiceCore {
     public static <T> T register(Net net,Service service) throws TrackException{
         return register(net,service,null,null);
     }
-    public static <T> T register(Net net,Service service,String serviceName,AbstractTypes types) throws TrackException {
+    public static <T> T register(Net net, Service service, String serviceName, AbstractTypeManager types) throws TrackException {
+        service.initialize();
         if(serviceName!=null)service.setName(serviceName);
         if(types!=null)service.setTypes(types);
-        Service.register(service);
         if(!net.getServices().containsKey(service.getName())){
+            Service.register(service);
             service.setNet(net);
             service.getExceptionEvent().register(net::onException);
             service.getLogEvent().register(net::onLog);
             net.getServices().put(service.getName(),service);
+            service.register();
             return (T) service;
         }
         else throw new TrackException(TrackException.ErrorCode.Core,String.format("%s-%s已注册,无法重复注册！",net.getName(),service.getName()));
     }
 
     public static boolean unregister(Service service) {
+        service.unregister();
         service.getNet().getServices().remove(service.getName());
         service.setNet(null);
+        service.unInitialize();
         return true;
     }
 }

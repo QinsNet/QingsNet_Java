@@ -3,7 +3,7 @@ package RequestDemo;
 
 import Model.User;
 import com.ethereal.server.Core.Model.TrackException;
-import com.ethereal.server.Request.Annotation.RequestMethod;
+import com.ethereal.server.Request.Annotation.RequestMapping;
 import com.ethereal.server.Request.WebSocket.WebSocketRequest;
 
 public class ClientRequest extends WebSocketRequest {
@@ -15,7 +15,7 @@ public class ClientRequest extends WebSocketRequest {
         types.add(Boolean.class,"Bool");
         types.add(User.class,"User");
     }
-    @RequestMethod
+    @RequestMapping(mapping = "Say")
     public void Say(User user, User sender, String message)
     {
         System.out.println(sender.getUsername() + ":" + message);
@@ -23,6 +23,16 @@ public class ClientRequest extends WebSocketRequest {
 
     @Override
     public void initialize() {
+
+    }
+
+    @Override
+    public void register() {
+
+    }
+
+    @Override
+    public void unregister() {
 
     }
 
