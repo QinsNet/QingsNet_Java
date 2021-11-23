@@ -21,15 +21,6 @@ public abstract class Request extends MZCore implements IRequest {
     protected String name;
     protected Service service;
     protected RequestConfig config;
-    protected AbstractTypeManager types = new AbstractTypeManager();
-
-    public AbstractTypeManager getTypes() {
-        return types;
-    }
-
-    public void setTypes(AbstractTypeManager types) {
-        this.types = types;
-    }
 
     public static void register(Request instance) throws TrackException {
         for (Method method : instance.getClass().getMethods()){

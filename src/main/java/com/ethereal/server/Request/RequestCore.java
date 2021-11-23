@@ -2,7 +2,7 @@ package com.ethereal.server.Request;
 
 import com.ethereal.server.Core.Model.TrackException;
 import com.ethereal.server.Request.Abstract.Request;
-import com.ethereal.server.Request.Abstract.RequestMethodInterceptor;
+import com.ethereal.server.Request.Abstract.RequestInterceptor;
 import com.ethereal.server.Request.Annotation.RequestMapping;
 import com.ethereal.server.Service.Abstract.Service;
 import com.ethereal.server.Service.ServiceCore;
@@ -31,7 +31,7 @@ public class RequestCore {
     public static <T> T register(Service service, Class<?> requestClass, String serviceName) throws TrackException {
         Enhancer enhancer = new Enhancer();
         enhancer.setSuperclass(requestClass);
-        RequestMethodInterceptor interceptor = new RequestMethodInterceptor();
+        RequestInterceptor interceptor = new RequestInterceptor();
         Callback noOp= NoOp.INSTANCE;
         enhancer.setCallbacks(new Callback[]{noOp,interceptor});
         enhancer.setCallbackFilter(method -> {

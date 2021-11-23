@@ -30,7 +30,6 @@ import java.util.HashMap;
 @com.ethereal.server.Service.Annotation.Service
 public abstract class Service extends MZCore implements IService {
     protected HashMap<String,Method> methods = new HashMap<>();
-    protected AbstractTypeManager types = new AbstractTypeManager();
     protected Net net;
     protected String name;
     protected ServiceConfig config;
@@ -96,14 +95,6 @@ public abstract class Service extends MZCore implements IService {
         this.interceptorEvent = interceptorEvent;
     }
 
-    public AbstractTypeManager getTypes() {
-        return types;
-    }
-
-    public void setTypes(AbstractTypeManager types) {
-        this.types = types;
-    }
-
     public HashMap<String, Method> getMethods() {
         return methods;
     }
@@ -141,11 +132,11 @@ public abstract class Service extends MZCore implements IService {
                     if(paramAnnotation != null){
                         String typeName = paramAnnotation.type();
                         if(instance.getTypes().get(typeName) == null){
-                            throw new TrackException(TrackException.ErrorCode.Core, String.format("%s 返回值未提供抽象类型方案", method.getName()));
+                            throw new TrackException(TrackException.ErrorCode.Core, String.format("%s 未提供 %s 抽象类型的映射", method.getName(),typeName));
                         }
                     }
                     else if(instance.getTypes().get(method.getReturnType()) == null){
-                        throw new TrackException(TrackException.ErrorCode.Core, String.format("%s 返回值未提供抽象类型方案", method.getName()));
+                        throw new TrackException(TrackException.ErrorCode.Core, String.format("%s 返回值未提供 %s 类型的抽象映射", method.getName(),method.getReturnType()));
                     }
                 }
                 for (Parameter parameter : method.getParameters()){
@@ -182,11 +173,13 @@ public abstract class Service extends MZCore implements IService {
                         if(parameterInfo.getAnnotation(com.ethereal.server.Service.Annotation.Token.class) != null){
                             args[idx] = token;
                         }
-                        if(request.getParams().containsKey(parameterInfo.getName())){
+                        else if(request.getParams().containsKey(parameterInfo.getName())){
                             String value = request.getParams().get(parameterInfo.getName());
                             AbstractType type = getTypes().get(parameterInfo);
                             args[idx] = type.getDeserialize().Deserialize(value);
                         }
+                        else throw new TrackException(TrackException.ErrorCode.Runtime,
+                                String.format("%s实例中%s方法的%s参数未提供注入方案",name,method.getName(),parameterInfo.getName()));
                         params.put(parameterInfo.getName(), args[idx++]);
                     }
                     BeforeEvent beforeEvent = method.getAnnotation(BeforeEvent.class);

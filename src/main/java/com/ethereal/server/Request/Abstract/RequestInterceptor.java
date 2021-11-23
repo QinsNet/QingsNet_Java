@@ -19,7 +19,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.HashMap;
 
-public class RequestMethodInterceptor implements MethodInterceptor {
+public class RequestInterceptor implements MethodInterceptor {
     @Override
     public Object intercept(Object o, Method method, Object[] args, MethodProxy methodProxy) throws Throwable {
         Request instance = (Request) o;

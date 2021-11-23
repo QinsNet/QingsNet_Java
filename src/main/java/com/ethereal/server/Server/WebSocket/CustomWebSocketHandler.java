@@ -124,7 +124,6 @@ public class CustomWebSocketHandler extends SimpleChannelInboundHandler<Object> 
                 ctx.close();
             }
         }
-
         handshaker = handshakerFactory.newHandshaker(req);
         if (handshaker == null) {
             System.out.println("空");
@@ -139,11 +138,12 @@ public class CustomWebSocketHandler extends SimpleChannelInboundHandler<Object> 
      * 拒绝不合法的请求，并返回错误信息
      * */
     private void sendHttpToClient(ChannelHandlerContext ctx ,ClientResponseModel responseModel) {
-        DefaultFullHttpResponse res = null;
+        DefaultFullHttpResponse res;
         if(responseModel.getError()==null)res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,HttpResponseStatus.OK);
         else res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,HttpResponseStatus.OK);
         if(token == null)res.content().writeBytes(Utils.gson.toJson(responseModel).getBytes(StandardCharsets.UTF_8));
         else res.content().writeBytes(token.getService().getConfig().getClientResponseModelSerialize().Serialize(responseModel).getBytes(token.getService().getConfig().getCharset()));
         ctx.channel().writeAndFlush(res);
+        ctx.close();
     }
 }
