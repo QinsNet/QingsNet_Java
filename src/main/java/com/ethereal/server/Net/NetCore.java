@@ -1,12 +1,7 @@
 package com.ethereal.server.Net;
 
-import com.ethereal.server.Core.Enums.NetType;
 import com.ethereal.server.Core.Model.TrackException;
 import com.ethereal.server.Net.Abstract.Net;
-import com.ethereal.server.Net.Abstract.NetConfig;
-import com.ethereal.server.Net.WebSocket.WebSocketNet;
-import com.ethereal.server.Net.WebSocket.WebSocketNetConfig;
-import com.ethereal.server.Request.Abstract.Request;
 
 import java.util.HashMap;
 
@@ -20,26 +15,21 @@ public class NetCore {
     }
 
     public static Net register(Net net) throws TrackException {
-        if (!nets.containsKey(net.getName()))
+        if (!net.isRegister())
         {
+            net.setRegister(true);
             nets.put(net.getName(), net);
             return net;
         }
         else throw new TrackException(TrackException.ErrorCode.Core,String.format("%s已注册,无法重复注册！", net.getName()));
     }
 
-    public static Boolean unregister(String name)  {
-        Net net = get(name);
-        return unregister(net);
-    }
-    public static Boolean unregister(Net net)
-    {
-        if(net != null){
-            if(nets.containsKey(net.getName())){
-                nets.remove(net.getName());
-            }
+    public static Boolean unregister(Net net) throws TrackException {
+        if(net.isRegister()){
+            nets.remove(net.getName());
+            net.setRegister(false);
+            return true;
         }
-        return true;
+        else throw new TrackException(TrackException.ErrorCode.Runtime, String.format("%s已经UnRegister,无法重复UnRegister", net.getName()));
     }
-
 }

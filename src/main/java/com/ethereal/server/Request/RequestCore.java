@@ -43,7 +43,8 @@ public class RequestCore {
         Request request = (Request)enhancer.create();
         request.initialize();
         if(serviceName!=null)request.setName(serviceName);
-        if(!service.getRequests().containsKey(request.getName())){
+        if(!service.isRegister()){
+            service.setRegister(true);
             Request.register(request);
             request.setService(service);
             request.getExceptionEvent().register(service::onException);
@@ -54,11 +55,15 @@ public class RequestCore {
         }
         else throw new TrackException(TrackException.ErrorCode.Core,String.format("%s-%s已注册,无法重复注册！", service.getName(),serviceName));
     }
-    public static boolean unregister(Request request)  {
-        request.unregister();
-        request.getService().getRequests().remove(request.getName());
-        request.setService(null);
-        request.unInitialize();
-        return true;
+    public static boolean unregister(Request request) throws TrackException {
+        if(request.isRegister()){
+            request.unregister();
+            request.getService().getRequests().remove(request.getName());
+            request.setService(null);
+            request.unInitialize();
+            request.setRegister(false);
+            return true;
+        }
+        else throw new TrackException(TrackException.ErrorCode.Runtime, String.format("%s已经UnRegister,无法重复UnRegister", request.getName()));
     }
 }

@@ -16,19 +16,25 @@ public class ServerCore {
     }
 
     public static Server register(Net net,Server server) throws TrackException {
-        if(net.getServer() == null){
+        if(!server.isRegister()){
+            server.setRegister(true);
             net.setServer(server);
             server.setNet(net);
             server.getLogEvent().register(net::onLog);//日志系统
             server.getExceptionEvent().register(net::onException);//异常系统
+            return server;
         }
-        return server;
+        else throw new TrackException(TrackException.ErrorCode.Core,String.format("%s-%s已注册,无法重复注册！", net.getName(),server.getPrefixes()));
     }
 
-    public static boolean unregister(Server server)  {
-        server.getNet().setServer(null);
-        server.setNet(null);
-        server.close();
-        return true;
+    public static boolean unregister(Server server) throws TrackException {
+        if(server.isRegister()){
+            server.getNet().setServer(null);
+            server.setNet(null);
+            server.close();
+            server.setRegister(false);
+            return true;
+        }
+        else throw new TrackException(TrackException.ErrorCode.Runtime, String.format("%s已经UnRegister,无法重复UnRegister", server.getPrefixes()));
     }
 }

@@ -10,6 +10,15 @@ import com.ethereal.server.Core.Model.TrackLog;
 public class BaseCore implements IExceptionEvent, ILogEvent {
     private ExceptionEvent exceptionEvent = new ExceptionEvent();
     private LogEvent logEvent = new LogEvent();
+    private Boolean isRegister = false;
+
+    public Boolean isRegister() {
+        return isRegister;
+    }
+
+    public void setRegister(Boolean register) {
+        isRegister = register;
+    }
 
     public ExceptionEvent getExceptionEvent() {
         return exceptionEvent;
