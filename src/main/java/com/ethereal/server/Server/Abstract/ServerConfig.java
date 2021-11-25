@@ -6,11 +6,12 @@ import com.ethereal.server.Core.Model.ServerRequestModel;
 import com.ethereal.server.Server.Delegate.ClientRequestModelDeserializeDelegate;
 import com.ethereal.server.Server.Delegate.ClientResponseModelSerializeDelegate;
 import com.ethereal.server.Server.Delegate.ServerRequestModelSerializeDelegate;
+import com.ethereal.server.Server.Interface.IServerConfig;
 import com.ethereal.server.Utils.Utils;
 
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
-public class ServerConfig {
+public class ServerConfig implements IServerConfig {
 
 }

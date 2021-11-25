@@ -1,5 +1,7 @@
 package com.ethereal.server.Net.Abstract;
 
+import com.ethereal.server.Net.Interface.INetConfig;
+
 /**
  * @ProjectName: YiXian_Client
  * @Package: com.yixian.material.RPC
@@ -12,6 +14,6 @@ package com.ethereal.server.Net.Abstract;
  * @UpdateRemark: 更新说明
  * @Version: 1.0
  */
-public abstract class NetConfig {
+public abstract class NetConfig implements INetConfig {
 
 }

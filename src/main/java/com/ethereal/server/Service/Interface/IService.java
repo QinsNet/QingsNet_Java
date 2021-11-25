@@ -5,7 +5,7 @@ import com.ethereal.server.Core.Interface.ILogEvent;
 import com.ethereal.server.Core.Model.TrackException;
 import com.ethereal.server.Service.Abstract.ServiceConfig;
 
-public interface IService extends IExceptionEvent, ILogEvent {
+public interface IService{
     void initialize() throws TrackException;
     void register();
     void unregister();
