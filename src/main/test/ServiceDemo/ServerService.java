@@ -2,11 +2,11 @@ package ServiceDemo;
 
 import Model.User;
 import RequestDemo.ClientRequest;
-import com.ethereal.server.Core.Manager.Event.Annotation.AfterEvent;
-import com.ethereal.server.Core.Model.TrackException;
-import com.ethereal.server.Service.Annotation.Token;
-import com.ethereal.server.Service.Annotation.ServiceMapping;
-import com.ethereal.server.Service.WebSocket.WebSocketService;
+import com.ethereal.net.core.manager.event.Annotation.AfterEvent;
+import com.ethereal.net.core.entity.TrackException;
+import com.ethereal.net.service.annotation.Token;
+import com.ethereal.net.service.annotation.ServiceMapping;
+import com.ethereal.net.service.WebSocket.WebSocketService;
 
 public class ServerService extends WebSocketService {
 

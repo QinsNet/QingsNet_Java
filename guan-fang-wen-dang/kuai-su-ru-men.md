@@ -190,7 +190,7 @@ types.add(Boolean,"Bool");
 types.add(User.class,"User");
 Net net = NetCore.register("name", Net.NetType.WebSocket); //注册网关
 Client client = ClientCore.Register(net,"127.0.0.1:28015/NetDemo/");//注册客户端
-Request request = RequestCore.register(ServerRequest.class,net, "Server", types);//注册请求
+Request requestMeta = RequestCore.register(ServerRequest.class,net, "Server", types);//注册请求
 net.publish();//启动
 ```
 
@@ -287,9 +287,9 @@ BaseToken内含有唯一Key值属性，Ethereal通过用户给予的Key值属性
 
 ```text
 [Service]
-public bool Login(BaseToken token, string username,string password)
+public bool Login(BaseToken node, string username,string password)
 {
-    token.Key = username;//为该token设置键值属性
+    node.Key = username;//为该token设置键值属性
     BaseToken.Register();//将token注册，受Ethereal管理其生命周期
 }
 ```
@@ -300,7 +300,7 @@ public bool Login(BaseToken token, string username,string password)
 public class ServerService
 {
     [Service]
-    public int Add(BaseToken token,int a,int b)
+    public int Add(BaseToken node,int a,int b)
     {
         return a + b;
     }
@@ -382,7 +382,7 @@ public class ServerService
         if (reciver != null)
         {
             //向listener用户发送Hello请求
-            request.Say(reciver,user.Name + "说:" + message);
+            requestMeta.Say(reciver,user.Name + "说:" + message);
             return true;
         }
         else return false;
@@ -436,9 +436,9 @@ Ethereal的服务拦截分为Net层拦截，以及Service层拦截，且两层�
 
 ```text
 service.InterceptorEvent += Interceptor;
-private static bool Interceptor(Net net, Service service, MethodInfo method, Token token)
+private static bool Interceptor(Net net, Service service, MethodInfo method, Token node)
 {
-    if (token.Key == "123")
+    if (node.Key == "123")
     {
         return false;
     }
@@ -456,7 +456,7 @@ public bool SendSay(User user, long recevier_key, string message)
     if (reciver != null)
     {
         //向listener用户发送Hello请求
-        request.Say(reciver,user.Name + "说:" + message);
+        requestMeta.Say(reciver,user.Name + "说:" + message);
         return true;
     }
     else return false;

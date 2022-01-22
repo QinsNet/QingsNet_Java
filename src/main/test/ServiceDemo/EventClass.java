@@ -1,6 +1,6 @@
 package ServiceDemo;
 
-import com.ethereal.server.Core.Manager.Event.Annotation.Event;
+import com.ethereal.net.core.manager.event.Annotation.Event;
 
 public class EventClass {
     @Event(mapping = "after")

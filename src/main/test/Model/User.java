@@ -1,6 +1,6 @@
 package Model;
 
-import com.ethereal.server.Service.WebSocket.WebSocketToken;
+import com.ethereal.net.service.WebSocket.WebSocketToken;
 import com.google.gson.annotations.Expose;
 
 public class User extends WebSocketToken {

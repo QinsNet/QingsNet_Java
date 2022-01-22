@@ -2,9 +2,9 @@ package RequestDemo;
 
 
 import Model.User;
-import com.ethereal.server.Core.Model.TrackException;
-import com.ethereal.server.Request.Annotation.RequestMapping;
-import com.ethereal.server.Request.WebSocket.WebSocketRequest;
+import com.ethereal.net.core.entity.TrackException;
+import com.ethereal.net.request.annotation.RequestMapping;
+import com.ethereal.net.request.WebSocket.WebSocketRequest;
 
 public class ClientRequest extends WebSocketRequest {
     public ClientRequest() throws TrackException {
