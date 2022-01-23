@@ -1,23 +1,25 @@
 package com.ethereal.net.service.core;
 
 import com.ethereal.net.core.annotation.BaseParam;
-import com.ethereal.net.core.base.MZCore;
+import com.ethereal.net.core.base.BaseCore;
+import com.ethereal.net.core.manager.ioc.IocManager;
+import com.ethereal.net.core.manager.type.AbstractTypeManager;
 import com.ethereal.net.core.manager.type.Param;
 import com.ethereal.net.core.manager.type.AbstractType;
-import com.ethereal.net.core.manager.event.Annotation.AfterEvent;
-import com.ethereal.net.core.manager.event.Annotation.BeforeEvent;
-import com.ethereal.net.core.manager.event.Model.AfterEventContext;
-import com.ethereal.net.core.manager.event.Model.BeforeEventContext;
-import com.ethereal.net.core.manager.event.Model.EventContext;
-import com.ethereal.net.core.manager.event.Model.ExceptionEventContext;
+import com.ethereal.net.core.manager.aop.annotation.AfterEvent;
+import com.ethereal.net.core.manager.aop.annotation.BeforeEvent;
+import com.ethereal.net.core.manager.aop.context.AfterEventContext;
+import com.ethereal.net.core.manager.aop.context.BeforeEventContext;
+import com.ethereal.net.core.manager.aop.context.EventContext;
+import com.ethereal.net.core.manager.aop.context.ExceptionEventContext;
 import com.ethereal.net.core.entity.*;
 import com.ethereal.net.core.entity.Error;
 import com.ethereal.net.net.core.Net;
 import com.ethereal.net.node.core.Node;
 import com.ethereal.net.service.annotation.ServiceMapping;
-import com.ethereal.net.service.event.delegate.InterceptorDelegate;
 import com.ethereal.net.service.event.InterceptorEvent;
 import com.ethereal.net.service.annotation.IService;
+import com.ethereal.net.service.event.delegate.InterceptorDelegate;
 import com.ethereal.net.utils.AnnotationUtils;
 import lombok.Getter;
 import lombok.Setter;
@@ -26,48 +28,55 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.function.Function;
 
 @Getter
 @Setter
 @com.ethereal.net.service.annotation.Service
-public abstract class Service extends MZCore implements IService {
+public abstract class Service extends BaseCore implements IService {
     protected HashMap<String,Method> methods = new HashMap<>();
+    protected Net net;
     protected Service parent;
-    protected String name;
+    protected String prefixes;
     protected ServiceConfig config;
     protected InterceptorEvent interceptorEvent = new InterceptorEvent();
     protected HashMap<String,Service> services = new HashMap<>();
     protected HashMap<Object, Node> tokens = new HashMap<>();
-    protected Boolean enable;
-    public abstract Node createNode(RequestMeta requestMeta);
+    protected Boolean initialized = false;
+    @Getter
+    protected String name;
+    @Getter
+    protected AbstractTypeManager types = new AbstractTypeManager();
+    @Getter
+    protected IocManager iocManager = new IocManager();
+
+    public abstract Node createNode(String raw_node);
     public boolean onInterceptor(RequestMeta requestMeta)
     {
         if (interceptorEvent != null)
         {
             for (InterceptorDelegate item : interceptorEvent.getListeners())
             {
-                if (!item.onInterceptor(requestMeta)) return false;
+                if (!item.onInterceptor(this,requestMeta)) return false;
             }
             return true;
         }
         else return true;
     }
 
-    public static void register(Service instance) throws TrackException {
-        for (Method method : instance.getClass().getMethods()){
+    public Service() throws TrackException {
+        for (Method method : getClass().getMethods()){
             ServiceMapping requestAnnotation = method.getAnnotation(ServiceMapping.class);
             if(requestAnnotation !=null){
                 if(method.getReturnType() != void.class){
                     Param paramAnnotation = method.getAnnotation(Param.class);
                     if(paramAnnotation != null){
                         String typeName = paramAnnotation.type();
-                        if(instance.getTypes().get(typeName) == null){
-                            throw new TrackException(TrackException.ErrorCode.Core, String.format("%s 未提供 %s 抽象类型的映射", method.getName(),typeName));
+                        if(getTypes().get(typeName) == null){
+                            throw new TrackException(TrackException.ErrorCode.Initialize, String.format("%s 未提供 %s 抽象类型的映射", method.getName(),typeName));
                         }
                     }
-                    else if(instance.getTypes().get(method.getReturnType()) == null){
-                        throw new TrackException(TrackException.ErrorCode.Core, String.format("%s 返回值未提供 %s 类型的抽象映射", method.getName(),method.getReturnType()));
+                    else if(getTypes().get(method.getReturnType()) == null){
+                        throw new TrackException(TrackException.ErrorCode.Initialize, String.format("%s 返回值未提供 %s 类型的抽象映射", method.getName(),method.getReturnType()));
                     }
                 }
                 for (Parameter parameter : method.getParameters()){
@@ -77,15 +86,15 @@ public abstract class Service extends MZCore implements IService {
                     Param paramAnnotation = method.getAnnotation(Param.class);
                     if(paramAnnotation != null){
                         String typeName = paramAnnotation.type();
-                        if(instance.getTypes().get(typeName) == null){
-                            throw new TrackException(TrackException.ErrorCode.Core, String.format("%s-%s-%s抽象类型未找到",instance.getName() ,method.getName(),paramAnnotation.type()));
+                        if(getTypes().get(typeName) == null){
+                            throw new TrackException(TrackException.ErrorCode.Initialize, String.format("%s-%s-%s抽象类型未找到",getName() ,method.getName(),paramAnnotation.type()));
                         }
                     }
-                    else if(instance.getTypes().get(parameter.getParameterizedType()) == null){
-                        throw new TrackException(TrackException.ErrorCode.Core, String.format("%s-%s-%s类型映射抽象类型",instance.getName() ,method.getName(),parameter.getParameterizedType()));
+                    else if(getTypes().get(parameter.getParameterizedType()) == null){
+                        throw new TrackException(TrackException.ErrorCode.Initialize, String.format("%s-%s-%s类型映射抽象类型",getName() ,method.getName(),parameter.getParameterizedType()));
                     }
                 }
-                instance.methods.put(requestAnnotation.mapping(),method);
+                methods.put(requestAnnotation.mapping(),method);
             }
         }
     }
@@ -123,7 +132,7 @@ public abstract class Service extends MZCore implements IService {
                     localResult = method.invoke(this,args);
                 }
                 catch (Exception e){
-                    com.ethereal.net.core.manager.event.Annotation.ExceptionEvent exceptionEvent = method.getAnnotation(com.ethereal.net.core.manager.event.Annotation.ExceptionEvent.class);
+                    com.ethereal.net.core.manager.aop.annotation.ExceptionEvent exceptionEvent = method.getAnnotation(com.ethereal.net.core.manager.aop.annotation.ExceptionEvent.class);
                     if(exceptionEvent != null){
                         eventContext = new ExceptionEventContext(params,method,e);
                         String iocObjectName = exceptionEvent.function().substring(0, exceptionEvent.function().indexOf("."));
@@ -155,16 +164,38 @@ public abstract class Service extends MZCore implements IService {
         }
     }
 
+    
+    public <T> T register(Service service) throws TrackException {
+        if(!service.getInitialized()){
+            service.setInitialized(true);
+            service.initialize();
+            service.setParent(this);
+            service.setNet(net);
+            service.setPrefixes(service.getPrefixes() + this.getName());
+            service.getExceptionEvent().register(this::onException);
+            service.getLogEvent().register(this::onLog);
+            services.put(service.getName(),service);
+            return (T) service;
+        }
+        else throw new TrackException(TrackException.ErrorCode.Initialize,String.format("%s/%s已注册,无法重复注册！",prefixes,service.getName()));
+    }
 
-    public static boolean unregister(Service service) throws TrackException {
-        if(service.getRegister()){
-            service.unregister();
-            service.getNet().getServices().remove(service.getName());
-            service.setNet(null);
-            service.unInitialize();
-            service.setRegister(false);
+    public boolean unRegister() throws TrackException {
+        if(initialized){
+            unInitialize();
+            for(Service service : services.values()){
+                service.unRegister();
+            }
+            if(parent != null){
+                parent.getServices().remove(name);
+            }
+            else net.getServices().remove(name);
+            parent = null;
+            net = null;
+            prefixes = null;
+            initialized = false;
             return true;
         }
-        else throw new TrackException(TrackException.ErrorCode.Runtime, String.format("%s已经UnRegister,无法重复UnRegister", service.getName()));
+        else throw new TrackException(TrackException.ErrorCode.Runtime, String.format("%s已经UnRegister,无法重复UnRegister", prefixes));
     }
 }

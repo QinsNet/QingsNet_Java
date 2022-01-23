@@ -1,6 +1,6 @@
-package com.ethereal.net.request.event.Model;
+package com.ethereal.net.request.aop.context;
 
-import com.ethereal.net.core.manager.event.Model.EventContext;
+import com.ethereal.net.core.manager.aop.context.EventContext;
 
 import java.lang.reflect.Method;
 import java.util.HashMap;

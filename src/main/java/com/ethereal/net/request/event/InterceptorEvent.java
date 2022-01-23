@@ -1,12 +1,11 @@
-package com.ethereal.net.service.event;
+package com.ethereal.net.request.event;
 
 import com.ethereal.net.core.entity.RequestMeta;
-import com.ethereal.net.net.core.Net;
+import com.ethereal.net.request.core.Request;
+import com.ethereal.net.request.event.delegate.InterceptorDelegate;
 import com.ethereal.net.service.core.Service;
-import com.ethereal.net.service.event.delegate.InterceptorDelegate;
 import lombok.Getter;
 
-import java.lang.reflect.Method;
 import java.util.Iterator;
 import java.util.Vector;
 
@@ -27,10 +26,10 @@ public class InterceptorEvent {
             }
         }
     }
-    public void onEvent(Service service,RequestMeta requestMeta){
+    public void onEvent(Request request, RequestMeta requestMeta){
         synchronized (listeners){
             for (InterceptorDelegate delegate:listeners) {
-                delegate.onInterceptor(service,requestMeta);
+                delegate.onInterceptor(request,requestMeta);
             }
         }
     }

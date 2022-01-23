@@ -1,4 +1,4 @@
-package com.ethereal.net.request.event.Annotation;
+package com.ethereal.net.request.aop.annotation;
 
 import java.lang.annotation.*;
 
@@ -6,6 +6,6 @@ import java.lang.annotation.*;
 @Inherited
 @Target(value = {ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
-public @interface SuccessEvent {
+public @interface TimeoutEvent {
     String function();
 }

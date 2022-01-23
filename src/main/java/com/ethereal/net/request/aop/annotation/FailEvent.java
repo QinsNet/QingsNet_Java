@@ -1,4 +1,4 @@
-package com.ethereal.net.core.manager.event.Annotation;
+package com.ethereal.net.request.aop.annotation;
 
 import java.lang.annotation.*;
 
@@ -6,7 +6,6 @@ import java.lang.annotation.*;
 @Inherited
 @Target(value = {ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
-public @interface AfterEvent {
+public @interface FailEvent {
     String function();
 }
-

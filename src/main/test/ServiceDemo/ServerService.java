@@ -2,7 +2,7 @@ package ServiceDemo;
 
 import Model.User;
 import RequestDemo.ClientRequest;
-import com.ethereal.net.core.manager.event.Annotation.AfterEvent;
+import com.ethereal.net.core.manager.aop.annotation.AfterEvent;
 import com.ethereal.net.core.entity.TrackException;
 import com.ethereal.net.service.annotation.Token;
 import com.ethereal.net.service.annotation.ServiceMapping;

@@ -1,4 +1,4 @@
-package com.ethereal.net.core.manager.event.Annotation;
+package com.ethereal.net.core.manager.aop.annotation;
 
 import java.lang.annotation.*;
 

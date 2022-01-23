@@ -1,6 +1,6 @@
-package com.ethereal.net.core.manager.event;
-import com.ethereal.net.core.manager.event.Annotation.*;
-import com.ethereal.net.core.manager.event.Model.*;
+package com.ethereal.net.core.manager.aop;
+import com.ethereal.net.core.manager.aop.annotation.*;
+import com.ethereal.net.core.manager.aop.context.*;
 import com.ethereal.net.core.entity.TrackException;
 import org.javatuples.Pair;
 import java.lang.reflect.InvocationTargetException;
@@ -20,7 +20,7 @@ public class EventManager {
         while(matcher.find()){
             matches.add(matcher.group());
         }
-        if ((matches.size() % 2) != 0 || matches.size() < 2) throw new TrackException(TrackException.ErrorCode.Core, String.format("%s不合法", function));
+        if ((matches.size() % 2) != 0 || matches.size() < 2) throw new TrackException(TrackException.ErrorCode.Initialize, String.format("%s不合法", function));
         String instanceName = matches.get(0);
         String mapping = matches.get(1);
         HashMap<String ,String > paramsMapping = new HashMap<>(matches.size()- 2);

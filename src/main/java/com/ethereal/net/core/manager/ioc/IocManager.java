@@ -1,7 +1,7 @@
 package com.ethereal.net.core.manager.ioc;
 
-import com.ethereal.net.core.manager.event.EventManager;
-import com.ethereal.net.core.manager.event.Model.EventContext;
+import com.ethereal.net.core.manager.aop.EventManager;
+import com.ethereal.net.core.manager.aop.context.EventContext;
 import com.ethereal.net.core.entity.TrackException;
 
 import java.lang.reflect.InvocationTargetException;

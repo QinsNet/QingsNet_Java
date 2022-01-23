@@ -1,5 +1,6 @@
 package com.ethereal.net.core.base.event;
 
+import com.ethereal.net.core.base.BaseCore;
 import com.ethereal.net.core.base.event.delegate.ExceptionEventDelegate;
 import com.ethereal.net.core.entity.TrackException;
 

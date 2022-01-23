@@ -33,7 +33,7 @@ public class AbstractTypeManager {
 
     }
     public void add(Type type, String abstractName) throws TrackException {
-        if (typesByName.containsKey(abstractName) || typesByType.containsKey(type)) throw new TrackException(TrackException.ErrorCode.Core,String.format("类型:{%s}转{%s}发生异常,存在重复键",type, abstractName));
+        if (typesByName.containsKey(abstractName) || typesByType.containsKey(type)) throw new TrackException(TrackException.ErrorCode.Initialize,String.format("类型:{%s}转{%s}发生异常,存在重复键",type, abstractName));
         else{
             AbstractType rpcType = new AbstractType();
             rpcType.setName(abstractName);
@@ -45,7 +45,7 @@ public class AbstractTypeManager {
         }
     }
     public void add(Type type, String abstractName, AbstractType.ISerialize serialize, AbstractType.IDeserialize deserialize) throws TrackException {
-        if (typesByName.containsKey(abstractName) || typesByType.containsKey(type)) throw new TrackException(TrackException.ErrorCode.Core,String.format("类型:{%s}转{%s}发生异常,存在重复键",type, abstractName));
+        if (typesByName.containsKey(abstractName) || typesByType.containsKey(type)) throw new TrackException(TrackException.ErrorCode.Initialize,String.format("类型:{%s}转{%s}发生异常,存在重复键",type, abstractName));
         else{
             AbstractType rpcType = new AbstractType();
             rpcType.setName(abstractName);

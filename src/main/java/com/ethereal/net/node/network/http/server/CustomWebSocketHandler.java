@@ -4,6 +4,8 @@ import com.ethereal.net.core.entity.ResponseMeta;
 import com.ethereal.net.core.entity.Error;
 import com.ethereal.net.net.core.Net;
 import com.ethereal.net.node.core.Node;
+import com.ethereal.net.node.event.ConnectEvent;
+import com.ethereal.net.node.event.DisConnectEvent;
 import com.ethereal.net.node.network.INetwork;
 import com.ethereal.net.service.core.Service;
 import com.ethereal.net.utils.UrlUtils;
@@ -14,6 +16,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.*;
 import io.netty.handler.codec.http.websocketx.*;
+import lombok.Setter;
 
 import java.lang.reflect.Type;
 import java.net.URL;
@@ -21,27 +24,26 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.concurrent.ExecutorService;
 
-public class CustomWebSocketHandler extends SimpleChannelInboundHandler<FullHttpRequest>  implements INetwork{
+public class CustomWebSocketHandler extends SimpleChannelInboundHandler<FullHttpRequest> implements INetwork{
     private final ExecutorService es;
-    private Node node;
     private ChannelHandlerContext ctx;
     private final Type gson_type = new TypeToken<HashMap<String,String>>(){}.getType();
+    private Node node;
+
     public CustomWebSocketHandler(ExecutorService executorService){
         this.es = executorService;
     }
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) {
-
+        this.ctx = ctx;
     }
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) {
-        if(node != null){
-            node.onDisConnect();
-            node.setNetwork(null);
-            node = null;
-        }
+        node.onDisConnect();
+        node.setNetwork(null);
+        ctx = null;
     }
     @Override
     public void channelReadComplete(ChannelHandlerContext ctx) {
@@ -88,11 +90,12 @@ public class CustomWebSocketHandler extends SimpleChannelInboundHandler<FullHttp
             send(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,HttpResponseStatus.OK, Unpooled.copiedBuffer((String.format("%s请求不支持", req.method())),StandardCharsets.UTF_8)));
         }
         //如果是第一次请求这个服务，生成Node
-        if(node == null){
-            node = service.createNode(requestMeta);
+        if(req.headers().get("node") != null){
+            Node node = service.createNode(req.headers().get("node"));
+            node.setNetwork(this);
             node.onConnect();
         }
-        requestMeta.setNode(node);
+
         send(Net.receiveProcess(requestMeta));
     }
 
@@ -128,6 +131,7 @@ public class CustomWebSocketHandler extends SimpleChannelInboundHandler<FullHttp
 
     @Override
     public boolean close() {
-        return false;
+        ctx.close();
+        return true;
     }
 }

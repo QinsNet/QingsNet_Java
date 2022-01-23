@@ -5,24 +5,19 @@ import com.ethereal.net.core.base.event.LogEvent;
 import com.ethereal.net.core.entity.TrackException;
 import com.ethereal.net.core.entity.TrackLog;
 import lombok.Getter;
-import lombok.Setter;
 
 public class BaseCore {
-    @Getter
-    @Setter
-    private Boolean register = false;
     @Getter
     private final ExceptionEvent exceptionEvent = new ExceptionEvent();
     @Getter
     private final LogEvent logEvent = new LogEvent();
-
 
     public void onException(TrackException.ErrorCode code, String message) {
         onException(new TrackException(code,message,this));
     }
 
     public void onException(Exception exception)  {
-        exceptionEvent.onEvent(exception);
+        exceptionEvent.onEvent(this,exception);
     }
 
     public void onLog(TrackLog.LogCode code, String message){
@@ -31,7 +26,7 @@ public class BaseCore {
 
     public void onLog(TrackLog log){
         log.setSender(this);
-        logEvent.onEvent(log);
+        logEvent.onEvent(this,log);
     }
 
 }

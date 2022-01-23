@@ -1,4 +1,4 @@
-package com.ethereal.net.core.manager.event.Model;
+package com.ethereal.net.core.manager.aop.context;
 
 import java.lang.reflect.Method;
 import java.util.HashMap;
