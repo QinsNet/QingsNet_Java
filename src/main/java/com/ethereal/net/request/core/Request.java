@@ -2,13 +2,13 @@ package com.ethereal.net.request.core;
 
 import com.ethereal.net.core.annotation.BaseParam;
 import com.ethereal.net.core.base.BaseCore;
-import com.ethereal.net.core.base.event.delegate.ExceptionEventDelegate;
 import com.ethereal.net.core.manager.ioc.IocManager;
 import com.ethereal.net.core.manager.type.AbstractTypeManager;
 import com.ethereal.net.core.manager.type.Param;
 import com.ethereal.net.core.entity.*;
-import com.ethereal.net.net.core.Net;
+import com.ethereal.net.node.core.Node;
 import com.ethereal.net.request.annotation.RequestMapping;
+import com.ethereal.net.service.core.Service;
 import com.ethereal.net.service.event.InterceptorEvent;
 import com.ethereal.net.utils.AnnotationUtils;
 import lombok.Getter;
@@ -33,12 +33,10 @@ public abstract class Request extends BaseCore implements IRequest {
     protected String name;
     protected String prefixes;
     protected Request parent;
-    protected Net net;
     protected RequestConfig config;
     protected Boolean initialized = false;
-    @Getter
+    protected Node node;
     protected AbstractTypeManager types = new AbstractTypeManager();
-    @Getter
     protected IocManager iocManager = new IocManager();
 
     public Request() throws TrackException {
@@ -77,15 +75,14 @@ public abstract class Request extends BaseCore implements IRequest {
             else return 0;
         });
         Request request = (Request)enhancer.create();
-        if(!request.getInitialized()){
+        if(!requests.containsKey(request.name)){
             request.setInitialized(true);
             request.initialize();
             request.setParent(this);
-            request.setNet(net);
             request.setPrefixes(parent.getPrefixes() + "/" + name);
             request.getExceptionEvent().register(request::onException);
             request.getLogEvent().register(request::onLog);
-            request.getRequests().put(request.getName(), request);
+            requests.put(request.getName(), request);
             return (T)request;
         }
         else throw new TrackException(TrackException.ErrorCode.Initialize,String.format("%s/%s已注册,无法重复注册！", prefixes,request.name));
@@ -98,12 +95,10 @@ public abstract class Request extends BaseCore implements IRequest {
             for(Request request : requests.values()){
                 request.unRegister();
             }
-            if(parent != null){
-                parent.getRequests().remove(name);
-            }
-            else net.getServices().remove(name);
+            getExceptionEvent().clear();
+            getLogEvent().clear();
+            parent.getRequests().remove(name);
             parent = null;
-            net = null;
             prefixes = null;
             initialized = false;
             return true;

@@ -23,6 +23,11 @@ public class ExceptionEvent {
             }
         }
     }
+    public void clear(){
+        synchronized (listeners){
+            listeners.clear();
+        }
+    }
     public void onEvent(Exception exception)  {
         synchronized (listeners){
             for (ExceptionEventDelegate delegate:listeners) {

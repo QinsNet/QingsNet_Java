@@ -14,8 +14,11 @@ import com.ethereal.net.core.manager.aop.context.EventContext;
 import com.ethereal.net.core.manager.aop.context.ExceptionEventContext;
 import com.ethereal.net.core.entity.*;
 import com.ethereal.net.core.entity.Error;
-import com.ethereal.net.net.core.Net;
 import com.ethereal.net.node.core.Node;
+import com.ethereal.net.node.network.http.server.Http2Server;
+import com.ethereal.net.request.annotation.RequestMapping;
+import com.ethereal.net.request.core.Request;
+import com.ethereal.net.request.core.RequestInterceptor;
 import com.ethereal.net.service.annotation.ServiceMapping;
 import com.ethereal.net.service.event.InterceptorEvent;
 import com.ethereal.net.service.annotation.IService;
@@ -23,6 +26,9 @@ import com.ethereal.net.service.event.delegate.InterceptorDelegate;
 import com.ethereal.net.utils.AnnotationUtils;
 import lombok.Getter;
 import lombok.Setter;
+import net.sf.cglib.proxy.Callback;
+import net.sf.cglib.proxy.Enhancer;
+import net.sf.cglib.proxy.NoOp;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
@@ -34,14 +40,14 @@ import java.util.HashMap;
 @com.ethereal.net.service.annotation.Service
 public abstract class Service extends BaseCore implements IService {
     protected HashMap<String,Method> methods = new HashMap<>();
-    protected Net net;
     protected Service parent;
     protected String prefixes;
     protected ServiceConfig config;
     protected InterceptorEvent interceptorEvent = new InterceptorEvent();
     protected HashMap<String,Service> services = new HashMap<>();
-    protected HashMap<Object, Node> tokens = new HashMap<>();
+    protected HashMap<Object,Node> nodes = new HashMap<>();
     protected Boolean initialized = false;
+    protected Node node = createNode(null);
     @Getter
     protected String name;
     @Getter
@@ -56,7 +62,7 @@ public abstract class Service extends BaseCore implements IService {
         {
             for (InterceptorDelegate item : interceptorEvent.getListeners())
             {
-                if (!item.onInterceptor(this,requestMeta)) return false;
+                if (!item.onInterceptor(requestMeta)) return false;
             }
             return true;
         }
@@ -99,7 +105,7 @@ public abstract class Service extends BaseCore implements IService {
         }
     }
 
-    public ResponseMeta receiveProcess(RequestMeta requestMeta) {
+    public Object receiveProcess(RequestMeta requestMeta) {
         try {
             Method method = requestMeta.getMethod();
             if(onInterceptor(requestMeta)){
@@ -166,11 +172,10 @@ public abstract class Service extends BaseCore implements IService {
 
     
     public <T> T register(Service service) throws TrackException {
-        if(!service.getInitialized()){
+        if(!services.containsKey(service.name)){
             service.setInitialized(true);
             service.initialize();
             service.setParent(this);
-            service.setNet(net);
             service.setPrefixes(service.getPrefixes() + this.getName());
             service.getExceptionEvent().register(this::onException);
             service.getLogEvent().register(this::onLog);
@@ -186,16 +191,23 @@ public abstract class Service extends BaseCore implements IService {
             for(Service service : services.values()){
                 service.unRegister();
             }
-            if(parent != null){
-                parent.getServices().remove(name);
-            }
-            else net.getServices().remove(name);
+            getExceptionEvent().clear();
+            getLogEvent().clear();
+            parent.getServices().remove(name);
             parent = null;
-            net = null;
             prefixes = null;
             initialized = false;
             return true;
         }
         else throw new TrackException(TrackException.ErrorCode.Runtime, String.format("%s已经UnRegister,无法重复UnRegister", prefixes));
+    }
+
+    public Node publish() throws TrackException {
+        if(node.getNetwork() != null){
+            throw new TrackException(TrackException.ErrorCode.Initialize,String.format("%s已部署,无法重复部署！",prefixes));
+        }
+        node.setNetwork(new Http2Server(this));
+        node.getNetwork().start();
+        return node;
     }
 }

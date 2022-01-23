@@ -17,7 +17,7 @@ public class BaseCore {
     }
 
     public void onException(Exception exception)  {
-        exceptionEvent.onEvent(this,exception);
+        exceptionEvent.onEvent(exception);
     }
 
     public void onLog(TrackLog.LogCode code, String message){
@@ -26,7 +26,7 @@ public class BaseCore {
 
     public void onLog(TrackLog log){
         log.setSender(this);
-        logEvent.onEvent(this,log);
+        logEvent.onEvent(log);
     }
 
 }

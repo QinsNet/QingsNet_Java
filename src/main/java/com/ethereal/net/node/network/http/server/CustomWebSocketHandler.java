@@ -1,11 +1,8 @@
 package com.ethereal.net.node.network.http.server;
 import com.ethereal.net.core.entity.RequestMeta;
 import com.ethereal.net.core.entity.ResponseMeta;
-import com.ethereal.net.core.entity.Error;
 import com.ethereal.net.net.core.Net;
 import com.ethereal.net.node.core.Node;
-import com.ethereal.net.node.event.ConnectEvent;
-import com.ethereal.net.node.event.DisConnectEvent;
 import com.ethereal.net.node.network.INetwork;
 import com.ethereal.net.service.core.Service;
 import com.ethereal.net.utils.UrlUtils;
@@ -15,10 +12,9 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.*;
-import io.netty.handler.codec.http.websocketx.*;
-import lombok.Setter;
 
 import java.lang.reflect.Type;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
@@ -29,9 +25,10 @@ public class CustomWebSocketHandler extends SimpleChannelInboundHandler<FullHttp
     private ChannelHandlerContext ctx;
     private final Type gson_type = new TypeToken<HashMap<String,String>>(){}.getType();
     private Node node;
-
-    public CustomWebSocketHandler(ExecutorService executorService){
+    private Service service;
+    public CustomWebSocketHandler(ExecutorService executorService,Service service){
         this.es = executorService;
+        this.service = service;
     }
 
     @Override
@@ -41,7 +38,7 @@ public class CustomWebSocketHandler extends SimpleChannelInboundHandler<FullHttp
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) {
-        node.onDisConnect();
+        node.onClose();
         node.setNetwork(null);
         ctx = null;
     }
@@ -54,18 +51,15 @@ public class CustomWebSocketHandler extends SimpleChannelInboundHandler<FullHttp
     protected void channelRead0(ChannelHandlerContext ctx, FullHttpRequest req) throws Exception {
         URL url = new URL(req.uri());
         RequestMeta requestMeta = new RequestMeta();
-        //查找服务
-        HashMap<String,Service> services = Net.getServices();
-        Service service = null;
         for(String name:url.getPath().split("/")){
-            if(services.containsKey(name)){
-                service = services.get(name);
+            if(service.getServices().containsKey(name)){
+                service = service.getServices().get(name);
             }
             else if(service != null && service.getMethods().containsKey(name)){
                 requestMeta.setMethod(service.getMethods().get(name));
             }
             else {
-                send(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,HttpResponseStatus.NOT_FOUND, Unpooled.copiedBuffer((String.format("%s 服务未找到", req.uri())),StandardCharsets.UTF_8)));
+                send(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,HttpResponseStatus.NOT_FOUND, Unpooled.copiedBuffer((String.format("%s 服务未找到", url.getPath())),StandardCharsets.UTF_8)));
                 return;
             }
         }
@@ -93,10 +87,11 @@ public class CustomWebSocketHandler extends SimpleChannelInboundHandler<FullHttp
         if(req.headers().get("node") != null){
             Node node = service.createNode(req.headers().get("node"));
             node.setNetwork(this);
-            node.onConnect();
+            node.onStart();
         }
-
-        send(Net.receiveProcess(requestMeta));
+        es.submit(() -> {
+            send(service.receiveProcess(requestMeta));
+        });
     }
 
 

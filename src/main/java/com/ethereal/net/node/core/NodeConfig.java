@@ -1,4 +1,4 @@
-package com.ethereal.net.net.config;
+package com.ethereal.net.node.core;
 
 
 import lombok.Getter;

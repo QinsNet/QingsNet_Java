@@ -8,7 +8,7 @@ import java.util.Iterator;
 import java.util.Vector;
 
 public class LogEvent {
-    Vector<LogEventDelegate> listeners= new Vector<>();
+    final Vector<LogEventDelegate> listeners= new Vector<>();
 
     public void register(LogEventDelegate delegate){
         synchronized (listeners){
@@ -21,6 +21,11 @@ public class LogEvent {
             while(iterator.hasNext() && iterator.next() == delegate){
                 iterator.remove();
             }
+        }
+    }
+    public void clear(){
+        synchronized (listeners){
+            listeners.clear();
         }
     }
     public void onEvent(TrackLog log){

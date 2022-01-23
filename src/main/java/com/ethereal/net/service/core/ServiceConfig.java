@@ -27,7 +27,7 @@ import java.util.function.Function;
 @Setter
 public class ServiceConfig {
     protected Charset charset = StandardCharsets.UTF_8;
-
+    protected int port;
     public ServiceConfig(){
 
     }

@@ -30,7 +30,7 @@ public class InterceptorEvent {
     public void onEvent(Service service,RequestMeta requestMeta){
         synchronized (listeners){
             for (InterceptorDelegate delegate:listeners) {
-                delegate.onInterceptor(service,requestMeta);
+                delegate.onInterceptor(requestMeta);
             }
         }
     }
