@@ -9,5 +9,6 @@ import lombok.Setter;
 public class NodeConfig {
     public int maxBufferSize = 10240;
     public int threadCount = 5;
-    public int port = 80;
+    public String prefixes;
+    public int port;
 }

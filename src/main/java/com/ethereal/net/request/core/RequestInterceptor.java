@@ -8,7 +8,7 @@ import com.ethereal.net.core.manager.event.Model.BeforeEventContext;
 import com.ethereal.net.core.manager.event.Model.EventContext;
 import com.ethereal.net.core.manager.event.Model.ExceptionEventContext;
 import com.ethereal.net.core.entity.*;
-import com.ethereal.net.node.annotation.Node;
+import com.ethereal.net.node.core.Node;
 import com.ethereal.net.request.annotation.InvokeTypeFlags;
 import com.ethereal.net.request.annotation.RequestMapping;
 import net.sf.cglib.proxy.MethodInterceptor;
@@ -26,14 +26,14 @@ public class RequestInterceptor implements MethodInterceptor {
         Object localResult = null;
         EventContext eventContext;
         Parameter[] parameterInfos = method.getParameters();
-        ServerRequestModel request = new ServerRequestModel();
+        RequestMeta request = new RequestMeta();
         request.setMapping(annotation.mapping());
         request.setParams(new HashMap<>(parameterInfos.length -1 ));
         HashMap<String,Object> params = new HashMap<>(parameterInfos.length);
         Node node = null;
         int idx = 0;
         for(Parameter parameterInfo : parameterInfos){
-            if(parameterInfo.getAnnotation(Node.class) != null){
+            if(parameterInfo.getAnnotation(com.ethereal.net.node.annotation.Node.class) != null){
                 node = (Node) args[idx];
             }
             else {
@@ -65,10 +65,7 @@ public class RequestInterceptor implements MethodInterceptor {
         }
         if((annotation.invokeType() & InvokeTypeFlags.Remote) != 0){
             if(node != null){
-                if(!node.getCanRequest()){
-                    throw new TrackException(TrackException.ErrorCode.Runtime, String.format("{%s}-{%s}传递了无法请求的Token！", instance.name,annotation.mapping()));
-                }
-                node.sendServerRequest(request);
+                node.getNetwork().send(request);
             }
             else throw new TrackException(TrackException.ErrorCode.Runtime, String.format("{%s}-{%s}首参并非BaseToken实现类！", instance.name,annotation.mapping()));
         }

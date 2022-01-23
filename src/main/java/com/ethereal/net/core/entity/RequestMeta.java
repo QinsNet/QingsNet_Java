@@ -1,24 +1,25 @@
 package com.ethereal.net.core.entity;
 
+import com.ethereal.net.node.core.Node;
+import com.ethereal.net.service.core.Service;
 import com.google.gson.annotations.Expose;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
 
+import java.lang.reflect.Method;
 import java.util.HashMap;
 
 @ToString
 @Getter
 @Setter
 public class RequestMeta {
-    @Expose(serialize = false,deserialize = false)
     private ResponseMeta result;
-    @Expose
-    private String type = "ER-1.0-Request";
-    @Expose
+    private String protocol = "ER-1.0-Request";
     private String mapping;
-    @Expose
-    private HashMap<String ,String > params;
-    @Expose
+    private HashMap<String,String> params;
     private String id;
+    private Service service;
+    private Node node;
+    private Method method;
 }

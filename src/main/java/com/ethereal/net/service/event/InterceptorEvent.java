@@ -1,23 +1,18 @@
 package com.ethereal.net.service.event;
 
+import com.ethereal.net.core.entity.RequestMeta;
 import com.ethereal.net.net.core.Net;
 import com.ethereal.net.service.core.Service;
 import com.ethereal.net.service.event.delegate.InterceptorDelegate;
+import lombok.Getter;
 
 import java.lang.reflect.Method;
 import java.util.Iterator;
 import java.util.Vector;
 
 public class InterceptorEvent {
-    Vector<InterceptorDelegate> listeners= new Vector<>();
-    public Vector<InterceptorDelegate> getListeners() {
-        return listeners;
-    }
-
-    public void setListeners(Vector<InterceptorDelegate> listeners) {
-        this.listeners = listeners;
-    }
-
+    @Getter
+    final Vector<InterceptorDelegate> listeners= new Vector<>();
 
     public void register(InterceptorDelegate delegate){
         synchronized (listeners){
@@ -32,10 +27,10 @@ public class InterceptorEvent {
             }
         }
     }
-    public void onEvent(Net net, Service service, Method method, Token token){
+    public void onEvent(RequestMeta requestMeta){
         synchronized (listeners){
             for (InterceptorDelegate delegate:listeners) {
-                delegate.onInterceptor(net,service,method,token);
+                delegate.onInterceptor(requestMeta);
             }
         }
     }

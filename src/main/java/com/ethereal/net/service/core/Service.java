@@ -13,7 +13,7 @@ import com.ethereal.net.core.manager.event.Model.ExceptionEventContext;
 import com.ethereal.net.core.entity.*;
 import com.ethereal.net.core.entity.Error;
 import com.ethereal.net.net.core.Net;
-import com.ethereal.net.node.annotation.Node;
+import com.ethereal.net.node.core.Node;
 import com.ethereal.net.service.annotation.ServiceMapping;
 import com.ethereal.net.service.event.delegate.InterceptorDelegate;
 import com.ethereal.net.service.event.InterceptorEvent;
@@ -33,22 +33,21 @@ import java.util.function.Function;
 @com.ethereal.net.service.annotation.Service
 public abstract class Service extends MZCore implements IService {
     protected HashMap<String,Method> methods = new HashMap<>();
-    protected Net net;
+    protected Service parent;
     protected String name;
     protected ServiceConfig config;
     protected InterceptorEvent interceptorEvent = new InterceptorEvent();
-    protected HashMap<String, com.ethereal.net.request.core.Request> requests = new HashMap<>();
+    protected HashMap<String,Service> services = new HashMap<>();
     protected HashMap<Object, Node> tokens = new HashMap<>();
     protected Boolean enable;
-    protected Function<Void, Node> createMethod;
-
-    public boolean OnInterceptor(Net net,Method method, Node node)
+    public abstract Node createNode(RequestMeta requestMeta);
+    public boolean onInterceptor(RequestMeta requestMeta)
     {
         if (interceptorEvent != null)
         {
             for (InterceptorDelegate item : interceptorEvent.getListeners())
             {
-                if (!item.onInterceptor(net,this, method, node)) return false;
+                if (!item.onInterceptor(requestMeta)) return false;
             }
             return true;
         }
@@ -91,72 +90,81 @@ public abstract class Service extends MZCore implements IService {
         }
     }
 
-    public ResponseMeta receiveProcess(Node node, RequestMeta requestMeta) {
+    public ResponseMeta receiveProcess(RequestMeta requestMeta) {
         try {
-            Method method = getMethods().get(requestMeta.getMapping());
-            if(method!= null){
-                if(net.OnInterceptor(this,method, node) && OnInterceptor(net,method, node)){
-                    EventContext eventContext;
-                    Parameter[] parameterInfos = method.getParameters();
-                    HashMap<String, Object> params = new HashMap<>(parameterInfos.length);
-                    Object[] args = new Object[parameterInfos.length];
-                    int idx = 0;
-                    for(Parameter parameterInfo : parameterInfos){
-                        if(parameterInfo.getAnnotation(Node.class) != null){
-                            args[idx] = node;
-                        }
-                        else if(requestMeta.getParams().containsKey(parameterInfo.getName())){
-                            String value = requestMeta.getParams().get(parameterInfo.getName());
-                            AbstractType type = getTypes().get(parameterInfo);
-                            args[idx] = type.getDeserialize().Deserialize(value);
-                        }
-                        else throw new TrackException(TrackException.ErrorCode.Runtime,
+            Method method = requestMeta.getMethod();
+            if(onInterceptor(requestMeta)){
+                EventContext eventContext;
+                Parameter[] parameterInfos = method.getParameters();
+                HashMap<String, Object> params = new HashMap<>(parameterInfos.length);
+                Object[] args = new Object[parameterInfos.length];
+                int idx = 0;
+                for(Parameter parameterInfo : parameterInfos){
+                    if(parameterInfo.getAnnotation(com.ethereal.net.node.annotation.Node.class) != null){
+                        args[idx] = requestMeta.getNode();
+                    }
+                    else if(requestMeta.getParams().containsKey(parameterInfo.getName())){
+                        String value = requestMeta.getParams().get(parameterInfo.getName());
+                        AbstractType type = getTypes().get(parameterInfo);
+                        args[idx] = type.getDeserialize().Deserialize(value);
+                    }
+                    else throw new TrackException(TrackException.ErrorCode.Runtime,
                                 String.format("%s实例中%s方法的%s参数未提供注入方案",name,method.getName(),parameterInfo.getName()));
-                        params.put(parameterInfo.getName(), args[idx++]);
-                    }
-                    BeforeEvent beforeEvent = method.getAnnotation(BeforeEvent.class);
-                    if(beforeEvent != null){
-                        eventContext = new BeforeEventContext(params,method);
-                        String iocObjectName = beforeEvent.function().substring(0, beforeEvent.function().indexOf("."));
-                        iocManager.invokeEvent(iocManager.get(iocObjectName), beforeEvent.function(), params,eventContext);
-                    }
-                    Object localResult = null;
-                    try{
-                        localResult = method.invoke(this,args);
-                    }
-                    catch (Exception e){
-                        com.ethereal.net.core.manager.event.Annotation.ExceptionEvent exceptionEvent = method.getAnnotation(com.ethereal.net.core.manager.event.Annotation.ExceptionEvent.class);
-                        if(exceptionEvent != null){
-                            eventContext = new ExceptionEventContext(params,method,e);
-                            String iocObjectName = exceptionEvent.function().substring(0, exceptionEvent.function().indexOf("."));
-                            iocManager.invokeEvent(iocManager.get(iocObjectName), exceptionEvent.function(),params,eventContext);
-                            if(exceptionEvent.isThrow())throw e;
-                        }
-                        else throw e;
-                    }
-                    AfterEvent afterEvent = method.getAnnotation(AfterEvent.class);
-                    if(afterEvent != null){
-                        eventContext = new AfterEventContext(params,method,localResult);
-                        String iocObjectName = afterEvent.function().substring(0,afterEvent.function().indexOf("."));
-                        iocManager.invokeEvent(iocManager.get(iocObjectName), afterEvent.function(), params,eventContext);
-                    }
-                    Class<?> return_type = method.getReturnType();
-                    if(return_type != void.class){
-                        Param paramAnnotation = method.getAnnotation(Param.class);
-                        AbstractType type = null;
-                        if(paramAnnotation != null) type = getTypes().getTypesByName().get(paramAnnotation.type());
-                        if(type == null)type = getTypes().getTypesByType().get(return_type);
-                        if(type == null)return new ResponseMeta(null, requestMeta.getId(),new Error(Error.ErrorCode.NotFoundAbstractType,String.format("RPC中的%s类型参数尚未被注册！",return_type),null));
-                        return new ResponseMeta(type.getSerialize().Serialize(localResult), requestMeta.getId(),null);
-                    }
-                    else return null;
+                    params.put(parameterInfo.getName(), args[idx++]);
                 }
-                else return new ResponseMeta(null, requestMeta.getId(),new com.ethereal.net.core.entity.Error(com.ethereal.net.core.entity.Error.ErrorCode.Intercepted,"请求已被拦截",null));
+                BeforeEvent beforeEvent = method.getAnnotation(BeforeEvent.class);
+                if(beforeEvent != null){
+                    eventContext = new BeforeEventContext(params,method);
+                    String iocObjectName = beforeEvent.function().substring(0, beforeEvent.function().indexOf("."));
+                    iocManager.invokeEvent(iocManager.get(iocObjectName), beforeEvent.function(), params,eventContext);
+                }
+                Object localResult = null;
+                try{
+                    localResult = method.invoke(this,args);
+                }
+                catch (Exception e){
+                    com.ethereal.net.core.manager.event.Annotation.ExceptionEvent exceptionEvent = method.getAnnotation(com.ethereal.net.core.manager.event.Annotation.ExceptionEvent.class);
+                    if(exceptionEvent != null){
+                        eventContext = new ExceptionEventContext(params,method,e);
+                        String iocObjectName = exceptionEvent.function().substring(0, exceptionEvent.function().indexOf("."));
+                        iocManager.invokeEvent(iocManager.get(iocObjectName), exceptionEvent.function(),params,eventContext);
+                        if(exceptionEvent.isThrow())throw e;
+                    }
+                    else throw e;
+                }
+                AfterEvent afterEvent = method.getAnnotation(AfterEvent.class);
+                if(afterEvent != null){
+                    eventContext = new AfterEventContext(params,method,localResult);
+                    String iocObjectName = afterEvent.function().substring(0,afterEvent.function().indexOf("."));
+                    iocManager.invokeEvent(iocManager.get(iocObjectName), afterEvent.function(), params,eventContext);
+                }
+                Class<?> return_type = method.getReturnType();
+                if(return_type != void.class){
+                    Param paramAnnotation = method.getAnnotation(Param.class);
+                    AbstractType type = null;
+                    if(paramAnnotation != null) type = getTypes().getTypesByName().get(paramAnnotation.type());
+                    if(type == null)type = getTypes().getTypesByType().get(return_type);
+                    if(type == null)return new ResponseMeta(null, requestMeta.getId(),new Error(Error.ErrorCode.NotFoundAbstractType,String.format("RPC中的%s类型参数尚未被注册！",return_type),null));
+                    return new ResponseMeta(type.getSerialize().Serialize(localResult), requestMeta.getId(),null);
+                }
+                else return null;
             }
-            else return new ResponseMeta(null, requestMeta.getId(),new com.ethereal.net.core.entity.Error(com.ethereal.net.core.entity.Error.ErrorCode.Intercepted, String.format("未找到方法%s-%s-%s",net.getName(),name, requestMeta.getMapping() ),null));
-        }
+            else return new ResponseMeta(null, requestMeta.getId(),new com.ethereal.net.core.entity.Error(com.ethereal.net.core.entity.Error.ErrorCode.Intercepted,"请求已被拦截",null));        }
         catch (Exception e){
-            return new ResponseMeta(null, requestMeta.getId(),new com.ethereal.net.core.entity.Error(Error.ErrorCode.Intercepted, String.format("%s\n%s",e.getMessage(), Arrays.toString(e.getStackTrace()))));
+            return new ResponseMeta(null, requestMeta.getId(),new com.ethereal.net.core.entity.Error(Error.ErrorCode.Exception, String.format("%s\n%s",e.getMessage(), Arrays.toString(e.getStackTrace()))));
         }
+    }
+
+
+    public static boolean unregister(Service service) throws TrackException {
+        if(service.getRegister()){
+            service.unregister();
+            service.getNet().getServices().remove(service.getName());
+            service.setNet(null);
+            service.unInitialize();
+            service.setRegister(false);
+            return true;
+        }
+        else throw new TrackException(TrackException.ErrorCode.Runtime, String.format("%s已经UnRegister,无法重复UnRegister", service.getName()));
     }
 }

@@ -12,30 +12,5 @@ public class ServiceCore {
         return get(net,serviceName);
     }
 
-    public static <T> T register(Net net, Service service) throws TrackException {
-        service.initialize();
-        if(!service.getRegister()){
-            service.setRegister(true);
-            Service.register(service);
-            service.setNet(net);
-            service.getExceptionEvent().register(net::onException);
-            service.getLogEvent().register(net::onLog);
-            net.getServices().put(service.getName(),service);
-            service.register();
-            return (T) service;
-        }
-        else throw new TrackException(TrackException.ErrorCode.Core,String.format("%s-%s已注册,无法重复注册！",net.getName(),service.getName()));
-    }
 
-    public static boolean unregister(Service service) throws TrackException {
-        if(service.getRegister()){
-            service.unregister();
-            service.getNet().getServices().remove(service.getName());
-            service.setNet(null);
-            service.unInitialize();
-            service.setRegister(false);
-            return true;
-        }
-        else throw new TrackException(TrackException.ErrorCode.Runtime, String.format("%s已经UnRegister,无法重复UnRegister", service.getName()));
-    }
 }

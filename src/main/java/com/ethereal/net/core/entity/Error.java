@@ -9,7 +9,7 @@ import lombok.ToString;
 @Getter
 @Setter
 public class Error {
-    public enum ErrorCode { Intercepted,NotFoundService,NotFoundMethod,NotFoundNet,BufferFlow,Common,MaxConnects,NotFoundAbstractType }
+    public enum ErrorCode { Intercepted,NotFoundService,NotFoundMethod,NotFoundNet,BufferFlow,Common,MaxConnects,NotFoundAbstractType,Exception }
     @Expose
     private ErrorCode Code;
     @Expose

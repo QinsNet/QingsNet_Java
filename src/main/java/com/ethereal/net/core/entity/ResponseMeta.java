@@ -21,5 +21,8 @@ public class ResponseMeta {
         this.error = error;
         this.id = id;
     }
-
+    public ResponseMeta(String id, Error error) {
+        this.error = error;
+        this.id = id;
+    }
 }

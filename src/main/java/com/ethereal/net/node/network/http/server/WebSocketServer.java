@@ -20,12 +20,12 @@ import java.util.concurrent.Executors;
 public class WebSocketServer implements INetwork {
     protected boolean isClose = false;
     protected ExecutorService es;
-    protected NodeConfig config;
+    protected NodeConfig config = new NodeConfig();
     protected String prefixes;
+    protected Net net;
     private Channel channel;
 
-    public WebSocketServer(NodeConfig config) {
-        this.config = config;
+    public WebSocketServer() {
         this.es = Executors.newFixedThreadPool(this.config.threadCount);
     }
 
@@ -49,18 +49,18 @@ public class WebSocketServer implements INetwork {
                                 ch.pipeline().addLast(new CustomWebSocketHandler(es));
                             }
                         });
-                channel = bootstrap.bind(Net.getConfig().getNode().getPort()).channel();
+                channel = bootstrap.bind(net.getConfig().getNode().getPort()).channel();
                 channel.closeFuture().sync();
             }
             catch (Exception e){
-                Net.onException(e);
+                net.onException(e);
             }
             finally {
                 boss.shutdownGracefully();
                 work.shutdownGracefully();
             }
         } catch (Exception e){
-            Net.onException(e);
+            net.onException(e);
         }
         return true;
     }
