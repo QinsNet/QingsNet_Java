@@ -1,12 +1,10 @@
 import Model.User;
 import RequestDemo.ClientRequest;
 import ServiceDemo.ServerService;
-import com.ethereal.net.core.base.event.delegate.ExceptionEventDelegate;
-import com.ethereal.net.core.entity.TrackException;
-import com.ethereal.net.net.core.Net;
-import com.ethereal.net.net.WebSocket.WebSocketNet;
-import com.ethereal.net.node.network.http.server.core.Server;
-import com.ethereal.net.node.network.http.server.WebSocket.WebSocketServer;
+import com.ethereal.meta.net.core.event.delegate.ExceptionEventDelegate;
+import com.ethereal.meta.core.entity.TrackException;
+import com.ethereal.meta.node.network.http.server.core.Server;
+import com.ethereal.meta.node.network.http.server.WebSocket.WebSocketServer;
 
 import java.util.ArrayList;
 import java.util.Scanner;

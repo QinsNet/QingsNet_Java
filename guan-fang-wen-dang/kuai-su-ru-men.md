@@ -169,7 +169,7 @@ types.Add<bool>("Bool");
 types.Add<User>("User");
 Net net = NetCore.Register("name", Net.NetType.WebSocket); //注册网关
 Server server = ServerCore.Register(net,"127.0.0.1:28015/NetDemo/");//注册服务端
-Service service = ServiceCore.Register<ServerService>(net, "Server", types);//注册服务
+Service serviceNet = ServiceCore.Register<ServerService>(net, "Server", types);//注册服务
 net.Publish();//启动
 ```
 
@@ -435,8 +435,8 @@ Ethereal的服务拦截分为Net层拦截，以及Service层拦截，且两层�
 在拦截委托中，如果您返回`True`将进行下一个拦截事件检测，而返回`False`，则消息立即拦截，后续的拦截策略不会执行。
 
 ```text
-service.InterceptorEvent += Interceptor;
-private static bool Interceptor(Net net, Service service, MethodInfo method, Token node)
+serviceNet.InterceptorEvent += Interceptor;
+private static bool Interceptor(Net net, Service serviceNet, MethodInfo method, Token node)
 {
     if (node.Key == "123")
     {
@@ -474,7 +474,7 @@ public class User:BaseToken,IAuthorityCheck
 2. 在方法注解中设置添加authority参数：`[Service(authority = 3)]`，这里3就是提供的权限信息
 3. 在拦截器中添加Ethereal权限检查函数
 
-   `service.InterceptorEvent += Extension.Authority.AuthorityCheck.ServiceCheck;`
+   `serviceNet.InterceptorEvent += Extension.Authority.AuthorityCheck.ServiceCheck;`
 
    等待收到请求到达该方法，Ethereal会主动调用`BaseToken`类实现`IAuthorityCheck`接口中的Check函数，具体权限判断逻辑，用户可以根据自己的情况自行设计，最简单的就是大于该等级，即可通过。
 
