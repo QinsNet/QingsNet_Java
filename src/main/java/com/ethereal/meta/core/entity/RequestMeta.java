@@ -1,5 +1,6 @@
 package com.ethereal.meta.core.entity;
 
+import com.ethereal.meta.meta.Meta;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
@@ -17,4 +18,5 @@ public class RequestMeta {
     private HashMap<String,String> params;
     private String id;
     private Method method;
+    private Class<? extends Meta> metaClass;
 }

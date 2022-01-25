@@ -8,7 +8,7 @@ import com.ethereal.meta.core.aop.context.BeforeEventContext;
 import com.ethereal.meta.core.aop.context.EventContext;
 import com.ethereal.meta.core.aop.context.ExceptionEventContext;
 import com.ethereal.meta.core.entity.*;
-import com.ethereal.meta.node.core.Node;
+import com.ethereal.meta.net.core.Net;
 import com.ethereal.meta.request.annotation.InvokeTypeFlags;
 import com.ethereal.meta.request.annotation.RequestMapping;
 import net.sf.cglib.proxy.MethodInterceptor;
@@ -30,11 +30,11 @@ public class RequestInterceptor implements MethodInterceptor {
         request.setMapping(annotation.mapping());
         request.setParams(new HashMap<>(parameterInfos.length -1 ));
         HashMap<String,Object> params = new HashMap<>(parameterInfos.length);
-        Node node = null;
+        Net net = null;
         int idx = 0;
         for(Parameter parameterInfo : parameterInfos){
-            if(parameterInfo.getAnnotation(com.ethereal.meta.node.annotation.Node.class) != null){
-                node = (Node) args[idx];
+            if(parameterInfo.getAnnotation(com.ethereal.meta.net.annotation.Node.class) != null){
+                net = (Net) args[idx];
             }
             else {
                 AbstractType type = instance.getTypes().get(parameterInfo);
@@ -46,7 +46,7 @@ public class RequestInterceptor implements MethodInterceptor {
         if(beforeEvent != null){
             eventContext = new BeforeEventContext(params,method);
             String iocObjectName = beforeEvent.function().substring(0, beforeEvent.function().indexOf("."));
-            instance.getInstanceManager().invokeEvent(instance.getInstanceManager().get(iocObjectName), beforeEvent.function(), params,eventContext);
+            instance.getEventManager().invokeEvent(instance.getInstanceManager().get(iocObjectName), beforeEvent.function(), params,eventContext);
         }
         if((annotation.invokeType() & InvokeTypeFlags.Local) == 0) {
             try{
@@ -57,15 +57,15 @@ public class RequestInterceptor implements MethodInterceptor {
                 if(exceptionEvent != null){
                     eventContext = new ExceptionEventContext(params,method,e);
                     String iocObjectName = exceptionEvent.function().substring(0, exceptionEvent.function().indexOf("."));
-                    instance.getInstanceManager().invokeEvent(instance.getInstanceManager().get(iocObjectName), exceptionEvent.function(),params,eventContext);
+                    instance.getEventManager().invokeEvent(instance.getInstanceManager().get(iocObjectName), exceptionEvent.function(),params,eventContext);
                     if(exceptionEvent.isThrow())throw e;
                 }
                 else throw e;
             }
         }
         if((annotation.invokeType() & InvokeTypeFlags.Remote) != 0){
-            if(node != null){
-                node.getNetwork().send(request);
+            if(net != null){
+                net.getNetwork().send(request);
             }
             else throw new TrackException(TrackException.ErrorCode.Runtime, String.format("{%s}-{%s}首参并非BaseToken实现类！", instance.getClass().getName(),annotation.mapping()));
         }
@@ -73,7 +73,7 @@ public class RequestInterceptor implements MethodInterceptor {
         if(afterEvent != null){
             eventContext = new AfterEventContext(params,method,localResult);
             String iocObjectName = afterEvent.function().substring(0,afterEvent.function().indexOf("."));
-            instance.getInstanceManager().invokeEvent(instance.getInstanceManager().get(iocObjectName), afterEvent.function(), params,eventContext);
+            instance.getEventManager().invokeEvent(instance.getInstanceManager().get(iocObjectName), afterEvent.function(), params,eventContext);
         }
         return localResult;
     }

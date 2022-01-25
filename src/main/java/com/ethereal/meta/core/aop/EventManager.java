@@ -60,9 +60,9 @@ public class EventManager {
         method.invoke(instance, eventParams);
     }
 
-    public void register(String name, Object instance)
+    public void register(String name, Class<?> instance)
     {
-        for (Method method : instance.getClass().getMethods())
+        for (Method method : instance.getMethods())
         {
             Event attribute = method.getAnnotation(Event.class);
             if (attribute != null)
@@ -71,9 +71,9 @@ public class EventManager {
             }
         }
     }
-    public void unregister(String name, Object instance)
+    public void unregister(String name, Class<?> instance)
     {
-        for (Method method : instance.getClass().getMethods())
+        for (Method method : instance.getMethods())
         {
             Event attribute = method.getAnnotation(Event.class);
             if (attribute != null)

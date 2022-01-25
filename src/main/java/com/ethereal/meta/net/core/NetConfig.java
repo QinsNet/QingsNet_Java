@@ -1,4 +1,4 @@
-package com.ethereal.meta.node.core;
+package com.ethereal.meta.net.core;
 
 
 import lombok.Getter;
@@ -9,10 +9,8 @@ import java.nio.charset.StandardCharsets;
 
 @Getter
 @Setter
-public class NodeConfig {
+public class NetConfig {
     private int maxBufferSize = 10240;
     private int threadCount = 5;
-    private String prefixes;
-    private int port;
     protected Charset charset = StandardCharsets.UTF_8;
 }

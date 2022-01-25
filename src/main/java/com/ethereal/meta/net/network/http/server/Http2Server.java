@@ -1,10 +1,11 @@
-package com.ethereal.meta.node.network.http.server;
+package com.ethereal.meta.net.network.http.server;
 
 import com.ethereal.meta.meta.Meta;
-import com.ethereal.meta.node.network.INetwork;
+import com.ethereal.meta.net.network.Network;
+import com.ethereal.meta.net.network.Server;
+import com.ethereal.meta.net.network.ServerConfig;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -17,18 +18,17 @@ import io.netty.handler.stream.ChunkedWriteHandler;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class Http2Server implements INetwork {
-    protected boolean isClose = false;
+public class Http2Server extends Server {
     protected ExecutorService es;
-    protected Meta meta;
+    protected Class<? extends Meta> rootMetaClass;
+    protected ServerConfig config;
     private Channel channel;
-    public Http2Server(Meta meta) {
-        this.meta = meta;
+    public Http2Server(Class<? extends Meta> rootMetaClass) {
+        this.rootMetaClass = rootMetaClass;
     }
-
     @Override
-    public boolean start() {
-        this.es = Executors.newFixedThreadPool(meta.getNodeConfig().getThreadCount());
+    public boolean start(){
+        this.es = Executors.newFixedThreadPool(config.getThreadCount());
         NioEventLoopGroup boss=new NioEventLoopGroup();
         NioEventLoopGroup work=new NioEventLoopGroup();
         try {
@@ -40,29 +40,23 @@ public class Http2Server implements INetwork {
                         public void initChannel(SocketChannel ch) {
                             //数据处理
                             ch.pipeline().addLast(new HttpServerCodec());
-                            ch.pipeline().addLast(new HttpObjectAggregator(meta.getNodeConfig().getMaxBufferSize()));
+                            ch.pipeline().addLast(new HttpObjectAggregator(config.getMaxBufferSize()));
                             ch.pipeline().addLast(new ChunkedWriteHandler());
-                            ch.pipeline().addLast(new CustomWebSocketHandler(es, meta));
+                            ch.pipeline().addLast(new CustomWebSocketHandler(es, rootMetaClass));
                         }
                     });
-            channel = bootstrap.bind(serviceNet.getNode().getConfig().getPort()).addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
-                    if (future.isSuccess()){
-                        serviceNet.getNode().onStart();
-                    }
-                    else {
-                        serviceNet.getNode().onClose();
-                    }
+            channel = bootstrap.bind(config.getPort()).addListener((ChannelFutureListener) future -> {
+                if (future.isSuccess()){
+
+                }
+                else {
+
                 }
             }).channel();
             channel.closeFuture().sync();
-
-        }
-        catch (Exception exception){
-            serviceNet.onException(exception);
-        }
-        finally {
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } finally {
             boss.shutdownGracefully();
             work.shutdownGracefully();
         }
@@ -70,15 +64,9 @@ public class Http2Server implements INetwork {
     }
 
     @Override
-    public boolean send(Object data) {
-        return true;
-    }
-
-    @Override
     public boolean close() {
-        if(!isClose && channel.isActive()){
+        if(!channel.isActive()){
             channel.close();
-            isClose = true;
         }
         return true;
     }

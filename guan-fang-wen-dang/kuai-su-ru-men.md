@@ -287,9 +287,9 @@ BaseToken内含有唯一Key值属性，Ethereal通过用户给予的Key值属性
 
 ```text
 [Service]
-public bool Login(BaseToken node, string username,string password)
+public bool Login(BaseToken net, string username,string password)
 {
-    node.Key = username;//为该token设置键值属性
+    net.Key = username;//为该token设置键值属性
     BaseToken.Register();//将token注册，受Ethereal管理其生命周期
 }
 ```
@@ -300,7 +300,7 @@ public bool Login(BaseToken node, string username,string password)
 public class ServerService
 {
     [Service]
-    public int Add(BaseToken node,int a,int b)
+    public int Add(BaseToken net,int a,int b)
     {
         return a + b;
     }
@@ -436,9 +436,9 @@ Ethereal的服务拦截分为Net层拦截，以及Service层拦截，且两层�
 
 ```text
 serviceNet.InterceptorEvent += Interceptor;
-private static bool Interceptor(Net net, Service serviceNet, MethodInfo method, Token node)
+private static bool Interceptor(Net net, Service serviceNet, MethodInfo method, Token net)
 {
-    if (node.Key == "123")
+    if (net.Key == "123")
     {
         return false;
     }

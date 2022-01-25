@@ -1,8 +1,11 @@
-package com.ethereal.meta.node.network.http.server;
+package com.ethereal.meta.net.network.http.server;
+import com.ethereal.meta.core.entity.Error;
 import com.ethereal.meta.core.entity.RequestMeta;
 import com.ethereal.meta.core.entity.ResponseMeta;
+import com.ethereal.meta.core.entity.TrackException;
 import com.ethereal.meta.meta.Meta;
-import com.ethereal.meta.node.network.INetwork;
+import com.ethereal.meta.meta.annotation.MetaMapping;
+import com.ethereal.meta.net.network.Network;
 import com.ethereal.meta.utils.UrlUtils;
 import com.ethereal.meta.utils.Utils;
 import com.google.gson.reflect.TypeToken;
@@ -11,20 +14,22 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.*;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Type;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
+import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 
-public class CustomWebSocketHandler extends SimpleChannelInboundHandler<FullHttpRequest> implements INetwork{
+public class CustomWebSocketHandler extends SimpleChannelInboundHandler<FullHttpRequest> implements Network{
     private final ExecutorService es;
     private ChannelHandlerContext ctx;
     private final Type gson_type = new TypeToken<HashMap<String,String>>(){}.getType();
-    private Meta meta;
-    public CustomWebSocketHandler(ExecutorService executorService, Meta meta){
+    private final Class<? extends Meta> rootMetaClass;
+    public CustomWebSocketHandler(ExecutorService executorService, Class<? extends Meta> rootMetaClass){
         this.es = executorService;
-        this.meta = meta;
+        this.rootMetaClass = rootMetaClass;
     }
 
     @Override
@@ -34,7 +39,7 @@ public class CustomWebSocketHandler extends SimpleChannelInboundHandler<FullHttp
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) {
-        meta.onClose();
+
     }
     @Override
     public void channelReadComplete(ChannelHandlerContext ctx) {
@@ -44,30 +49,40 @@ public class CustomWebSocketHandler extends SimpleChannelInboundHandler<FullHttp
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, FullHttpRequest req) throws Exception {
         URL url = new URL(req.uri());
-        RequestMeta requestMeta = new RequestMeta();
-        //这里考虑到每一个连接都会产生一个独立的Meta，会造成一定程度的浪费，不过目前基于构想型设计，缓存等之类的技术后续考虑是否加入。
-        for(String name:url.getPath().split("/")){
-            if(meta.getMetas().containsKey(name)){
-                meta = meta.getMetas().get(name);
-            }
-            else if(meta != null && meta.getMethods().containsKey(name)){
-
-                //找到了方法
-                requestMeta.setMethod(meta.getMethods().get(name));
-            }
-            else {
-                send(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,HttpResponseStatus.NOT_FOUND, Unpooled.copiedBuffer((String.format("%s 服务未找到", url.getPath())),StandardCharsets.UTF_8)));
-                return;
-            }
-        }
         //处理请求头,生成请求元数据
+        RequestMeta requestMeta = new RequestMeta();
         requestMeta.setMapping(url.getPath());
         requestMeta.setParams(UrlUtils.getQuery(url.getQuery()));
         requestMeta.setId(req.headers().get("id"));
         requestMeta.setProtocol(req.headers().get("protocol"));
+        requestMeta.setMapping(req.headers().get("mapping"));
+        //查找Meta
+        Class<? extends Meta> metaClass = rootMetaClass;
+        boolean search;
+        for(String name:url.getPath().split("/")){
+            search = false;
+            for (Field field : metaClass.getFields()){
+                if(field.getAnnotation(MetaMapping.class) != null && Objects.equals(field.getAnnotation(MetaMapping.class).mapping(), name)){
+                    metaClass = (Class<? extends Meta>) field.getType();
+                    search = true;
+                    break;
+                }
+            }
+            if(!search){
+                send(new ResponseMeta(requestMeta.getId(),new Error(Error.ErrorCode.NotFoundNet,String.format("Meta:%s 未找到", url.getPath()))));
+                return;
+            }
+        }
+        requestMeta.setMetaClass(metaClass);
+        //构造Meta
+        final Meta meta = Meta.connect(metaClass);
+        meta.setNetwork(this);
         //Body体中获取参数
-        if(req.method() == HttpMethod.POST){
-            String raw_body = req.content().toString(meta.getNodeConfig().getCharset());
+        if(req.method() == HttpMethod.GET){
+
+        }
+        else if(req.method() == HttpMethod.POST){
+            String raw_body = req.content().toString(meta.getNetConfig().getCharset());
             HashMap<String,String> body = Utils.gson.fromJson(raw_body,gson_type);
             for (String key : body.keySet()){
                 if(!requestMeta.getParams().containsKey(key)){
@@ -78,11 +93,10 @@ public class CustomWebSocketHandler extends SimpleChannelInboundHandler<FullHttp
         else {
             send(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,HttpResponseStatus.OK, Unpooled.copiedBuffer((String.format("%s请求不支持", req.method())),StandardCharsets.UTF_8)));
         }
-        if(req.headers().get("meta") != null){
-            meta.update(req.headers().get("meta"));
-        }
+        meta.update(req.headers().get("meta"));
         es.submit(() -> {
-            send(serviceNet.receiveProcess(requestMeta));
+            meta.onConnect();
+            send(meta.receiveProcess(requestMeta));
         });
     }
 
