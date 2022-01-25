@@ -2,7 +2,6 @@ package com.ethereal.meta.net.network.http.server;
 import com.ethereal.meta.core.entity.Error;
 import com.ethereal.meta.core.entity.RequestMeta;
 import com.ethereal.meta.core.entity.ResponseMeta;
-import com.ethereal.meta.core.entity.TrackException;
 import com.ethereal.meta.meta.Meta;
 import com.ethereal.meta.meta.annotation.MetaMapping;
 import com.ethereal.meta.net.network.Network;
@@ -22,14 +21,14 @@ import java.util.HashMap;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 
-public class CustomWebSocketHandler extends SimpleChannelInboundHandler<FullHttpRequest> implements Network{
+public class CustomHandler extends SimpleChannelInboundHandler<FullHttpRequest> implements Network{
     private final ExecutorService es;
     private ChannelHandlerContext ctx;
     private final Type gson_type = new TypeToken<HashMap<String,String>>(){}.getType();
-    private final Class<? extends Meta> rootMetaClass;
-    public CustomWebSocketHandler(ExecutorService executorService, Class<? extends Meta> rootMetaClass){
+    private Class<? extends Meta> metaClass;
+    public CustomHandler(ExecutorService executorService, Class<? extends Meta> metaClass){
         this.es = executorService;
-        this.rootMetaClass = rootMetaClass;
+        this.metaClass = metaClass;
     }
 
     @Override
@@ -56,8 +55,6 @@ public class CustomWebSocketHandler extends SimpleChannelInboundHandler<FullHttp
         requestMeta.setId(req.headers().get("id"));
         requestMeta.setProtocol(req.headers().get("protocol"));
         requestMeta.setMapping(req.headers().get("mapping"));
-        //查找Meta
-        Class<? extends Meta> metaClass = rootMetaClass;
         boolean search;
         for(String name:url.getPath().split("/")){
             search = false;
@@ -95,7 +92,7 @@ public class CustomWebSocketHandler extends SimpleChannelInboundHandler<FullHttp
         }
         meta.update(req.headers().get("meta"));
         es.submit(() -> {
-            meta.onConnect();
+            meta.onConnectSuccess();
             send(meta.receiveProcess(requestMeta));
         });
     }

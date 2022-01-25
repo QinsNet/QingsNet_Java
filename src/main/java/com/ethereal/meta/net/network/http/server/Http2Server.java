@@ -1,7 +1,6 @@
 package com.ethereal.meta.net.network.http.server;
 
 import com.ethereal.meta.meta.Meta;
-import com.ethereal.meta.net.network.Network;
 import com.ethereal.meta.net.network.Server;
 import com.ethereal.meta.net.network.ServerConfig;
 import io.netty.bootstrap.ServerBootstrap;
@@ -42,7 +41,7 @@ public class Http2Server extends Server {
                             ch.pipeline().addLast(new HttpServerCodec());
                             ch.pipeline().addLast(new HttpObjectAggregator(config.getMaxBufferSize()));
                             ch.pipeline().addLast(new ChunkedWriteHandler());
-                            ch.pipeline().addLast(new CustomWebSocketHandler(es, rootMetaClass));
+                            ch.pipeline().addLast(new CustomHandler(es, rootMetaClass));
                         }
                     });
             channel = bootstrap.bind(config.getPort()).addListener((ChannelFutureListener) future -> {
