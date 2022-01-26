@@ -14,5 +14,8 @@ public abstract class Request extends RawMeta implements IRequest {
     protected final ConcurrentHashMap<Integer, com.ethereal.meta.core.entity.RequestMeta> tasks = new ConcurrentHashMap<>();
     @Getter
     protected RequestConfig requestConfig;
+    public Object receiveProcess(RequestMeta requestMeta){
 
+        return null;
+    }
 }

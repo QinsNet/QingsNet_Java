@@ -9,6 +9,7 @@ import com.ethereal.meta.core.entity.TrackException;
 import com.ethereal.meta.core.entity.TrackLog;
 import com.ethereal.meta.core.instance.InstanceManager;
 import com.ethereal.meta.core.type.AbstractTypeManager;
+import com.ethereal.meta.net.network.Network;
 import com.ethereal.meta.request.annotation.RequestMapping;
 import com.ethereal.meta.service.annotation.ServiceMapping;
 import com.ethereal.meta.service.event.InterceptorEvent;
@@ -18,6 +19,7 @@ import lombok.Getter;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.util.HashMap;
 
 
 public abstract class RawMeta {
@@ -27,7 +29,8 @@ public abstract class RawMeta {
     protected AbstractTypeManager types = new AbstractTypeManager();
     @Getter
     protected InstanceManager instanceManager = new InstanceManager();
-
+    @Getter
+    protected HashMap<String,Meta> metas = new HashMap<>();
 
     @Getter
     private final ExceptionEvent exceptionEvent = new ExceptionEvent();
@@ -37,11 +40,11 @@ public abstract class RawMeta {
     private final InterceptorEvent interceptorEvent = new InterceptorEvent();
 
 
-    protected abstract void configure();
-    protected abstract void type();
-    protected abstract void initialize();
-    protected abstract void uninitialize();
-
+    protected abstract void onConfigure();
+    protected abstract void onRegister();
+    protected abstract void onInitialize();
+    public abstract void onNetwork(Network parent);
+    protected abstract void onUninitialize();
 
     public void onException(TrackException.ErrorCode code, String message) {
         onException(new TrackException(code,message,this));

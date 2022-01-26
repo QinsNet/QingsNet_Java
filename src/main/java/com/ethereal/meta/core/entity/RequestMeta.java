@@ -13,10 +13,10 @@ import java.util.HashMap;
 @Setter
 public class RequestMeta {
     private ResponseMeta result;
-    private String protocol = "ER-1.0-Request";
+    private String protocol = "Meta-Request-1.0";
     private String mapping;
     private HashMap<String,String> params;
     private String id;
+    private String meta;
     private Method method;
-    private Class<? extends Meta> metaClass;
 }

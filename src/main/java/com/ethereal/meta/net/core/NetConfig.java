@@ -13,6 +13,5 @@ public class NetConfig {
     private String host;
     private int maxBufferSize = 10240;
     private int threadCount = 5;
-    private Charset charset = StandardCharsets.UTF_8;
     private boolean syncConnect;
 }

@@ -36,12 +36,11 @@ public abstract class Meta extends Net {
             }
         }
         //Life Cycle
-        meta.configure();
-        meta.type();
-        meta.initialize();
+        meta.onConfigure();
+        meta.onRegister();
+        meta.onInitialize();
         return meta;
     }
-
     public static <T extends Meta> Server publish(Class<T> metaClass, String protocol) {
         if("http2".equals(protocol)){
             return new Http2Server(metaClass);

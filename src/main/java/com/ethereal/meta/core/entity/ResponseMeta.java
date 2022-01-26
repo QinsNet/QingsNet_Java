@@ -8,21 +8,28 @@ import lombok.*;
 @Setter
 public class ResponseMeta {
     @Expose
-    private final String type = "ER-1.0-Response";
+    private String protocol = "Meta-Response-1.0";
     @Expose
-    private String result = null;
+    private String result;
     @Expose
-    private Error error = null;
+    private Error error;
     @Expose
-    private String id = null;
+    private String id;
+    @Expose
+    private String mapping;
+    @Expose String meta;
+    public ResponseMeta(){
 
+    }
     public ResponseMeta(String result, String id, Error error) {
         this.result = result;
         this.error = error;
         this.id = id;
     }
+
     public ResponseMeta(String id, Error error) {
         this.error = error;
         this.id = id;
     }
+
 }

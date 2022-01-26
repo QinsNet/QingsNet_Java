@@ -36,7 +36,7 @@ public class Http2Server extends Server {
                     .channel(NioServerSocketChannel.class)            //3
                     .childHandler(new ChannelInitializer<SocketChannel>() {    //5
                         @Override
-                        public void initChannel(SocketChannel ch) {
+                        public void initChannel(SocketChannel ch) throws IllegalAccessException {
                             //数据处理
                             ch.pipeline().addLast(new HttpServerCodec());
                             ch.pipeline().addLast(new HttpObjectAggregator(config.getMaxBufferSize()));
@@ -53,7 +53,7 @@ public class Http2Server extends Server {
                 }
             }).channel();
             channel.closeFuture().sync();
-        } catch (InterruptedException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         } finally {
             boss.shutdownGracefully();
