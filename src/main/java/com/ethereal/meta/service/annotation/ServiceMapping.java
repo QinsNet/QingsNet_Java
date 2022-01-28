@@ -1,10 +1,12 @@
 package com.ethereal.meta.service.annotation;
 
-import java.lang.annotation.*;
+import lombok.Getter;
+import lombok.Setter;
 
-@Documented
-@Target(ElementType.METHOD)
-@Retention(RetentionPolicy.RUNTIME)
-public @interface ServiceMapping {
-        String mapping();
+@Getter
+@Setter
+public class ServiceMapping {
+        ServiceType method;
+        String mapping;
+        int timeout;
 }

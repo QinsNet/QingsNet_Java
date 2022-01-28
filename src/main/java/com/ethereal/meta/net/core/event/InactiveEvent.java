@@ -1,7 +1,6 @@
 package com.ethereal.meta.net.core.event;
 
 import com.ethereal.meta.net.core.Net;
-import com.ethereal.meta.net.network.Network;
 import com.ethereal.meta.net.core.event.Delegate.InactiveDelegate;
 
 import java.util.Iterator;

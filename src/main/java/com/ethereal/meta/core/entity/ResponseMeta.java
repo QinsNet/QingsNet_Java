@@ -17,19 +17,19 @@ public class ResponseMeta {
     private String id;
     @Expose
     private String mapping;
-    @Expose String meta;
+    @Expose
+    private String meta;
     public ResponseMeta(){
 
     }
-    public ResponseMeta(String result, String id, Error error) {
+    public ResponseMeta(RequestMeta requestMeta, Error error) {
+        this.mapping = requestMeta.getMapping();
+        this.error = error;
+        this.id = requestMeta.getId();
+    }
+    public ResponseMeta(RequestMeta requestMeta,String result) {
         this.result = result;
-        this.error = error;
-        this.id = id;
+        this.mapping = requestMeta.getMapping();
+        this.id = requestMeta.getId();
     }
-
-    public ResponseMeta(String id, Error error) {
-        this.error = error;
-        this.id = id;
-    }
-
 }

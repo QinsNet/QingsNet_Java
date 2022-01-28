@@ -1,6 +1,6 @@
 package com.ethereal.meta.core.type;
 import com.ethereal.meta.core.entity.TrackException;
-import com.ethereal.meta.utils.Utils;
+import com.ethereal.meta.util.Util;
 
 import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
@@ -33,19 +33,19 @@ public class AbstractTypeManager {
 
     }
     public void add(Type type, String abstractName) throws TrackException {
-        if (typesByName.containsKey(abstractName) || typesByType.containsKey(type)) throw new TrackException(TrackException.ErrorCode.Initialize,String.format("类型:{%s}转{%s}发生异常,存在重复键",type, abstractName));
+        if (typesByName.containsKey(abstractName) || typesByType.containsKey(type)) throw new TrackException(TrackException.ExceptionCode.Initialize,String.format("类型:{%s}转{%s}发生异常,存在重复键",type, abstractName));
         else{
             AbstractType rpcType = new AbstractType();
             rpcType.setName(abstractName);
             rpcType.setType(type);
-            rpcType.setDeserialize(obj -> Utils.gson.fromJson(obj,type));
-            rpcType.setSerialize(obj -> Utils.gson.toJson(obj,type));
+            rpcType.setDeserialize(obj -> Util.gson.fromJson(obj,type));
+            rpcType.setSerialize(obj -> Util.gson.toJson(obj,type));
             if(!typesByType.containsKey(type))this.typesByType.put(type, rpcType);
             this.typesByName.put(abstractName,rpcType);
         }
     }
     public void add(Type type, String abstractName, AbstractType.ISerialize serialize, AbstractType.IDeserialize deserialize) throws TrackException {
-        if (typesByName.containsKey(abstractName) || typesByType.containsKey(type)) throw new TrackException(TrackException.ErrorCode.Initialize,String.format("类型:{%s}转{%s}发生异常,存在重复键",type, abstractName));
+        if (typesByName.containsKey(abstractName) || typesByType.containsKey(type)) throw new TrackException(TrackException.ExceptionCode.Initialize,String.format("类型:{%s}转{%s}发生异常,存在重复键",type, abstractName));
         else{
             AbstractType rpcType = new AbstractType();
             rpcType.setName(abstractName);

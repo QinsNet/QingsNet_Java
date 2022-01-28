@@ -6,6 +6,8 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class ServerConfig extends NetConfig {
+public class ServerConfig {
+    private int maxBufferSize = 10240;
+    private int threadCount = 5;
     private int port;
 }

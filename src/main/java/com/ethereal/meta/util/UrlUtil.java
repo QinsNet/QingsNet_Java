@@ -1,8 +1,8 @@
-package com.ethereal.meta.utils;
+package com.ethereal.meta.util;
 
 import java.util.HashMap;
 
-public class UrlUtils {
+public class UrlUtil {
     public static HashMap<String,String> getQuery(String raw_query) throws IllegalArgumentException {
         HashMap<String,String> query = new HashMap<>();
         for(String raw_pair : raw_query.split("&")){

@@ -2,7 +2,6 @@ package com.ethereal.meta.net.core.event;
 
 import com.ethereal.meta.net.core.Net;
 import com.ethereal.meta.net.core.event.Delegate.ActiveDelegate;
-import com.ethereal.meta.net.network.Network;
 
 import java.util.Iterator;
 import java.util.Vector;

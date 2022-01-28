@@ -1,7 +1,7 @@
 package com.ethereal.meta.net.network.http.server;
 
 import com.ethereal.meta.meta.Meta;
-import com.ethereal.meta.net.network.Server;
+import com.ethereal.meta.net.network.IServer;
 import com.ethereal.meta.net.network.ServerConfig;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
@@ -17,7 +17,7 @@ import io.netty.handler.stream.ChunkedWriteHandler;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class Http2Server extends Server {
+public class Http2Server implements IServer {
     protected ExecutorService es;
     protected Class<? extends Meta> rootMetaClass;
     protected ServerConfig config;

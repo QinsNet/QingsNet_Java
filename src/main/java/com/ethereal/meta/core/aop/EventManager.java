@@ -20,7 +20,7 @@ public class EventManager {
         while(matcher.find()){
             matches.add(matcher.group());
         }
-        if ((matches.size() % 2) != 0 || matches.size() < 2) throw new TrackException(TrackException.ErrorCode.Initialize, String.format("%s不合法", function));
+        if ((matches.size() % 2) != 0 || matches.size() < 2) throw new TrackException(TrackException.ExceptionCode.Initialize, String.format("%s不合法", function));
         String instanceName = matches.get(0);
         String mapping = matches.get(1);
         HashMap<String ,String > paramsMapping = new HashMap<>(matches.size()- 2);
@@ -31,7 +31,7 @@ public class EventManager {
         Method method = methodEvents.get(new Pair<>(instanceName,mapping));
         if (method == null)
         {
-            throw new TrackException(TrackException.ErrorCode.Runtime, String.format("%s实例的%s方法未注册", instanceName,mapping));
+            throw new TrackException(TrackException.ExceptionCode.Runtime, String.format("%s实例的%s方法未注册", instanceName,mapping));
         }
         Parameter[] parameterInfos = method.getParameters();
         Object[] eventParams = new Object[parameterInfos.length];
@@ -51,10 +51,10 @@ public class EventManager {
                 {
                     eventParams[i] = object;
                 }
-                else throw new TrackException(TrackException.ErrorCode.Runtime,
+                else throw new TrackException(TrackException.ExceptionCode.Runtime,
                         String.format("%s方法发起%s事件时，发起方未提供自身的%s参数",context.getMethod().getName(), function,name));
             }
-            else throw new TrackException(TrackException.ErrorCode.Runtime,
+            else throw new TrackException(TrackException.ExceptionCode.Runtime,
                     String.format("%s方法发起%s事件时，发起方为定义被调用方的%s参数", context.getMethod(),function,parameterInfos[i].getName()));
         }
         method.invoke(instance, eventParams);

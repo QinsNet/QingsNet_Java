@@ -1,5 +1,7 @@
 package com.ethereal.meta.core.aop.annotation;
 
+import lombok.NonNull;
+
 import java.lang.annotation.*;
 
 @Documented
@@ -7,6 +9,6 @@ import java.lang.annotation.*;
 @Target(value = {ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface BeforeEvent {
-    String function();
+    String function() default "";
 }
 

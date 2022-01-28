@@ -1,5 +1,8 @@
 package com.ethereal.meta.request.core;
 
+import lombok.Getter;
+import lombok.Setter;
+
 /**
  * @ProjectName: YiXian_Client
  * @Package: com.yixian.material.RPC
@@ -12,6 +15,8 @@ package com.ethereal.meta.request.core;
  * @UpdateRemark: 更新说明
  * @Version: 1.0
  */
+@Getter
+@Setter
 public class RequestConfig {
-
+    int timeout = -1;
 }

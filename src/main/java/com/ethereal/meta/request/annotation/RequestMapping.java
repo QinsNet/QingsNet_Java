@@ -1,11 +1,13 @@
 package com.ethereal.meta.request.annotation;
 
-import java.lang.annotation.*;
+import lombok.Getter;
+import lombok.Setter;
 
-@Documented
-@Target(ElementType.METHOD)
-@Retention(RetentionPolicy.RUNTIME)
-public @interface RequestMapping {
-        String mapping();
-        int invokeType() default InvokeTypeFlags.Remote;
+@Getter
+@Setter
+public class RequestMapping {
+        RequestType method;
+        String mapping;
+        int invoke;
+        int timeout;
 }

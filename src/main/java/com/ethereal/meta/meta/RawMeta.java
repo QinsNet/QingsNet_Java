@@ -1,7 +1,7 @@
 package com.ethereal.meta.meta;
 
 import com.ethereal.meta.core.aop.EventManager;
-import com.ethereal.meta.core.type.Param;
+import com.ethereal.meta.meta.annotation.MetaMapping;
 import com.ethereal.meta.meta.event.ExceptionEvent;
 import com.ethereal.meta.meta.event.LogEvent;
 import com.ethereal.meta.core.entity.RequestMeta;
@@ -9,16 +9,12 @@ import com.ethereal.meta.core.entity.TrackException;
 import com.ethereal.meta.core.entity.TrackLog;
 import com.ethereal.meta.core.instance.InstanceManager;
 import com.ethereal.meta.core.type.AbstractTypeManager;
-import com.ethereal.meta.net.network.Network;
-import com.ethereal.meta.request.annotation.RequestMapping;
-import com.ethereal.meta.service.annotation.ServiceMapping;
+import com.ethereal.meta.net.network.INetwork;
 import com.ethereal.meta.service.event.InterceptorEvent;
 import com.ethereal.meta.service.event.delegate.InterceptorDelegate;
-import com.ethereal.meta.utils.AnnotationUtils;
 import lombok.Getter;
 
-import java.lang.reflect.Method;
-import java.lang.reflect.Parameter;
+import java.lang.reflect.Field;
 import java.util.HashMap;
 
 
@@ -31,7 +27,8 @@ public abstract class RawMeta {
     protected InstanceManager instanceManager = new InstanceManager();
     @Getter
     protected HashMap<String,Meta> metas = new HashMap<>();
-
+    @Getter
+    protected String prefixes;
     @Getter
     private final ExceptionEvent exceptionEvent = new ExceptionEvent();
     @Getter
@@ -40,13 +37,15 @@ public abstract class RawMeta {
     private final InterceptorEvent interceptorEvent = new InterceptorEvent();
 
 
+
     protected abstract void onConfigure();
     protected abstract void onRegister();
+    protected abstract void onInstance();
     protected abstract void onInitialize();
-    public abstract void onNetwork(Network parent);
+    public abstract void onNetwork(INetwork parent);
     protected abstract void onUninitialize();
 
-    public void onException(TrackException.ErrorCode code, String message) {
+    public void onException(TrackException.ExceptionCode code, String message) {
         onException(new TrackException(code,message,this));
     }
 
