@@ -1,4 +1,4 @@
-package ServiceDemo;
+package Server;
 
 import com.ethereal.meta.core.aop.annotation.Event;
 

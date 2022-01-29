@@ -14,4 +14,5 @@ public class NetConfig {
     private int maxBufferSize = 10240;
     private int threadCount = 5;
     private boolean syncConnect;
+    private boolean Independence = true;
 }

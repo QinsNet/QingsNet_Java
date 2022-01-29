@@ -1,6 +1,5 @@
-import Model.User;
 import RequestDemo.ClientRequest;
-import ServiceDemo.ServerService;
+import Server.Player;
 import com.ethereal.meta.net.core.event.delegate.ExceptionEventDelegate;
 import com.ethereal.meta.core.entity.TrackException;
 import com.ethereal.meta.net.network.http.server.core.Server;
@@ -39,7 +38,7 @@ public class Demo {
         });
         net.getLogEvent().register(log -> System.out.println(log.getMessage()));
         //向网关注册服务
-        ServerService service = ServiceCore.register(net,new ServerService());
+        Player service = ServiceCore.register(net,new Player());
         //向网关注册请求
         service.userRequest = RequestCore.register(service, ClientRequest.class);
         Server server = ServerCore.register(net,new WebSocketServer(new ArrayList<>()));

@@ -8,7 +8,7 @@ import lombok.ToString;
 @Getter
 @Setter
 public class TrackException extends Exception {
-    public enum ExceptionCode {Initialize, Runtime, NotFoundMeta,NotFoundRequest}
+    public enum ExceptionCode {Initialize, Runtime, NotFoundMeta,NotFoundRequest,NotFoundType}
     private ExceptionCode exceptionCode;
     private Object sender;
     public TrackException(ExceptionCode exceptionCode, String message)

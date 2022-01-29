@@ -1,13 +1,18 @@
 package com.ethereal.meta.core.type;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import java.lang.reflect.Type;
 
+@Getter
+@Setter
 public class AbstractType {
     public interface IDeserialize {
-        Object Deserialize(String obj);
+        Object deserialize(String obj,Type type);
     }
     public interface ISerialize {
-        String  Serialize(Object obj);
+        String serialize(Object obj,Type type);
     }
 
     private IDeserialize deserialize;
@@ -15,35 +20,10 @@ public class AbstractType {
     private Type type;
     private String name;
 
-    public IDeserialize getDeserialize() {
-        return deserialize;
+    public String serialize(Object obj){
+        return serialize.serialize(obj,type);
     }
-
-    public void setDeserialize(IDeserialize deserialize) {
-        this.deserialize = deserialize;
-    }
-
-    public ISerialize getSerialize() {
-        return serialize;
-    }
-
-    public void setSerialize(ISerialize serialize) {
-        this.serialize = serialize;
-    }
-
-    public Type getType() {
-        return type;
-    }
-
-    public void setType(Type type) {
-        this.type = type;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
+    public Object deserialize(String obj){
+        return deserialize.deserialize(obj,type);
     }
 }

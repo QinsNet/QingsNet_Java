@@ -6,5 +6,5 @@ import java.lang.annotation.*;
 @Target(value = {ElementType.PARAMETER,ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Param {
-        String type() default "";
+        String name();
 }

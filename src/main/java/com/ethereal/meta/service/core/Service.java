@@ -10,12 +10,13 @@ import com.ethereal.meta.core.aop.context.EventContext;
 import com.ethereal.meta.core.aop.context.ExceptionEventContext;
 import com.ethereal.meta.core.entity.*;
 import com.ethereal.meta.core.entity.Error;
-import com.ethereal.meta.meta.RawMeta;
+import com.ethereal.meta.meta.Meta;
 import com.ethereal.meta.request.annotation.*;
 import com.ethereal.meta.service.annotation.ServiceAnnotation;
 import com.ethereal.meta.service.annotation.ServiceMapping;
 import com.ethereal.meta.service.annotation.ServiceType;
-import com.ethereal.meta.util.AnnotationUtil;
+import com.ethereal.meta.service.event.InterceptorEvent;
+import com.ethereal.meta.service.event.delegate.InterceptorDelegate;
 import lombok.Getter;
 
 import java.lang.reflect.Method;
@@ -26,18 +27,65 @@ import java.util.LinkedList;
 
 
 @ServiceAnnotation
-public abstract class Service extends RawMeta implements IService {
+public abstract class Service implements IService {
     @Getter
     private ServiceConfig serviceConfig;
     @Getter
     private HashMap<String,Method> services;
-    public Service(){
-        for (Method method : this.getClass().getMethods()){
-            if(AnnotationUtil.getAnnotation(method, ServiceAnnotation.class) != null){
+    @Getter
+    private Meta meta;
+    @Getter
+    protected final InterceptorEvent interceptorEvent = new InterceptorEvent();
+
+    public Service(Meta meta,Class<? extends Meta> metaClass){
+        try {
+            this.meta = meta;
+            for (Method method : metaClass.getMethods()){
                 ServiceMapping serviceMapping = getServiceMapping(method);
-                services.put(serviceMapping.getMapping(),method);
+                if(serviceMapping !=null){
+                    if(method.getReturnType() != void.class){
+                        Param paramAnnotation = method.getAnnotation(Param.class);
+                        if(paramAnnotation != null){
+                            if(paramAnnotation.name() != null){
+                                String typeName = paramAnnotation.name();
+                                if(meta.getTypes().get(typeName) == null){
+                                    throw new TrackException(TrackException.ExceptionCode.NotFoundType, String.format("%s-%s-%s抽象类型未找到", metaClass.getName() ,method.getName(),paramAnnotation.name()));
+                                }
+                            }
+                        }
+                        else if(meta.getTypes().get(method.getReturnType()) == null){
+                            meta.getTypes().add(method.getName(),method.getReturnType());
+                        }
+                    }
+                    for (Parameter parameter : method.getParameters()){
+                        Param paramAnnotation = method.getAnnotation(Param.class);
+                        if(paramAnnotation != null){
+                            if(paramAnnotation.name() != null){
+                                String typeName = paramAnnotation.name();
+                                if(meta.getTypes().get(typeName) == null){
+                                    throw new TrackException(TrackException.ExceptionCode.NotFoundType, String.format("%s-%s-%s抽象类型未找到", metaClass.getName() ,method.getName(),paramAnnotation.name()));
+                                }
+                            }
+                        }
+                        else if(meta.getTypes().get(parameter.getParameterizedType()) == null){
+                            meta.getTypes().add(parameter.getName(),parameter.getType());
+                        }
+                    }
+                    services.put(serviceMapping.getMapping(), method);
+                }
             }
         }
+        catch (Exception e){
+            meta.onException(e);
+        }
+    }
+    public boolean onInterceptor(RequestMeta requestMeta)
+    {
+        for (InterceptorDelegate item : interceptorEvent.getListeners())
+        {
+            if (!item.onInterceptor(requestMeta)) return false;
+        }
+        return true;
     }
     public Object receive(RequestMeta requestMeta) {
         try {
@@ -58,8 +106,8 @@ public abstract class Service extends RawMeta implements IService {
                 for(Parameter parameterInfo : parameterInfos){
                     if(requestMeta.getParams().containsKey(parameterInfo.getName())){
                         String value = requestMeta.getParams().get(parameterInfo.getName());
-                        AbstractType type = types.get(parameterInfo);
-                        args[idx] = type.getDeserialize().Deserialize(value);
+                        AbstractType type = meta.getTypes().get(parameterInfo);
+                        args[idx] = type.deserialize(value);
                     }
                     else return new ResponseMeta(requestMeta,new Error(Error.ErrorCode.NotFoundParam, String.format("%s实例中%s方法的%s参数未提供注入方案", getClass().getName(),method.getName(),parameterInfo.getName())));
                     params.put(parameterInfo.getName(), args[idx++]);
@@ -68,7 +116,7 @@ public abstract class Service extends RawMeta implements IService {
                 if(beforeEvent != null){
                     eventContext = new BeforeEventContext(params,method);
                     String iocObjectName = beforeEvent.function().substring(0, beforeEvent.function().indexOf("."));
-                    eventManager.invokeEvent(instanceManager.get(iocObjectName), beforeEvent.function(), params,eventContext);
+                    meta.getEventManager().invokeEvent(meta.getInstanceManager().get(iocObjectName), beforeEvent.function(), params,eventContext);
                 }
                 Object localResult = null;
                 try{
@@ -79,7 +127,7 @@ public abstract class Service extends RawMeta implements IService {
                     if(exceptionEvent != null){
                         eventContext = new ExceptionEventContext(params,method,e);
                         String iocObjectName = exceptionEvent.function().substring(0, exceptionEvent.function().indexOf("."));
-                        eventManager.invokeEvent(instanceManager.get(iocObjectName), exceptionEvent.function(),params,eventContext);
+                        meta.getEventManager().invokeEvent(meta.getInstanceManager().get(iocObjectName), exceptionEvent.function(),params,eventContext);
                         if(exceptionEvent.isThrow())throw e;
                     }
                     else throw e;
@@ -88,16 +136,16 @@ public abstract class Service extends RawMeta implements IService {
                 if(afterEvent != null){
                     eventContext = new AfterEventContext(params,method,localResult);
                     String iocObjectName = afterEvent.function().substring(0,afterEvent.function().indexOf("."));
-                    eventManager.invokeEvent(instanceManager.get(iocObjectName), afterEvent.function(), params,eventContext);
+                    meta.getEventManager().invokeEvent(meta.getInstanceManager().get(iocObjectName), afterEvent.function(), params,eventContext);
                 }
                 Class<?> return_type = method.getReturnType();
                 if(return_type != void.class){
                     Param paramAnnotation = method.getAnnotation(Param.class);
                     AbstractType type = null;
-                    if(paramAnnotation != null) type = types.getTypesByName().get(paramAnnotation.type());
-                    if(type == null)type = types.getTypesByType().get(return_type);
+                    if(paramAnnotation != null) type = meta.getTypes().getTypesByName().get(paramAnnotation.name());
+                    if(type == null)type = meta.getTypes().getTypesByType().get(return_type);
                     if(type == null)return new ResponseMeta(requestMeta,new Error(Error.ErrorCode.NotFoundAbstractType,String.format("RPC中的%s类型参数尚未被注册！",return_type),null));
-                    return new ResponseMeta(requestMeta,type.getSerialize().Serialize(localResult));
+                    return new ResponseMeta(requestMeta,type.serialize(localResult));
                 }
                 else return null;
             }
