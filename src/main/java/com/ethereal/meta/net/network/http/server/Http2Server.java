@@ -1,8 +1,8 @@
 package com.ethereal.meta.net.network.http.server;
 
+import com.ethereal.meta.core.boot.ServerConfig;
 import com.ethereal.meta.meta.Meta;
 import com.ethereal.meta.net.network.IServer;
-import com.ethereal.meta.net.network.ServerConfig;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
@@ -14,6 +14,7 @@ import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.stream.ChunkedWriteHandler;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -21,10 +22,11 @@ public class Http2Server implements IServer {
     protected ExecutorService es;
     protected Class<? extends Meta> rootMetaClass;
     protected ServerConfig config;
-    private Channel channel;
-    public Http2Server(Class<? extends Meta> rootMetaClass) {
-        this.rootMetaClass = rootMetaClass;
+    protected Channel channel;
+    public Http2Server(ServerConfig config) {
+        this.config = config;
     }
+
     @Override
     public boolean start(){
         this.es = Executors.newFixedThreadPool(config.getThreadCount());
@@ -36,7 +38,7 @@ public class Http2Server implements IServer {
                     .channel(NioServerSocketChannel.class)            //3
                     .childHandler(new ChannelInitializer<SocketChannel>() {    //5
                         @Override
-                        public void initChannel(SocketChannel ch) throws IllegalAccessException {
+                        public void initChannel(SocketChannel ch) throws IllegalAccessException, InvocationTargetException, NoSuchMethodException, InstantiationException {
                             //数据处理
                             ch.pipeline().addLast(new HttpServerCodec());
                             ch.pipeline().addLast(new HttpObjectAggregator(config.getMaxBufferSize()));

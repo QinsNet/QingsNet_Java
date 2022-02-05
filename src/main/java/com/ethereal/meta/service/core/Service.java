@@ -37,10 +37,10 @@ public abstract class Service implements IService {
     @Getter
     protected final InterceptorEvent interceptorEvent = new InterceptorEvent();
 
-    public Service(Meta meta,Class<? extends Meta> metaClass){
+    public Service(Meta meta){
         try {
             this.meta = meta;
-            for (Method method : metaClass.getMethods()){
+            for (Method method : meta.getComponent().getInstance().getMethods()){
                 ServiceMapping serviceMapping = getServiceMapping(method);
                 if(serviceMapping !=null){
                     if(method.getReturnType() != void.class){
@@ -49,7 +49,7 @@ public abstract class Service implements IService {
                             if(paramAnnotation.name() != null){
                                 String typeName = paramAnnotation.name();
                                 if(meta.getTypes().get(typeName) == null){
-                                    throw new TrackException(TrackException.ExceptionCode.NotFoundType, String.format("%s-%s-%s抽象类型未找到", metaClass.getName() ,method.getName(),paramAnnotation.name()));
+                                    throw new TrackException(TrackException.ExceptionCode.NotFoundType, String.format("%s-%s-%s抽象类型未找到", meta.getComponent().getInstance().getName() ,method.getName(),paramAnnotation.name()));
                                 }
                             }
                         }
@@ -63,7 +63,7 @@ public abstract class Service implements IService {
                             if(paramAnnotation.name() != null){
                                 String typeName = paramAnnotation.name();
                                 if(meta.getTypes().get(typeName) == null){
-                                    throw new TrackException(TrackException.ExceptionCode.NotFoundType, String.format("%s-%s-%s抽象类型未找到", metaClass.getName() ,method.getName(),paramAnnotation.name()));
+                                    throw new TrackException(TrackException.ExceptionCode.NotFoundType, String.format("%s-%s-%s抽象类型未找到", meta.getComponent().getInstance().getName() ,method.getName(),paramAnnotation.name()));
                                 }
                             }
                         }

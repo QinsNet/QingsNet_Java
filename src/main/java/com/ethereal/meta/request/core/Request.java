@@ -41,6 +41,7 @@ public abstract class Request implements IRequest {
     protected RequestConfig requestConfig;
     @Getter
     protected Meta meta;
+
     public void receive(ResponseMeta responseMeta) {
         try {
             if(!tasks.containsKey(responseMeta.getId())){
@@ -57,10 +58,10 @@ public abstract class Request implements IRequest {
         }
     }
 
-    public Request(Meta meta,Class<? extends Request> metaClass){
+    public Request(Meta meta){
         try {
             this.meta = meta;
-            for (Method method : metaClass.getMethods()){
+            for (Method method : meta.getComponent().getInstance().getMethods()){
                 RequestMapping requestMapping = getRequestMapping(method);
                 if(requestMapping !=null){
                     if(method.getReturnType() != void.class){
@@ -69,7 +70,7 @@ public abstract class Request implements IRequest {
                             if(paramAnnotation.name() != null){
                                 String typeName = paramAnnotation.name();
                                 if(meta.getTypes().get(typeName) == null){
-                                    throw new TrackException(TrackException.ExceptionCode.NotFoundType, String.format("%s-%s-%s抽象类型未找到", metaClass.getName() ,method.getName(),paramAnnotation.name()));
+                                    throw new TrackException(TrackException.ExceptionCode.NotFoundType, String.format("%s-%s-%s抽象类型未找到", meta.getComponent().getInstance().getName() ,method.getName(),paramAnnotation.name()));
                                 }
                             }
                         }
@@ -83,7 +84,7 @@ public abstract class Request implements IRequest {
                             if(paramAnnotation.name() != null){
                                 String typeName = paramAnnotation.name();
                                 if(meta.getTypes().get(typeName) == null){
-                                    throw new TrackException(TrackException.ExceptionCode.NotFoundType, String.format("%s-%s-%s抽象类型未找到", metaClass.getName() ,method.getName(),paramAnnotation.name()));
+                                    throw new TrackException(TrackException.ExceptionCode.NotFoundType, String.format("%s-%s-%s抽象类型未找到", meta.getComponent().getInstance().getName() ,method.getName(),paramAnnotation.name()));
                                 }
                             }
                         }
@@ -118,9 +119,8 @@ public abstract class Request implements IRequest {
         }
         return requestMapping;
     }
-    public Object intercept(Object o, Method method, Object[] args, MethodProxy methodProxy){
+    public Object intercept(Object instance, Method method, Object[] args, MethodProxy methodProxy){
         try {
-            Request instance = (Request) o;
             RequestMapping requestMapping = getRequestMapping(method);
             Object localResult = null;
             Object remoteResult = null;

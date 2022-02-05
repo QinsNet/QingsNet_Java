@@ -14,7 +14,7 @@ public abstract class Net implements INet {
     protected INetwork network;
     @Getter
     protected Meta meta;
-    protected Net(Meta meta,Class<? extends Request> metaClass){
+    protected Net(Meta meta){
         this.meta = meta;
     }
 

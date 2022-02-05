@@ -2,7 +2,6 @@ package com.ethereal.meta.net.network.http.client;
 
 import com.ethereal.meta.meta.Meta;
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelInitializer;
@@ -31,15 +30,13 @@ import java.util.concurrent.ExecutorService;
 public class Http2Client {
     protected ExecutorService es;
     protected Meta meta;
-    private Channel channel;
     public Http2Client(Meta meta) {
         this.meta = meta;
     }
-
     public void connect() {
         NioEventLoopGroup group = new NioEventLoopGroup(1);
         try {
-            URI uri = new URI(meta.getNetConfig().getHost());
+            URI uri = new URI(meta.getNet().getNetConfig().getHost());
             CustomHandler webSocketHandler = new CustomHandler(es, meta);
             Bootstrap bootstrap = new Bootstrap();               //1
             bootstrap.group(group)                                //2
@@ -49,27 +46,27 @@ public class Http2Client {
                         public void initChannel(SocketChannel ch) {
                             //数据处理
                             ch.pipeline().addLast(new HttpClientCodec());
-                            ch.pipeline().addLast(new HttpObjectAggregator(meta.getNetConfig().getMaxBufferSize()));
+                            ch.pipeline().addLast(new HttpObjectAggregator(meta.getNet().getNetConfig().getMaxBufferSize()));
                             ch.pipeline().addLast(webSocketHandler);
                             //心跳包
                             ch.pipeline().addLast(new IdleStateHandler(0,0,5));
 
                         }
                     });
-            if(meta.getNetConfig().isSyncConnect()){
-                channel = bootstrap.connect(uri.getHost(),uri.getPort()).addListener(new ChannelFutureListener() {
+            if(meta.getNet().getNetConfig().isSyncConnect()){
+                bootstrap.connect(uri.getHost(), uri.getPort()).addListener(new ChannelFutureListener() {
                     @Override
                     public void operationComplete(ChannelFuture future) throws Exception {
-                        if(!future.isSuccess()){
-                            meta.onConnectFail();
+                        if (!future.isSuccess()) {
+                            meta.getNet().onConnectFail();
                         }
                     }
                 }).sync().channel();
             }
             else {
-                channel = bootstrap.connect(uri.getHost(),uri.getPort()).addListener((ChannelFutureListener) future -> {
-                    if(!future.isSuccess()){
-                        meta.onConnectFail();
+                bootstrap.connect(uri.getHost(), uri.getPort()).addListener((ChannelFutureListener) future -> {
+                    if (!future.isSuccess()) {
+                        meta.getNet().onConnectFail();
                     }
                 }).channel();
             }

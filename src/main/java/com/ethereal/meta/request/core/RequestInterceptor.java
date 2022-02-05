@@ -10,6 +10,7 @@ import com.ethereal.meta.core.aop.context.EventContext;
 import com.ethereal.meta.core.aop.context.ExceptionEventContext;
 import com.ethereal.meta.core.entity.*;
 import com.ethereal.meta.core.type.Param;
+import com.ethereal.meta.meta.Meta;
 import com.ethereal.meta.request.annotation.*;
 import com.ethereal.meta.request.aop.annotation.FailEvent;
 import com.ethereal.meta.request.aop.annotation.SuccessEvent;
@@ -17,6 +18,8 @@ import com.ethereal.meta.request.aop.annotation.TimeoutEvent;
 import com.ethereal.meta.request.aop.context.FailEventContext;
 import com.ethereal.meta.request.aop.context.SuccessEventContext;
 import com.ethereal.meta.request.aop.context.TimeoutEventContext;
+import lombok.Getter;
+import lombok.Setter;
 import net.sf.cglib.proxy.MethodInterceptor;
 import net.sf.cglib.proxy.MethodProxy;
 
@@ -26,8 +29,12 @@ import java.util.HashMap;
 import java.util.Random;
 
 public class RequestInterceptor implements MethodInterceptor {
+    @Getter
+    @Setter
+    private Request request;
     @Override
     public Object intercept(Object o, Method method, Object[] args, MethodProxy methodProxy) {
-        return ((Request)o).intercept(o,method,args,methodProxy);
+        return request.intercept(o,method,args,methodProxy);
     }
+
 }

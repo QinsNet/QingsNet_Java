@@ -1,9 +1,15 @@
-package com.ethereal.meta.meta;
+package com.ethereal.meta.standard;
 
-public class RootMeta extends Meta{
+import com.ethereal.meta.meta.Meta;
+import com.ethereal.meta.meta.annotation.MetaMapping;
+import com.ethereal.meta.service.core.Service;
+
+import java.lang.reflect.Field;
+
+public class StandardMeta extends Meta {
     @Override
     protected void onConfigure() {
-        
+
     }
 
     @Override
@@ -16,6 +22,7 @@ public class RootMeta extends Meta{
 
     }
 
+
     @Override
     protected void onInitialize() {
 
@@ -23,6 +30,7 @@ public class RootMeta extends Meta{
 
     @Override
     protected void onUninitialize() {
-
+        
     }
+
 }
