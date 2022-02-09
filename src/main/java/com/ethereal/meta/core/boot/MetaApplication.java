@@ -17,13 +17,13 @@ public class MetaApplication {
     private static ApplicationContext context;
     public static ApplicationContext publish(String mapping,Class<?> instanceClass){
         if(context == null){
-            context = new ApplicationContext();
+            ServerApplicationContext serverApplicationContext = new ServerApplicationContext();
+            context = serverApplicationContext;
             loadConfig(ServerConfig.class);
-            context.setServer(new Http2Server((ServerConfig) context.getConfig()));
-            context.getServer().start();
+            serverApplicationContext.setServer(new Http2Server((ServerConfig) context.getConfig()));
+            serverApplicationContext.getServer().start();
         }
-        Meta meta = Meta.newInstance(instanceClass);
-        Meta.getRoot().put(mapping,meta);
+        context.getRoot().put(mapping,instanceClass);
         return context;
     }
 
@@ -40,6 +40,11 @@ public class MetaApplication {
                     Console.error(e.getLocalizedMessage());
                 }
             }
+            return true;
+        }
+        else {
+            Console.error("未找到application.yaml");
+            return false;
         }
     }
 }

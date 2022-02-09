@@ -19,6 +19,8 @@ public class ResponseMeta {
     private String mapping;
     @Expose
     private String meta;
+    @Expose
+    private Object instance;
     public ResponseMeta(){
 
     }

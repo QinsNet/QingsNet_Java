@@ -5,6 +5,9 @@ import com.ethereal.meta.core.entity.ResponseMeta;
 import com.ethereal.meta.core.entity.TrackException;
 import com.ethereal.meta.meta.Meta;
 import com.ethereal.meta.net.network.INetwork;
+import com.ethereal.meta.request.annotation.RequestAnnotation;
+import com.ethereal.meta.request.core.RequestInterceptor;
+import com.ethereal.meta.util.AnnotationUtil;
 import com.ethereal.meta.util.SerializeUtil;
 import com.ethereal.meta.util.Util;
 import com.google.gson.reflect.TypeToken;
@@ -12,6 +15,9 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.*;
+import net.sf.cglib.proxy.Callback;
+import net.sf.cglib.proxy.Enhancer;
+import net.sf.cglib.proxy.NoOp;
 
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
@@ -24,21 +30,19 @@ public class CustomHandler extends SimpleChannelInboundHandler<FullHttpResponse>
     private final ExecutorService es;
     static final Type gson_type = new TypeToken<HashMap<String,String>>(){}.getType();
     private ChannelHandlerContext ctx;
-    private final Meta rootMeta;
-    public CustomHandler(ExecutorService executorService,Meta rootMeta){
+    private final Meta root;
+    public CustomHandler(ExecutorService executorService,Meta root){
         this.es = executorService;
-        this.rootMeta = rootMeta;
+        this.root = root;
     }
     @Override
     public void channelActive(ChannelHandlerContext ctx) {
-        rootMeta.getNet().updateNetwork(this);
-        rootMeta.getNet().onConnectSuccess();
         this.ctx = ctx;
     }
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) {
-        rootMeta.getNet().onConnectLost();
+
     }
 
     @Override
@@ -51,7 +55,7 @@ public class CustomHandler extends SimpleChannelInboundHandler<FullHttpResponse>
             requestMeta.setProtocol(res.headers().get("protocol"));
             requestMeta.setMapping(res.headers().get("mapping"));
             requestMeta.setMeta(res.headers().get("meta"));
-            Meta meta = rootMeta;
+            Meta meta = root;
             LinkedList<String> mappings = new LinkedList<>(Arrays.asList(requestMeta.getMapping().split("/")));
             mappings.removeLast();
             for(String name : mappings){
@@ -63,6 +67,7 @@ public class CustomHandler extends SimpleChannelInboundHandler<FullHttpResponse>
                     return;
                 }
             }
+            requestMeta.setInstance(instance);
             //Body体中获取参数
             String raw_body = res.content().toString(StandardCharsets.UTF_8);
             HashMap<String,String> body = SerializeUtil.gson.fromJson(raw_body,gson_type);
@@ -83,7 +88,7 @@ public class CustomHandler extends SimpleChannelInboundHandler<FullHttpResponse>
             responseMeta.setError(SerializeUtil.gson.fromJson(res.headers().get("error"), Error.class));
             responseMeta.setProtocol(protocol);
             responseMeta.setMeta(res.headers().get("rootMeta"));
-            Meta meta = rootMeta;
+            Meta meta = root;
             LinkedList<String> mappings = new LinkedList<>(Arrays.asList(responseMeta.getMapping().split("/")));
             mappings.removeLast();
             for(String name : mappings){
@@ -102,7 +107,7 @@ public class CustomHandler extends SimpleChannelInboundHandler<FullHttpResponse>
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-        rootMeta.onException(new Exception(cause));
+        root.onException(new Exception(cause));
     }
 
     @Override

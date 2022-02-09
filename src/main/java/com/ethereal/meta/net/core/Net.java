@@ -10,39 +10,9 @@ import lombok.Setter;
 @Getter
 public abstract class Net implements INet {
     protected NetConfig netConfig;
-    @Setter
-    protected INetwork network;
     @Getter
     protected Meta meta;
     protected Net(Meta meta){
         this.meta = meta;
-    }
-
-    public void updateNetwork(INetwork parent) {
-        if(!netConfig.isIndependence()){
-            network = parent;
-        }
-    }
-
-    public void onConnectSuccess(){
-        for (Meta meta : meta.getMetas().values()){
-            if(meta.getNet().getNetwork() == network){
-                meta.getNet().onConnectSuccess();
-            }
-        }
-    }
-    public void onConnectFail(){
-        for (Meta meta : meta.getMetas().values()){
-            if(meta.getNet().getNetwork() == network){
-                meta.getNet().onConnectFail();
-            }
-        }
-    }
-    public void onConnectLost(){
-        for (Meta meta : meta.getMetas().values()){
-            if(meta.getNet().getNetwork() == network){
-                meta.getNet().onConnectLost();
-            }
-        }
     }
 }

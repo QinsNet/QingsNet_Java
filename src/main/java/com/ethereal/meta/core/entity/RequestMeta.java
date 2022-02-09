@@ -18,4 +18,5 @@ public class RequestMeta {
     private HashMap<String,String> params;
     private String id;
     private String meta;
+    private Object instance;
 }

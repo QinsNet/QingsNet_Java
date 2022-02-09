@@ -15,16 +15,18 @@ import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.stream.ChunkedWriteHandler;
 
 import java.lang.reflect.InvocationTargetException;
+import java.util.HashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class Http2Server implements IServer {
     protected ExecutorService es;
-    protected Class<? extends Meta> rootMetaClass;
+    protected HashMap<String,Class<? extends Meta>> root;
     protected ServerConfig config;
     protected Channel channel;
-    public Http2Server(ServerConfig config) {
+    public Http2Server(ServerConfig config, HashMap<String,Class<? extends Meta>> root) {
         this.config = config;
+        this.root = root;
     }
 
     @Override
@@ -43,7 +45,7 @@ public class Http2Server implements IServer {
                             ch.pipeline().addLast(new HttpServerCodec());
                             ch.pipeline().addLast(new HttpObjectAggregator(config.getMaxBufferSize()));
                             ch.pipeline().addLast(new ChunkedWriteHandler());
-                            ch.pipeline().addLast(new CustomHandler(es, rootMetaClass));
+                            ch.pipeline().addLast(new CustomHandler(es, root));
                         }
                     });
             channel = bootstrap.bind(config.getPort()).addListener((ChannelFutureListener) future -> {

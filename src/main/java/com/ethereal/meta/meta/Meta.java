@@ -27,8 +27,6 @@ import java.util.HashMap;
 
 public abstract class Meta{
     @Getter
-    protected static HashMap<String,Meta> root = new HashMap<>();
-    @Getter
     protected EventManager eventManager = new EventManager();
     @Getter
     protected AbstractTypeManager types = new AbstractTypeManager();
@@ -53,7 +51,7 @@ public abstract class Meta{
     @Getter
     protected Net net;
     @Getter
-    protected Object instance;
+    protected Class<?> instanceClass;
 
     protected abstract void onConfigure();
     protected abstract void onRegister();
@@ -61,7 +59,7 @@ public abstract class Meta{
 
     protected void onLink() {
         try {
-            for (Field field : instance.getClass().getFields()){
+            for (Field field : instanceClass.getFields()){
                 MetaMapping metaMapping = field.getAnnotation(MetaMapping.class);
                 if(metaMapping != null){
                     Meta meta = newInstance(field.getType());
@@ -113,20 +111,6 @@ public abstract class Meta{
         if(components == null){
             components = Components.class.getAnnotation(Components.class);
         }
-        //Proxy Instance
-        Enhancer enhancer = new Enhancer();
-        enhancer.setSuperclass(instanceClass);
-        RequestInterceptor interceptor = new RequestInterceptor();
-        Callback noOp= NoOp.INSTANCE;
-        enhancer.setCallbacks(new Callback[]{noOp,interceptor});
-        enhancer.setCallbackFilter(method ->
-        {
-            if(AnnotationUtil.getAnnotation(method, RequestAnnotation.class) != null){
-                return 1;
-            }
-            else return 0;
-        });
-        Object instance = enhancer.create();
         Meta meta = null;
         try {
             meta = components.meta().getConstructor().newInstance();
@@ -136,11 +120,9 @@ public abstract class Meta{
             return null;
         }
         try {
-            meta.instance = instance;
             //Life Cycle
             meta.service = components.service().getConstructor(Meta.class,Class.class).newInstance(meta,instanceClass);
             meta.request = components.request().getConstructor(Meta.class,Class.class).newInstance(meta,instanceClass);
-            interceptor.setRequest(meta.request);
             meta.net = components.net().getConstructor(Meta.class,Class.class).newInstance(meta, instanceClass);
 
             meta.onConfigure();

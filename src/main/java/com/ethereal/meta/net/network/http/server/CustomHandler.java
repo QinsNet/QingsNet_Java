@@ -4,7 +4,11 @@ import com.ethereal.meta.core.entity.RequestMeta;
 import com.ethereal.meta.core.entity.ResponseMeta;
 import com.ethereal.meta.core.entity.TrackException;
 import com.ethereal.meta.meta.Meta;
+import com.ethereal.meta.meta.RootMeta;
 import com.ethereal.meta.net.network.INetwork;
+import com.ethereal.meta.request.annotation.RequestAnnotation;
+import com.ethereal.meta.request.core.RequestInterceptor;
+import com.ethereal.meta.util.AnnotationUtil;
 import com.ethereal.meta.util.SerializeUtil;
 import com.ethereal.meta.util.UrlUtil;
 import com.google.gson.reflect.TypeToken;
@@ -12,6 +16,9 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.*;
+import net.sf.cglib.proxy.Callback;
+import net.sf.cglib.proxy.Enhancer;
+import net.sf.cglib.proxy.NoOp;
 
 import java.lang.reflect.Type;
 import java.net.URL;
@@ -25,22 +32,20 @@ public class CustomHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
     private final ExecutorService es;
     private ChannelHandlerContext ctx;
     static final Type gson_type = new TypeToken<HashMap<String,String>>(){}.getType();
-    private final Meta rootMeta;
-    public CustomHandler(ExecutorService executorService, Class<?> instance) {
+    private final RootMeta root;
+    public CustomHandler(ExecutorService executorService, RootMeta root) {
         this.es = executorService;
-        this.rootMeta = Meta.newInstance(instance);
+        this.root = root;
     }
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) {
         this.ctx = ctx;
-        rootMeta.getNet().updateNetwork(this);
-        rootMeta.getNet().onConnectSuccess();
     }
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) {
-        rootMeta.getNet().onConnectLost();
+
     }
 
     @Override
@@ -60,7 +65,7 @@ public class CustomHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
             requestMeta.setId(req.headers().get("id"));
             requestMeta.setProtocol(req.headers().get("protocol"));
             requestMeta.setMeta(req.headers().get("meta"));
-            Meta meta = rootMeta;
+            Meta meta = root;
             LinkedList<String> mappings = new LinkedList<>(Arrays.asList(requestMeta.getMapping().split("/")));
             mappings.removeLast();
             for(String name : mappings){
@@ -72,6 +77,21 @@ public class CustomHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
                     return;
                 }
             }
+            //Proxy Instance
+            Enhancer enhancer = new Enhancer();
+            enhancer.setSuperclass(meta.getInstanceClass());
+            RequestInterceptor interceptor = new RequestInterceptor();
+            Callback noOp= NoOp.INSTANCE;
+            enhancer.setCallbacks(new Callback[]{noOp,interceptor});
+            enhancer.setCallbackFilter(method ->
+            {
+                if(AnnotationUtil.getAnnotation(method, RequestAnnotation.class) != null){
+                    return 1;
+                }
+                else return 0;
+            });
+            Object instance = enhancer.create();
+            requestMeta.setInstance(instance);
             //Body体中获取参数
             if(req.method() == HttpMethod.GET){
 
@@ -99,8 +119,7 @@ public class CustomHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
             responseMeta.setId(req.headers().get("id"));
             responseMeta.setError(SerializeUtil.gson.fromJson(req.headers().get("error"), Error.class));
             responseMeta.setProtocol(protocol);
-            responseMeta.setMeta(req.headers().get("meta"));
-            Meta meta = rootMeta;
+            Meta meta = root;
             LinkedList<String> mappings = new LinkedList<>(Arrays.asList(responseMeta.getMapping().split("/")));
             mappings.removeLast();
             for(String name : mappings){
@@ -111,6 +130,8 @@ public class CustomHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
                     throw new TrackException(TrackException.ExceptionCode.NotFoundMeta,String.format("Meta:%s 未找到", responseMeta.getMapping()));
                 }
             }
+            Object instance = SerializeUtil.gson.fromJson(responseMeta.getMeta(),meta.getInstanceClass());
+            responseMeta.setInstance(instance);
             responseMeta.setResult(req.content().toString(StandardCharsets.UTF_8));
             Meta finalMeta = meta;
             es.submit(() -> finalMeta.getRequest().receive(responseMeta));
@@ -120,7 +141,7 @@ public class CustomHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         super.exceptionCaught(ctx, cause);
-        rootMeta.onException(new Exception(cause));
+        root.onException(new Exception(cause));
     }
 
     @Override

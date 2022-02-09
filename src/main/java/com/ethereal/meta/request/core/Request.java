@@ -12,6 +12,7 @@ import com.ethereal.meta.core.type.AbstractType;
 import com.ethereal.meta.core.type.Param;
 import com.ethereal.meta.meta.Meta;
 import com.ethereal.meta.net.core.Net;
+import com.ethereal.meta.net.network.INetwork;
 import com.ethereal.meta.request.annotation.*;
 import com.ethereal.meta.request.aop.annotation.FailEvent;
 import com.ethereal.meta.request.aop.annotation.SuccessEvent;
@@ -19,9 +20,14 @@ import com.ethereal.meta.request.aop.annotation.TimeoutEvent;
 import com.ethereal.meta.request.aop.context.FailEventContext;
 import com.ethereal.meta.request.aop.context.SuccessEventContext;
 import com.ethereal.meta.request.aop.context.TimeoutEventContext;
+import com.ethereal.meta.util.AnnotationUtil;
 import lombok.Getter;
+import net.sf.cglib.proxy.Callback;
+import net.sf.cglib.proxy.Enhancer;
 import net.sf.cglib.proxy.MethodProxy;
+import net.sf.cglib.proxy.NoOp;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.HashMap;
@@ -35,6 +41,8 @@ public abstract class Request implements IRequest {
     private final Random random = new Random();
     @Getter
     protected final HashMap<String, Method> requests = new HashMap<>();
+    @Getter
+    protected final HashMap<String, Field> requestFields = new HashMap<>();
     @Getter
     protected final ConcurrentHashMap<String,RequestMeta> tasks = new ConcurrentHashMap<>();
     @Getter
@@ -61,7 +69,7 @@ public abstract class Request implements IRequest {
     public Request(Meta meta){
         try {
             this.meta = meta;
-            for (Method method : meta.getComponent().getInstance().getMethods()){
+            for (Method method : meta.getInstanceClass().getMethods()){
                 RequestMapping requestMapping = getRequestMapping(method);
                 if(requestMapping !=null){
                     if(method.getReturnType() != void.class){
@@ -95,12 +103,34 @@ public abstract class Request implements IRequest {
                     requests.put(requestMapping.getMapping(), method);
                 }
             }
+            for (Field field:meta.getInstanceClass().getFields()){
+                field.getAnnotation()
+            }
         }
         catch (Exception e){
             meta.onException(e);
         }
     }
+    public Object newRequestInstance(INetwork network){
+        //Proxy Instance
+        Enhancer enhancer = new Enhancer();
+        enhancer.setSuperclass(meta.getInstanceClass());
+        RequestInterceptor interceptor = new RequestInterceptor(this,network);
+        Callback noOp= NoOp.INSTANCE;
+        enhancer.setCallbacks(new Callback[]{noOp,interceptor});
+        enhancer.setCallbackFilter(method ->
+        {
+            if(AnnotationUtil.getAnnotation(method, RequestAnnotation.class) != null){
+                return 1;
+            }
+            else return 0;
+        });
+        for (Field field : meta.getInstanceClass()){
 
+        }
+        Object instance = enhancer.create();
+        return instance;
+    }
     public RequestMapping getRequestMapping(Method method){
         RequestMapping requestMapping = new RequestMapping();
         if(method.getAnnotation(PostRequest.class) != null){
@@ -119,7 +149,7 @@ public abstract class Request implements IRequest {
         }
         return requestMapping;
     }
-    public Object intercept(Object instance, Method method, Object[] args, MethodProxy methodProxy){
+    public Object intercept(Object instance, Method method, Object[] args, MethodProxy methodProxy, INetwork network){
         try {
             RequestMapping requestMapping = getRequestMapping(method);
             Object localResult = null;
@@ -167,7 +197,7 @@ public abstract class Request implements IRequest {
             if((requestMapping.getInvoke() & InvokeTypeFlags.Remote) != 0){
                 Class<?> return_type = method.getReturnType();
                 if(return_type.equals(Void.TYPE)){
-                    meta.getNet().getNetwork().send(request);
+                    network.send(request);
                 }
                 else{
                     String  id = String.valueOf(random.nextInt());
@@ -179,7 +209,7 @@ public abstract class Request implements IRequest {
                     try {
                         int timeout = requestConfig.getTimeout();
                         if(requestMapping.getTimeout() != -1)timeout = requestMapping.getTimeout();
-                        if(meta.getNet().getNetwork().send(request)){
+                        if(network.send(request)){
                             request.wait(timeout);
                             ResponseMeta respond = request.getResult();
                             if(respond != null){
