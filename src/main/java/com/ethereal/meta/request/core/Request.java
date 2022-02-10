@@ -11,7 +11,6 @@ import com.ethereal.meta.core.entity.*;
 import com.ethereal.meta.core.type.AbstractType;
 import com.ethereal.meta.core.type.Param;
 import com.ethereal.meta.meta.Meta;
-import com.ethereal.meta.net.core.Net;
 import com.ethereal.meta.net.network.INetwork;
 import com.ethereal.meta.request.annotation.*;
 import com.ethereal.meta.request.aop.annotation.FailEvent;
@@ -20,14 +19,9 @@ import com.ethereal.meta.request.aop.annotation.TimeoutEvent;
 import com.ethereal.meta.request.aop.context.FailEventContext;
 import com.ethereal.meta.request.aop.context.SuccessEventContext;
 import com.ethereal.meta.request.aop.context.TimeoutEventContext;
-import com.ethereal.meta.util.AnnotationUtil;
 import lombok.Getter;
-import net.sf.cglib.proxy.Callback;
-import net.sf.cglib.proxy.Enhancer;
 import net.sf.cglib.proxy.MethodProxy;
-import net.sf.cglib.proxy.NoOp;
 
-import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.HashMap;
@@ -41,8 +35,6 @@ public abstract class Request implements IRequest {
     private final Random random = new Random();
     @Getter
     protected final HashMap<String, Method> requests = new HashMap<>();
-    @Getter
-    protected final HashMap<String, Field> requestFields = new HashMap<>();
     @Getter
     protected final ConcurrentHashMap<String,RequestMeta> tasks = new ConcurrentHashMap<>();
     @Getter
@@ -78,7 +70,7 @@ public abstract class Request implements IRequest {
                             if(paramAnnotation.name() != null){
                                 String typeName = paramAnnotation.name();
                                 if(meta.getTypes().get(typeName) == null){
-                                    throw new TrackException(TrackException.ExceptionCode.NotFoundType, String.format("%s-%s-%s抽象类型未找到", meta.getComponent().getInstance().getName() ,method.getName(),paramAnnotation.name()));
+                                    throw new TrackException(TrackException.ExceptionCode.NotFoundType, String.format("%s-%s-%s抽象类型未找到", meta.getInstanceClass().getName() ,method.getName(),paramAnnotation.name()));
                                 }
                             }
                         }
@@ -92,7 +84,7 @@ public abstract class Request implements IRequest {
                             if(paramAnnotation.name() != null){
                                 String typeName = paramAnnotation.name();
                                 if(meta.getTypes().get(typeName) == null){
-                                    throw new TrackException(TrackException.ExceptionCode.NotFoundType, String.format("%s-%s-%s抽象类型未找到", meta.getComponent().getInstance().getName() ,method.getName(),paramAnnotation.name()));
+                                    throw new TrackException(TrackException.ExceptionCode.NotFoundType, String.format("%s-%s-%s抽象类型未找到",meta.getInstanceClass().getName() ,method.getName(),paramAnnotation.name()));
                                 }
                             }
                         }
@@ -103,46 +95,24 @@ public abstract class Request implements IRequest {
                     requests.put(requestMapping.getMapping(), method);
                 }
             }
-            for (Field field:meta.getInstanceClass().getFields()){
-                field.getAnnotation()
-            }
         }
         catch (Exception e){
             meta.onException(e);
         }
     }
-    public Object newRequestInstance(INetwork network){
-        //Proxy Instance
-        Enhancer enhancer = new Enhancer();
-        enhancer.setSuperclass(meta.getInstanceClass());
-        RequestInterceptor interceptor = new RequestInterceptor(this,network);
-        Callback noOp= NoOp.INSTANCE;
-        enhancer.setCallbacks(new Callback[]{noOp,interceptor});
-        enhancer.setCallbackFilter(method ->
-        {
-            if(AnnotationUtil.getAnnotation(method, RequestAnnotation.class) != null){
-                return 1;
-            }
-            else return 0;
-        });
-        for (Field field : meta.getInstanceClass()){
 
-        }
-        Object instance = enhancer.create();
-        return instance;
-    }
     public RequestMapping getRequestMapping(Method method){
         RequestMapping requestMapping = new RequestMapping();
         if(method.getAnnotation(PostRequest.class) != null){
             PostRequest annotation = method.getAnnotation(PostRequest.class);
-            requestMapping.setMapping(annotation.mapping());
+            requestMapping.setMapping(annotation.value());
             requestMapping.setInvoke(annotation.invoke());
             requestMapping.setTimeout(annotation.timeout());
             requestMapping.setMethod(RequestType.Post);
         }
         else if(method.getAnnotation(GetRequest.class) != null){
             GetRequest annotation = method.getAnnotation(GetRequest.class);
-            requestMapping.setMapping(annotation.mapping());
+            requestMapping.setMapping(annotation.value());
             requestMapping.setInvoke(annotation.invoke());
             requestMapping.setTimeout(annotation.timeout());
             requestMapping.setMethod(RequestType.Get);

@@ -1,7 +1,5 @@
 package com.ethereal.meta.service.annotation;
 
-import com.ethereal.meta.request.annotation.InvokeTypeFlags;
-
 import java.lang.annotation.*;
 
 @Documented
@@ -9,6 +7,6 @@ import java.lang.annotation.*;
 @Retention(RetentionPolicy.RUNTIME)
 @ServiceAnnotation
 public @interface GetService {
-    String mapping();
+    String value();
     int timeout() default -1;
 }

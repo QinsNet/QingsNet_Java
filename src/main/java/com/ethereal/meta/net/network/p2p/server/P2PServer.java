@@ -1,4 +1,4 @@
-package com.ethereal.meta.net.network.http.server;
+package com.ethereal.meta.net.network.p2p.server;
 
 import com.ethereal.meta.core.boot.ApplicationConfig;
 import com.ethereal.meta.meta.root.RootMeta;
@@ -18,12 +18,12 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class Http2Server implements IServer {
+public class P2PServer implements IServer {
     protected ExecutorService es;
     protected RootMeta root;
     protected ApplicationConfig config;
     protected Channel channel;
-    public Http2Server(ApplicationConfig config, RootMeta root) {
+    public P2PServer(ApplicationConfig config, RootMeta root) {
         this.config = config;
         this.root = root;
     }
@@ -44,7 +44,7 @@ public class Http2Server implements IServer {
                             ch.pipeline().addLast(new HttpServerCodec());
                             ch.pipeline().addLast(new HttpObjectAggregator(config.getMaxBufferSize()));
                             ch.pipeline().addLast(new ChunkedWriteHandler());
-                            ch.pipeline().addLast(new CustomHandler(es, root));
+                            ch.pipeline().addLast(new P2PServerHandler(es, root));
                         }
                     });
             channel = bootstrap.bind(config.getPort()).addListener((ChannelFutureListener) future -> {

@@ -68,7 +68,7 @@ public interface IServer{
 
 
 //IServer实现类[部署在服务器]
-public class Server:IServer{
+public class server:IServer{
     public string GetName(long id){
         return NameDictionary.Get(id);//从键值表中取出名字并返回
     }
@@ -148,7 +148,7 @@ Ethereal也对混合编程进行了支持，而且是强有力的支持，Ethere
 
 接下来我们以C\#和Java版本来快速了解三步曲：类型、网关、服务\请求。
 
-#### Server\[C\#\]
+#### server\[C\#\]
 
 ```text
 public class ServerService
@@ -168,8 +168,8 @@ types.Add<string>("String");
 types.Add<bool>("Bool");
 types.Add<User>("User");
 Net net = NetCore.Register("name", Net.NetType.WebSocket); //注册网关
-Server server = ServerCore.Register(net,"127.0.0.1:28015/NetDemo/");//注册服务端
-Service serviceNet = ServiceCore.Register<ServerService>(net, "Server", types);//注册服务
+server server = ServerCore.Register(net,"127.0.0.1:28015/NetDemo/");//注册服务端
+Service serviceNet = ServiceCore.Register<ServerService>(net, "server", types);//注册服务
 net.Publish();//启动
 ```
 
@@ -190,7 +190,7 @@ types.add(Boolean,"Bool");
 types.add(User.class,"User");
 Net net = NetCore.register("name", Net.NetType.WebSocket); //注册网关
 Client client = ClientCore.Register(net,"127.0.0.1:28015/NetDemo/");//注册客户端
-Request requestMeta = RequestCore.register(ServerRequest.class,net, "Server", types);//注册请求
+Request requestMeta = RequestCore.register(ServerRequest.class,net, "server", types);//注册请求
 net.publish();//启动
 ```
 
@@ -227,7 +227,7 @@ Config含有各式各样的配置项，以此满足用户的个性化配置。
 Core根据Config配置产生具体的Object（实体），实体完成具体的工作。
 
 * **Net**：对内作为管理中心，管理实体，对外负责作为注册中心向外暴露服务。
-* **Client/Server**：通讯框架，Java使用Netty框架，Python使用Twisted。
+* **Client/server**：通讯框架，Java使用Netty框架，Python使用Twisted。
 * **Service**：服务实现类，负责请求的具体实现。
 * **Request**：服务请求类，负责向远程具体的服务实现发起请求。
 
@@ -239,7 +239,7 @@ Ethereal中心配置涵盖了注册中心、管理中心的功能。
 
 中心配置十分轻效，在Net的Config中开启集群配置，并提供集群地址和对应集群配置项即可。
 
-**Server\[C\#\]**
+**server\[C\#\]**
 
 ```text
 Net net = NetCore.Register("name", Net.NetType.WebSocket); //注册网关
@@ -490,11 +490,11 @@ _“黄昏，垂夜，星海，白珑。”_
 
 | 板块 | 语言\|框架 | 开发人员 |
 | :---: | :---: | :---: |
-| Server | C\# | 白阳 |
+| server | C\# | 白阳 |
 | Client | C\# | 白阳 |
-| Server | Java | 007 |
+| server | Java | 007 |
 | Client | Java | anmmMa |
-| Server | Python | Ckay |
+| server | Python | Ckay |
 | Client | Python | 青山 |
 | Center | Vue | Laity |
 | Document | Jekyll | 白阳 |

@@ -1,9 +1,11 @@
-package com.ethereal.meta.meta;
+package com.ethereal.meta.meta.root;
 
-public class RootMeta extends Meta{
+import com.ethereal.meta.meta.Meta;
+
+public class RootMeta extends Meta {
     @Override
     protected void onConfigure() {
-        
+
     }
 
     @Override

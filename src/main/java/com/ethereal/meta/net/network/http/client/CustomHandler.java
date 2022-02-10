@@ -53,7 +53,7 @@ public class CustomHandler extends SimpleChannelInboundHandler<FullHttpResponse>
             RequestMeta requestMeta = new RequestMeta();
             requestMeta.setId(res.headers().get("id"));
             requestMeta.setProtocol(res.headers().get("protocol"));
-            requestMeta.setMapping(res.headers().get("mapping"));
+            requestMeta.setMapping(res.headers().get("value"));
             requestMeta.setMeta(res.headers().get("meta"));
             Meta meta = root;
             LinkedList<String> mappings = new LinkedList<>(Arrays.asList(requestMeta.getMapping().split("/")));
@@ -67,7 +67,7 @@ public class CustomHandler extends SimpleChannelInboundHandler<FullHttpResponse>
                     return;
                 }
             }
-            requestMeta.setInstance(instance);
+            requestMeta.setInstance(meta.newInstance(this));
             //Body体中获取参数
             String raw_body = res.content().toString(StandardCharsets.UTF_8);
             HashMap<String,String> body = SerializeUtil.gson.fromJson(raw_body,gson_type);
@@ -83,7 +83,7 @@ public class CustomHandler extends SimpleChannelInboundHandler<FullHttpResponse>
         }
         else if("Meta-Response-1.0".equals(protocol)){
             ResponseMeta responseMeta = new ResponseMeta();
-            responseMeta.setMapping(res.headers().get("mapping"));
+            responseMeta.setMapping(res.headers().get("value"));
             responseMeta.setId(res.headers().get("id"));
             responseMeta.setError(SerializeUtil.gson.fromJson(res.headers().get("error"), Error.class));
             responseMeta.setProtocol(protocol);
@@ -129,7 +129,7 @@ public class CustomHandler extends SimpleChannelInboundHandler<FullHttpResponse>
             request.headers().set("error", SerializeUtil.gson.toJson(responseMeta.getError()));
             request.headers().set("protocol",responseMeta.getProtocol());
             request.headers().set("meta",responseMeta.getMeta());
-            request.headers().set("mapping",responseMeta.getMapping());
+            request.headers().set("value",responseMeta.getMapping());
             send(request);
         }
         else if(data instanceof RequestMeta){
@@ -138,7 +138,7 @@ public class CustomHandler extends SimpleChannelInboundHandler<FullHttpResponse>
             request.headers().set("id", requestMeta.getId());
             request.headers().set("protocol", requestMeta.getProtocol());
             request.headers().set("meta", requestMeta.getMeta());
-            request.headers().set("mapping", requestMeta.getMapping());
+            request.headers().set("value", requestMeta.getMapping());
             send(request);
         }
         else if(data instanceof byte[]){

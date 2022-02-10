@@ -1,13 +1,11 @@
-package com.ethereal.meta.net.network.http.server;
+package com.ethereal.meta.net.network.p2p.server;
 import com.ethereal.meta.core.entity.Error;
 import com.ethereal.meta.core.entity.RequestMeta;
 import com.ethereal.meta.core.entity.ResponseMeta;
 import com.ethereal.meta.core.entity.TrackException;
 import com.ethereal.meta.meta.Meta;
-import com.ethereal.meta.meta.root.Root;
 import com.ethereal.meta.meta.root.RootMeta;
-import com.ethereal.meta.net.network.INetwork;
-import com.ethereal.meta.net.network.http.client.Http2Client;
+import com.ethereal.meta.net.network.p2p.client.P2PClient;
 import com.ethereal.meta.util.SerializeUtil;
 import com.ethereal.meta.util.UrlUtil;
 import com.google.gson.reflect.TypeToken;
@@ -24,12 +22,12 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.concurrent.ExecutorService;
 
-public class CustomHandler extends SimpleChannelInboundHandler<FullHttpRequest> implements INetwork {
+public class P2PServerHandler extends SimpleChannelInboundHandler<FullHttpRequest>  {
     private final ExecutorService es;
     private ChannelHandlerContext ctx;
     static final Type gson_type = new TypeToken<HashMap<String,String>>(){}.getType();
     private final RootMeta root;
-    public CustomHandler(ExecutorService executorService, RootMeta root) {
+    public P2PServerHandler(ExecutorService executorService, RootMeta root) {
         this.es = executorService;
         this.root = root;
     }
@@ -69,11 +67,12 @@ public class CustomHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
                     meta = meta.getMetas().get(name);
                 }
                 else {
-                    send(new ResponseMeta(requestMeta,new Error(Error.ErrorCode.NotFoundNet,String.format("Meta:%s 未找到", requestMeta.getMapping()))));
+                    ctx.writeAndFlush(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,HttpResponseStatus.NOT_FOUND,Unpooled.copiedBuffer(String.format("Meta:%s 未找到", requestMeta.getMapping()),StandardCharsets.UTF_8)));
                     return;
                 }
             }
-            requestMeta.setInstance(meta.newInstance(this));
+            P2PClient client = new P2PClient(meta,ctx.channel().remoteAddress(),ctx.channel().localAddress());
+            requestMeta.setInstance(meta.newInstance(client));
             //Body体中获取参数
             if(req.method() == HttpMethod.GET){
 
@@ -92,7 +91,7 @@ public class CustomHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
             }
             Meta finalMeta = meta;
             es.submit(() -> {
-                send(finalMeta.getService().receive(requestMeta));
+                client.send(finalMeta.getService().receive(requestMeta));
             });
         }
         else if("Meta-Response-1.0".equals(protocol)){
@@ -126,54 +125,7 @@ public class CustomHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
         root.onException(new Exception(cause));
     }
 
-    @Override
-    public boolean start() {
-        return true;
-    }
-
     private void send(DefaultFullHttpResponse res) {
         ctx.channel().writeAndFlush(res);
-    }
-
-    @Override
-    public boolean send(Object data) {
-        if(data == null){
-            return true;
-        }
-        else if(data instanceof ResponseMeta){
-            ResponseMeta responseMeta = (ResponseMeta) data;
-            DefaultFullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,HttpResponseStatus.OK,Unpooled.copiedBuffer(SerializeUtil.gson.toJson(responseMeta.getResult()).getBytes(StandardCharsets.UTF_8)));
-            response.headers().set("id",responseMeta.getId());
-            response.headers().set("error", SerializeUtil.gson.toJson(responseMeta.getError()));
-            response.headers().set("protocol",responseMeta.getProtocol());
-            response.headers().set("meta",responseMeta.getMeta());
-            response.headers().set("value",responseMeta.getMapping());
-            send(response);
-        }
-        else if(data instanceof RequestMeta){
-            RequestMeta requestMeta = (RequestMeta) data;
-            DefaultFullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,HttpResponseStatus.OK,Unpooled.copiedBuffer(SerializeUtil.gson.toJson(requestMeta.getParams()).getBytes(StandardCharsets.UTF_8)));
-            response.headers().set("id", requestMeta.getId());
-            response.headers().set("protocol", requestMeta.getProtocol());
-            response.headers().set("meta", requestMeta.getMeta());
-            response.headers().set("value", requestMeta.getMapping());
-            send(response);
-        }
-        else if(data instanceof byte[]){
-            send(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,HttpResponseStatus.OK, Unpooled.copiedBuffer((byte[]) data)));
-        }
-        else if(data instanceof DefaultFullHttpResponse){
-            send((DefaultFullHttpResponse) data);
-        }
-        else if(data instanceof String){
-            send(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,HttpResponseStatus.OK, Unpooled.copiedBuffer((String) data,StandardCharsets.UTF_8)));
-        }
-        return true;
-    }
-
-    @Override
-    public boolean close() {
-        ctx.close();
-        return true;
     }
 }

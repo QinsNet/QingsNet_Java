@@ -6,7 +6,7 @@ import java.lang.annotation.*;
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
 @ServiceAnnotation
-public @interface PostService {
+public @interface Service {
     String value();
     int timeout() default -1;
 }

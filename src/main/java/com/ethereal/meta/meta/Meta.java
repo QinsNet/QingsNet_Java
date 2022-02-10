@@ -11,6 +11,7 @@ import com.ethereal.meta.meta.annotation.MetaMapping;
 import com.ethereal.meta.meta.event.ExceptionEvent;
 import com.ethereal.meta.meta.event.LogEvent;
 import com.ethereal.meta.net.core.Net;
+import com.ethereal.meta.net.network.INetwork;
 import com.ethereal.meta.request.annotation.RequestAnnotation;
 import com.ethereal.meta.request.core.Request;
 import com.ethereal.meta.request.core.RequestInterceptor;
@@ -52,28 +53,28 @@ public abstract class Meta{
     protected Net net;
     @Getter
     protected Class<?> instanceClass;
+    @Getter
+    protected Field field;
 
     protected abstract void onConfigure();
     protected abstract void onRegister();
     protected abstract void onInstance();
 
     protected void onLink() {
-        try {
-            for (Field field : instanceClass.getFields()){
-                MetaMapping metaMapping = field.getAnnotation(MetaMapping.class);
-                if(metaMapping != null){
-                    Meta meta = newInstance(field.getType());
-                    if(meta != null){
-                        meta.mapping = metaMapping.mapping();
-                        meta.parent = this;
-                        meta.prefixes = meta.parent.prefixes + "/" + meta.mapping;
-                        field.set(this,meta);
-                    }
+        for (Field field : instanceClass.getFields()){
+            MetaMapping metaMapping = field.getAnnotation(MetaMapping.class);
+            if(metaMapping != null){
+                Meta meta = newMeta(field.getType());
+                if(meta != null){
+                    meta.mapping = metaMapping.value();
+                    meta.parent = this;
+                    meta.prefixes = meta.parent.prefixes + "/" + meta.mapping;
+                    metas.put(mapping,meta);
+                }
+                else {
+                    onException(TrackException.ExceptionCode.NewInstanceError, String.format("%s-%s 生成失败", prefixes, metaMapping.value()));
                 }
             }
-        }
-        catch (IllegalAccessException exception){
-            onException(exception);
         }
     }
 
@@ -96,17 +97,31 @@ public abstract class Meta{
         log.setSender(this);
         logEvent.onEvent(log);
     }
-
-
-    public void update(String msg){
-
+    public Object newInstance(INetwork network){
+        //Proxy Instance
+        Enhancer enhancer = new Enhancer();
+        enhancer.setSuperclass(instanceClass);
+        Callback noOp= NoOp.INSTANCE;
+        enhancer.setCallbacks(new Callback[]{noOp,new RequestInterceptor(request,network)});
+        enhancer.setCallbackFilter(method ->
+        {
+            if(AnnotationUtil.getAnnotation(method, RequestAnnotation.class) != null){
+                return 1;
+            }
+            else return 0;
+        });
+        Object instance = enhancer.create();
+        for (Meta meta: metas.values()){
+            try {
+                meta.getField().set(instance,meta.newInstance(network));
+            }
+            catch (IllegalAccessException e) {
+                onException(e);
+            }
+        }
+        return instance;
     }
-
-    public String save(){
-        return null;
-    }
-
-    public static Meta newInstance(Class<?> instanceClass)  {
+    public static Meta newMeta(Class<?> instanceClass)  {
         Components components = instanceClass.getAnnotation(Components.class);
         if(components == null){
             components = Components.class.getAnnotation(Components.class);
@@ -134,6 +149,7 @@ public abstract class Meta{
             meta.onLink();
 
             meta.onInitialize();
+
 
         }
         catch (Exception e){

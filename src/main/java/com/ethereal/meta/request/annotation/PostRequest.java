@@ -7,7 +7,7 @@ import java.lang.annotation.*;
 @Retention(RetentionPolicy.RUNTIME)
 @RequestAnnotation
 public @interface PostRequest {
-    String mapping();
+    String value();
     int invoke() default InvokeTypeFlags.Remote;
     int timeout() default -1;
 }

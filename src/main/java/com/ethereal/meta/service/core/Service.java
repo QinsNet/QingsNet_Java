@@ -40,7 +40,7 @@ public abstract class Service implements IService {
     public Service(Meta meta){
         try {
             this.meta = meta;
-            for (Method method : meta.getComponent().getInstance().getMethods()){
+            for (Method method : meta.getInstanceClass().getMethods()){
                 ServiceMapping serviceMapping = getServiceMapping(method);
                 if(serviceMapping !=null){
                     if(method.getReturnType() != void.class){
@@ -49,7 +49,7 @@ public abstract class Service implements IService {
                             if(paramAnnotation.name() != null){
                                 String typeName = paramAnnotation.name();
                                 if(meta.getTypes().get(typeName) == null){
-                                    throw new TrackException(TrackException.ExceptionCode.NotFoundType, String.format("%s-%s-%s抽象类型未找到", meta.getComponent().getInstance().getName() ,method.getName(),paramAnnotation.name()));
+                                    throw new TrackException(TrackException.ExceptionCode.NotFoundType, String.format("%s-%s-%s抽象类型未找到", meta.getInstanceClass().getName() ,method.getName(),paramAnnotation.name()));
                                 }
                             }
                         }
@@ -63,7 +63,7 @@ public abstract class Service implements IService {
                             if(paramAnnotation.name() != null){
                                 String typeName = paramAnnotation.name();
                                 if(meta.getTypes().get(typeName) == null){
-                                    throw new TrackException(TrackException.ExceptionCode.NotFoundType, String.format("%s-%s-%s抽象类型未找到", meta.getComponent().getInstance().getName() ,method.getName(),paramAnnotation.name()));
+                                    throw new TrackException(TrackException.ExceptionCode.NotFoundType, String.format("%s-%s-%s抽象类型未找到", meta.getInstanceClass().getName() ,method.getName(),paramAnnotation.name()));
                                 }
                             }
                         }
@@ -158,13 +158,13 @@ public abstract class Service implements IService {
         ServiceMapping serviceMapping = new ServiceMapping();
         if(method.getAnnotation(PostRequest.class) != null){
             PostRequest annotation = method.getAnnotation(PostRequest.class);
-            serviceMapping.setMapping(annotation.mapping());
+            serviceMapping.setMapping(annotation.value());
             serviceMapping.setTimeout(annotation.timeout());
             serviceMapping.setMethod(ServiceType.Post);
         }
         else if(method.getAnnotation(GetRequest.class) != null){
             GetRequest annotation = method.getAnnotation(GetRequest.class);
-            serviceMapping.setMapping(annotation.mapping());
+            serviceMapping.setMapping(annotation.value());
             serviceMapping.setTimeout(annotation.timeout());
             serviceMapping.setMethod(ServiceType.Get);
         }

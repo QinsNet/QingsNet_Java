@@ -62,7 +62,7 @@ public interface IServer{
 
 
 //IServer实现类[部署在服务器]
-public class Server:IServer{
+public class server:IServer{
     public string GetName(long id){
         return NameDictionary.Get(id);//从键值表中取出名字并返回
     }

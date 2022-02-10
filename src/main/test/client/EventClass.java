@@ -1,4 +1,4 @@
-package Server;
+package client;
 
 import com.ethereal.meta.core.aop.annotation.Event;
 

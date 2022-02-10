@@ -15,4 +15,5 @@ public abstract class Net implements INet {
     protected Net(Meta meta){
         this.meta = meta;
     }
+
 }

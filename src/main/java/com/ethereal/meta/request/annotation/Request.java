@@ -1,12 +1,13 @@
-package com.ethereal.meta.service.annotation;
+package com.ethereal.meta.request.annotation;
 
 import java.lang.annotation.*;
 
 @Documented
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
-@ServiceAnnotation
-public @interface PostService {
+@RequestAnnotation
+public @interface Request {
     String value();
+    int invoke() default InvokeTypeFlags.Remote;
     int timeout() default -1;
 }

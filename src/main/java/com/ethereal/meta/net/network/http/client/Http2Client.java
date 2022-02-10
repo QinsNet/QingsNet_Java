@@ -1,6 +1,7 @@
 package com.ethereal.meta.net.network.http.client;
 
 import com.ethereal.meta.meta.Meta;
+import com.ethereal.meta.meta.root.RootMeta;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -29,8 +30,8 @@ import java.util.concurrent.ExecutorService;
  */
 public class Http2Client {
     protected ExecutorService es;
-    protected Meta meta;
-    public Http2Client(Meta meta) {
+    protected final RootMeta meta;
+    public Http2Client(RootMeta meta) {
         this.meta = meta;
     }
     public void connect() {
@@ -58,7 +59,7 @@ public class Http2Client {
                     @Override
                     public void operationComplete(ChannelFuture future) throws Exception {
                         if (!future.isSuccess()) {
-                            meta.getNet().onConnectFail();
+
                         }
                     }
                 }).sync().channel();
@@ -66,7 +67,7 @@ public class Http2Client {
             else {
                 bootstrap.connect(uri.getHost(), uri.getPort()).addListener((ChannelFutureListener) future -> {
                     if (!future.isSuccess()) {
-                        meta.getNet().onConnectFail();
+
                     }
                 }).channel();
             }

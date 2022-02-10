@@ -7,7 +7,7 @@
     <groupId>io.github.ethereal-rpc</groupId>
     <artifactId>EtherealS</artifactId>
     <name>EtherealS</name>
-    <description>Ethereal Server</description>
+    <description>Ethereal server</description>
     <url>https://github.com/Ethereal-RPC/</url>
     <packaging>jar</packaging>
     <version>1.0.6</version>
