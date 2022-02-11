@@ -1,9 +1,7 @@
 package com.ethereal.meta.core.type;
 import com.ethereal.meta.core.entity.TrackException;
 import com.ethereal.meta.util.SerializeUtil;
-import com.ethereal.meta.util.Util;
 
-import java.io.Serializable;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
 import java.util.HashMap;

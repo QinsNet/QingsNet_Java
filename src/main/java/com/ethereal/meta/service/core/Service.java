@@ -12,9 +12,7 @@ import com.ethereal.meta.core.entity.*;
 import com.ethereal.meta.core.entity.Error;
 import com.ethereal.meta.meta.Meta;
 import com.ethereal.meta.request.annotation.*;
-import com.ethereal.meta.service.annotation.ServiceAnnotation;
-import com.ethereal.meta.service.annotation.ServiceMapping;
-import com.ethereal.meta.service.annotation.ServiceType;
+import com.ethereal.meta.service.annotation.*;
 import com.ethereal.meta.service.event.InterceptorEvent;
 import com.ethereal.meta.service.event.delegate.InterceptorDelegate;
 import lombok.Getter;
@@ -31,7 +29,7 @@ public abstract class Service implements IService {
     @Getter
     private ServiceConfig serviceConfig;
     @Getter
-    private HashMap<String,Method> services;
+    private final HashMap<String,Method> services = new HashMap<>();
     @Getter
     private Meta meta;
     @Getter
@@ -40,39 +38,43 @@ public abstract class Service implements IService {
     public Service(Meta meta){
         try {
             this.meta = meta;
-            for (Method method : meta.getInstanceClass().getMethods()){
-                ServiceMapping serviceMapping = getServiceMapping(method);
-                if(serviceMapping !=null){
-                    if(method.getReturnType() != void.class){
-                        Param paramAnnotation = method.getAnnotation(Param.class);
-                        if(paramAnnotation != null){
-                            if(paramAnnotation.name() != null){
-                                String typeName = paramAnnotation.name();
-                                if(meta.getTypes().get(typeName) == null){
-                                    throw new TrackException(TrackException.ExceptionCode.NotFoundType, String.format("%s-%s-%s抽象类型未找到", meta.getInstanceClass().getName() ,method.getName(),paramAnnotation.name()));
+            Class<?> checkClass = meta.getInstanceClass();
+            while (checkClass != null){
+                for (Method method : checkClass.getDeclaredMethods()){
+                    ServiceMapping serviceMapping = getServiceMapping(method);
+                    if(serviceMapping !=null){
+                        if(method.getReturnType() != void.class){
+                            Param paramAnnotation = method.getAnnotation(Param.class);
+                            if(paramAnnotation != null){
+                                if(paramAnnotation.name() != null){
+                                    String typeName = paramAnnotation.name();
+                                    if(meta.getTypes().get(typeName) == null){
+                                        throw new TrackException(TrackException.ExceptionCode.NotFoundType, String.format("%s-%s-%s抽象类型未找到", meta.getInstanceClass().getName() ,method.getName(),paramAnnotation.name()));
+                                    }
                                 }
                             }
-                        }
-                        else if(meta.getTypes().get(method.getReturnType()) == null){
-                            meta.getTypes().add(method.getName(),method.getReturnType());
-                        }
-                    }
-                    for (Parameter parameter : method.getParameters()){
-                        Param paramAnnotation = method.getAnnotation(Param.class);
-                        if(paramAnnotation != null){
-                            if(paramAnnotation.name() != null){
-                                String typeName = paramAnnotation.name();
-                                if(meta.getTypes().get(typeName) == null){
-                                    throw new TrackException(TrackException.ExceptionCode.NotFoundType, String.format("%s-%s-%s抽象类型未找到", meta.getInstanceClass().getName() ,method.getName(),paramAnnotation.name()));
-                                }
+                            else if(meta.getTypes().get(method.getReturnType()) == null){
+                                meta.getTypes().add(method.getName(),method.getReturnType());
                             }
                         }
-                        else if(meta.getTypes().get(parameter.getParameterizedType()) == null){
-                            meta.getTypes().add(parameter.getName(),parameter.getType());
+                        for (Parameter parameter : method.getParameters()){
+                            Param paramAnnotation = method.getAnnotation(Param.class);
+                            if(paramAnnotation != null){
+                                if(paramAnnotation.name() != null){
+                                    String typeName = paramAnnotation.name();
+                                    if(meta.getTypes().get(typeName) == null){
+                                        throw new TrackException(TrackException.ExceptionCode.NotFoundType, String.format("%s-%s-%s抽象类型未找到", meta.getInstanceClass().getName() ,method.getName(),paramAnnotation.name()));
+                                    }
+                                }
+                            }
+                            else if(meta.getTypes().get(parameter.getParameterizedType()) == null){
+                                meta.getTypes().add(parameter.getName(),parameter.getType());
+                            }
                         }
+                        services.put(serviceMapping.getMapping(), method);
                     }
-                    services.put(serviceMapping.getMapping(), method);
                 }
+                checkClass = checkClass.getSuperclass();
             }
         }
         catch (Exception e){
@@ -100,43 +102,43 @@ public abstract class Service implements IService {
             if(onInterceptor(requestMeta)){
                 EventContext eventContext;
                 Parameter[] parameterInfos = method.getParameters();
-                HashMap<String, Object> params = new HashMap<>(parameterInfos.length);
-                Object[] args = new Object[parameterInfos.length];
-                int idx = 0;
                 for(Parameter parameterInfo : parameterInfos){
-                    if(requestMeta.getParams().containsKey(parameterInfo.getName())){
-                        String value = requestMeta.getParams().get(parameterInfo.getName());
+                    if(requestMeta.getRawParams().containsKey(parameterInfo.getName())){
+                        String value = requestMeta.getRawParams().get(parameterInfo.getName());
                         AbstractType type = meta.getTypes().get(parameterInfo);
-                        args[idx] = type.deserialize(value);
+                        requestMeta.getParams().put(parameterInfo.getName(),type.deserialize(value));
                     }
                     else return new ResponseMeta(requestMeta,new Error(Error.ErrorCode.NotFoundParam, String.format("%s实例中%s方法的%s参数未提供注入方案", getClass().getName(),method.getName(),parameterInfo.getName())));
-                    params.put(parameterInfo.getName(), args[idx++]);
                 }
                 BeforeEvent beforeEvent = method.getAnnotation(BeforeEvent.class);
                 if(beforeEvent != null){
-                    eventContext = new BeforeEventContext(params,method);
+                    eventContext = new BeforeEventContext(requestMeta.getParams(),method);
                     String iocObjectName = beforeEvent.function().substring(0, beforeEvent.function().indexOf("."));
-                    meta.getEventManager().invokeEvent(meta.getInstanceManager().get(iocObjectName), beforeEvent.function(), params,eventContext);
+                    meta.getEventManager().invokeEvent(meta.getInstanceManager().get(iocObjectName), beforeEvent.function(), requestMeta.getParams(),eventContext);
                 }
                 Object localResult = null;
                 try{
+                    Object[] args = new Object[parameterInfos.length];
+                    for (int i=0;i<parameterInfos.length;i++){
+                        args[i] = requestMeta.getParams().get(parameterInfos[i].getName());
+                    }
                     localResult = method.invoke(this,args);
                 }
                 catch (Exception e){
                     com.ethereal.meta.core.aop.annotation.ExceptionEvent exceptionEvent = method.getAnnotation(com.ethereal.meta.core.aop.annotation.ExceptionEvent.class);
                     if(exceptionEvent != null){
-                        eventContext = new ExceptionEventContext(params,method,e);
+                        eventContext = new ExceptionEventContext(requestMeta.getParams(),method,e);
                         String iocObjectName = exceptionEvent.function().substring(0, exceptionEvent.function().indexOf("."));
-                        meta.getEventManager().invokeEvent(meta.getInstanceManager().get(iocObjectName), exceptionEvent.function(),params,eventContext);
+                        meta.getEventManager().invokeEvent(meta.getInstanceManager().get(iocObjectName), exceptionEvent.function(),requestMeta.getParams(),eventContext);
                         if(exceptionEvent.isThrow())throw e;
                     }
                     else throw e;
                 }
                 AfterEvent afterEvent = method.getAnnotation(AfterEvent.class);
                 if(afterEvent != null){
-                    eventContext = new AfterEventContext(params,method,localResult);
+                    eventContext = new AfterEventContext(requestMeta.getParams(),method,localResult);
                     String iocObjectName = afterEvent.function().substring(0,afterEvent.function().indexOf("."));
-                    meta.getEventManager().invokeEvent(meta.getInstanceManager().get(iocObjectName), afterEvent.function(), params,eventContext);
+                    meta.getEventManager().invokeEvent(meta.getInstanceManager().get(iocObjectName), afterEvent.function(), requestMeta.getParams(),eventContext);
                 }
                 Class<?> return_type = method.getReturnType();
                 if(return_type != void.class){
@@ -155,19 +157,30 @@ public abstract class Service implements IService {
         }
     }
     public ServiceMapping getServiceMapping(Method method){
-        ServiceMapping serviceMapping = new ServiceMapping();
-        if(method.getAnnotation(PostRequest.class) != null){
-            PostRequest annotation = method.getAnnotation(PostRequest.class);
+        if(method.getAnnotation(PostService.class) != null){
+            ServiceMapping serviceMapping = new ServiceMapping();
+            PostService annotation = method.getAnnotation(PostService.class);
             serviceMapping.setMapping(annotation.value());
             serviceMapping.setTimeout(annotation.timeout());
             serviceMapping.setMethod(ServiceType.Post);
+            return serviceMapping;
         }
-        else if(method.getAnnotation(GetRequest.class) != null){
-            GetRequest annotation = method.getAnnotation(GetRequest.class);
+        else if(method.getAnnotation(GetService.class) != null){
+            ServiceMapping serviceMapping = new ServiceMapping();
+            GetService annotation = method.getAnnotation(GetService.class);
             serviceMapping.setMapping(annotation.value());
             serviceMapping.setTimeout(annotation.timeout());
             serviceMapping.setMethod(ServiceType.Get);
+            return serviceMapping;
         }
-        return serviceMapping;
+        else if(method.getAnnotation(MetaService.class) != null){
+            ServiceMapping serviceMapping = new ServiceMapping();
+            MetaService annotation = method.getAnnotation(MetaService.class);
+            serviceMapping.setMapping(annotation.value());
+            serviceMapping.setTimeout(annotation.timeout());
+            serviceMapping.setMethod(ServiceType.Command);
+            return serviceMapping;
+        }
+        return null;
     }
 }

@@ -4,6 +4,10 @@ import com.ethereal.meta.meta.Meta;
 import com.ethereal.meta.net.core.Net;
 import com.ethereal.meta.request.core.Request;
 import com.ethereal.meta.service.core.Service;
+import com.ethereal.meta.standard.StandardMeta;
+import com.ethereal.meta.standard.StandardNet;
+import com.ethereal.meta.standard.StandardRequest;
+import com.ethereal.meta.standard.StandardService;
 
 import java.lang.annotation.*;
 
@@ -12,8 +16,8 @@ import java.lang.annotation.*;
 @Retention(RetentionPolicy.RUNTIME)
 @Components()
 public @interface Components {
-    Class<? extends Meta> meta() default Meta.class;
-    Class<? extends Request> request() default Request.class;
-    Class<? extends Service> service() default Service.class;
-    Class<? extends Net> net() default Net.class;
+    Class<? extends Meta> meta() default StandardMeta.class;
+    Class<? extends Request> request() default StandardRequest.class;
+    Class<? extends Service> service() default StandardService.class;
+    Class<? extends Net> net() default StandardNet.class;
 }

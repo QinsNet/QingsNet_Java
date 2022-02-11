@@ -8,8 +8,6 @@ import com.ethereal.meta.core.instance.InstanceManager;
 import com.ethereal.meta.core.type.AbstractTypeManager;
 import com.ethereal.meta.meta.annotation.Components;
 import com.ethereal.meta.meta.annotation.MetaMapping;
-import com.ethereal.meta.meta.event.ExceptionEvent;
-import com.ethereal.meta.meta.event.LogEvent;
 import com.ethereal.meta.net.core.Net;
 import com.ethereal.meta.net.network.INetwork;
 import com.ethereal.meta.request.annotation.RequestAnnotation;
@@ -42,10 +40,6 @@ public abstract class Meta{
     @Getter
     protected Meta parent;
     @Getter
-    protected final ExceptionEvent exceptionEvent = new ExceptionEvent();
-    @Getter
-    protected final LogEvent logEvent = new LogEvent();
-    @Getter
     protected Request request;
     @Getter
     protected Service service;
@@ -61,20 +55,23 @@ public abstract class Meta{
     protected abstract void onInstance();
 
     protected void onLink() {
-        for (Field field : instanceClass.getFields()){
-            MetaMapping metaMapping = field.getAnnotation(MetaMapping.class);
-            if(metaMapping != null){
-                Meta meta = newMeta(field.getType());
-                if(meta != null){
-                    meta.mapping = metaMapping.value();
-                    meta.parent = this;
-                    meta.prefixes = meta.parent.prefixes + "/" + meta.mapping;
-                    metas.put(mapping,meta);
-                }
-                else {
-                    onException(TrackException.ExceptionCode.NewInstanceError, String.format("%s-%s 生成失败", prefixes, metaMapping.value()));
+        Class<?> checkClass = instanceClass;
+        while (checkClass != null){
+            for (Field field : checkClass.getDeclaredFields()){
+                MetaMapping metaMapping = field.getAnnotation(MetaMapping.class);
+                if(metaMapping != null){
+                    Meta meta = newMeta(this,metaMapping.value(), field.getType());
+                    if(meta != null){
+                        link(meta);
+                        field.setAccessible(true);
+                        meta.field = field;
+                    }
+                    else {
+                        onException(TrackException.ExceptionCode.NewInstanceError, String.format("%s-%s 生成失败", prefixes, metaMapping.value()));
+                    }
                 }
             }
+            checkClass = checkClass.getSuperclass();
         }
     }
 
@@ -85,19 +82,14 @@ public abstract class Meta{
         onException(new TrackException(code,message,this));
     }
 
-    public void onException(Exception exception)  {
-        exceptionEvent.onEvent(exception);
-    }
+    public abstract void onException(Exception exception);
 
     public void onLog(TrackLog.LogCode code, String message){
         onLog(new TrackLog(code,message,this));
     }
 
-    public void onLog(TrackLog log){
-        log.setSender(this);
-        logEvent.onEvent(log);
-    }
-    public Object newInstance(INetwork network){
+    public abstract void onLog(TrackLog log);
+    public <T> T newInstance(INetwork network){
         //Proxy Instance
         Enhancer enhancer = new Enhancer();
         enhancer.setSuperclass(instanceClass);
@@ -105,7 +97,7 @@ public abstract class Meta{
         enhancer.setCallbacks(new Callback[]{noOp,new RequestInterceptor(request,network)});
         enhancer.setCallbackFilter(method ->
         {
-            if(AnnotationUtil.getAnnotation(method, RequestAnnotation.class) != null){
+            if(getRequest().getRequests().containsValue(method)){
                 return 1;
             }
             else return 0;
@@ -119,9 +111,16 @@ public abstract class Meta{
                 onException(e);
             }
         }
-        return instance;
+        return (T)instance;
     }
-    public static Meta newMeta(Class<?> instanceClass)  {
+
+    public void link(Meta child){
+        child.parent = this;
+        child.prefixes = this.prefixes + child.mapping;
+        metas.put(child.prefixes, child);
+    }
+
+    public static Meta newMeta(Meta parent,String mapping,Class<?> instanceClass)  {
         Components components = instanceClass.getAnnotation(Components.class);
         if(components == null){
             components = Components.class.getAnnotation(Components.class);
@@ -129,16 +128,19 @@ public abstract class Meta{
         Meta meta = null;
         try {
             meta = components.meta().getConstructor().newInstance();
+            meta.mapping = mapping;
+            parent.link(meta);
         }
         catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
             Console.error(e.getMessage());
             return null;
         }
         try {
+            meta.instanceClass = instanceClass;
             //Life Cycle
-            meta.service = components.service().getConstructor(Meta.class,Class.class).newInstance(meta,instanceClass);
-            meta.request = components.request().getConstructor(Meta.class,Class.class).newInstance(meta,instanceClass);
-            meta.net = components.net().getConstructor(Meta.class,Class.class).newInstance(meta, instanceClass);
+            meta.service = components.service().getConstructor(Meta.class).newInstance(meta);
+            meta.request = components.request().getConstructor(Meta.class).newInstance(meta);
+            meta.net = components.net().getConstructor(Meta.class).newInstance(meta);
 
             meta.onConfigure();
 
@@ -149,7 +151,6 @@ public abstract class Meta{
             meta.onLink();
 
             meta.onInitialize();
-
 
         }
         catch (Exception e){

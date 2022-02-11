@@ -7,12 +7,10 @@ import com.ethereal.meta.net.network.INetwork;
 import com.ethereal.meta.util.SerializeUtil;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelInitializer;
+import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.socket.nio.NioChannelOption;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.*;
 import io.netty.handler.timeout.IdleStateHandler;
@@ -51,6 +49,7 @@ public class P2PClient implements INetwork {
             Bootstrap bootstrap = new Bootstrap();               //1
             bootstrap.group(group)                                //2
                     .channel(NioSocketChannel.class)            //3
+                    .option(ChannelOption.SO_REUSEADDR,true)
                     .handler(new ChannelInitializer<SocketChannel>() {    //5
                         @Override
                         public void initChannel(SocketChannel ch) {
@@ -74,7 +73,7 @@ public class P2PClient implements INetwork {
                 return channel.isActive();
             }
             else {
-                bootstrap.connect(remote,local).addListener((ChannelFutureListener) future -> {
+                 channel = bootstrap.connect(remote,local).addListener((ChannelFutureListener) future -> {
                     if (future.isSuccess()) {
 
                     }
@@ -89,8 +88,9 @@ public class P2PClient implements INetwork {
     }
 
     private void send(DefaultFullHttpRequest res) {
+        start();
         channel.writeAndFlush(res);
-        channel.close();
+        close();
     }
     @Override
     public boolean send(Object data) {
@@ -109,7 +109,7 @@ public class P2PClient implements INetwork {
         }
         else if(data instanceof RequestMeta){
             RequestMeta requestMeta = (RequestMeta) data;
-            DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1,HttpMethod.POST,requestMeta.getMapping(),Unpooled.copiedBuffer(SerializeUtil.gson.toJson(requestMeta.getParams()).getBytes(StandardCharsets.UTF_8)));
+            DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1,HttpMethod.POST,requestMeta.getMapping(),Unpooled.copiedBuffer(SerializeUtil.gson.toJson(requestMeta.getRawParams()).getBytes(StandardCharsets.UTF_8)));
             request.headers().set("id", requestMeta.getId());
             request.headers().set("protocol", requestMeta.getProtocol());
             request.headers().set("meta", requestMeta.getMeta());

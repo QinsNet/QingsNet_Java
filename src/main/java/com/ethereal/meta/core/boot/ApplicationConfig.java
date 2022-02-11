@@ -8,5 +8,5 @@ import lombok.Setter;
 public class ApplicationConfig {
     private int maxBufferSize = 10240;
     private int threadCount = 5;
-    private int port = 80;
+    private int port = 28000;
 }

@@ -6,7 +6,7 @@ import com.ethereal.meta.request.core.Request;
 
 public class StandardNet extends Net {
 
-    protected StandardNet(Meta meta) {
+    public StandardNet(Meta meta) {
         super(meta);
     }
 

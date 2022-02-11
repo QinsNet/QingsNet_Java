@@ -1,56 +1,59 @@
 package com.ethereal.meta.core.boot;
 
-import com.ethereal.meta.core.console.Console;
+import com.ethereal.meta.core.entity.TrackException;
 import com.ethereal.meta.meta.Meta;
 import com.ethereal.meta.meta.annotation.MetaMapping;
 import com.ethereal.meta.net.network.http.server.Http2Server;
+import com.ethereal.meta.net.network.p2p.client.P2PClient;
 import com.ethereal.meta.util.SerializeUtil;
-import javafx.application.Application;
-import javafx.stage.Stage;
 import lombok.Getter;
 
-import javax.naming.Context;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.lang.reflect.InvocationTargetException;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
 
 public class MetaApplication {
     @Getter
     private ApplicationContext context;
 
-    public ApplicationContext load(String mapping,Class<?> instanceClass){
-        context.getServer().start();
-        context.getRoot().getMetas().put(mapping,context.getRoot());
-        return context;
+    public Meta publish(Class<?> instanceClass){
+        MetaMapping metaMapping  = instanceClass.getAnnotation(MetaMapping.class);
+        if(metaMapping == null){
+            context.getRoot().onException(TrackException.ExceptionCode.NotFoundMeta,instanceClass.getName() + "未标记MetaMapping");
+            return null;
+        }
+        return Meta.newMeta(context.getRoot(),metaMapping.value(), instanceClass);
     }
     public static MetaApplication run(){
         MetaApplication application = new MetaApplication();
         application.context = new ApplicationContext();
-        application.loadConfig(ApplicationConfig.class);
+        application.loadConfig();
         application.context.setServer(new Http2Server(application.context.getConfig(),application.context.getRoot()));
         application.context.getServer().start();
         return application;
     }
 
-    public boolean loadConfig(Class<? extends ApplicationConfig> configClass){
-        File file = new File("application.yaml");
+    private boolean loadConfig(){
+        File file = new File("src/main/resources/application.yaml");
         if(file.exists()){
             try {
                 context.setConfig(SerializeUtil.yaml.load(new FileInputStream(file)));
+                return true;
             }
             catch (FileNotFoundException e) {
-                try {
-                    context.setConfig(configClass.getConstructor().newInstance());
-                } catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException ex) {
-                    Console.error(e.getLocalizedMessage());
-                }
+                context.getRoot().onException(e);
+                return false;
             }
-            return true;
         }
         else {
-            Console.error("未找到application.yaml");
-            return false;
+            context.setConfig(new ApplicationConfig());
+            try {
+                String data = SerializeUtil.yaml.dump(context.getConfig());
+                new FileOutputStream(file).write(data.getBytes(StandardCharsets.UTF_8));
+            } catch (IOException e) {
+                context.getRoot().onException(e);
+                return false;
+            }
         }
+        return true;
     }
 }

@@ -11,6 +11,7 @@ import com.ethereal.meta.core.entity.*;
 import com.ethereal.meta.core.type.AbstractType;
 import com.ethereal.meta.core.type.Param;
 import com.ethereal.meta.meta.Meta;
+import com.ethereal.meta.meta.annotation.MetaMapping;
 import com.ethereal.meta.net.network.INetwork;
 import com.ethereal.meta.request.annotation.*;
 import com.ethereal.meta.request.aop.annotation.FailEvent;
@@ -22,6 +23,7 @@ import com.ethereal.meta.request.aop.context.TimeoutEventContext;
 import lombok.Getter;
 import net.sf.cglib.proxy.MethodProxy;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.HashMap;
@@ -61,39 +63,43 @@ public abstract class Request implements IRequest {
     public Request(Meta meta){
         try {
             this.meta = meta;
-            for (Method method : meta.getInstanceClass().getMethods()){
-                RequestMapping requestMapping = getRequestMapping(method);
-                if(requestMapping !=null){
-                    if(method.getReturnType() != void.class){
-                        Param paramAnnotation = method.getAnnotation(Param.class);
-                        if(paramAnnotation != null){
-                            if(paramAnnotation.name() != null){
-                                String typeName = paramAnnotation.name();
-                                if(meta.getTypes().get(typeName) == null){
-                                    throw new TrackException(TrackException.ExceptionCode.NotFoundType, String.format("%s-%s-%s抽象类型未找到", meta.getInstanceClass().getName() ,method.getName(),paramAnnotation.name()));
+            Class<?> checkClass = meta.getInstanceClass();
+            while (checkClass != null){
+                for (Method method : checkClass.getMethods()){
+                    RequestMapping requestMapping = getRequestMapping(method);
+                    if(requestMapping !=null){
+                        if(method.getReturnType() != void.class){
+                            Param paramAnnotation = method.getAnnotation(Param.class);
+                            if(paramAnnotation != null){
+                                if(paramAnnotation.name() != null){
+                                    String typeName = paramAnnotation.name();
+                                    if(meta.getTypes().get(typeName) == null){
+                                        throw new TrackException(TrackException.ExceptionCode.NotFoundType, String.format("%s-%s-%s抽象类型未找到", meta.getInstanceClass().getName() ,method.getName(),paramAnnotation.name()));
+                                    }
                                 }
                             }
-                        }
-                        else if(meta.getTypes().get(method.getReturnType()) == null){
-                            meta.getTypes().add(method.getName(),method.getReturnType());
-                        }
-                    }
-                    for (Parameter parameter : method.getParameters()){
-                        Param paramAnnotation = method.getAnnotation(Param.class);
-                        if(paramAnnotation != null){
-                            if(paramAnnotation.name() != null){
-                                String typeName = paramAnnotation.name();
-                                if(meta.getTypes().get(typeName) == null){
-                                    throw new TrackException(TrackException.ExceptionCode.NotFoundType, String.format("%s-%s-%s抽象类型未找到",meta.getInstanceClass().getName() ,method.getName(),paramAnnotation.name()));
-                                }
+                            else if(meta.getTypes().get(method.getReturnType()) == null){
+                                meta.getTypes().add(method.getName(),method.getReturnType());
                             }
                         }
-                        else if(meta.getTypes().get(parameter.getParameterizedType()) == null){
-                            meta.getTypes().add(parameter.getName(),parameter.getType());
+                        for (Parameter parameter : method.getParameters()){
+                            Param paramAnnotation = method.getAnnotation(Param.class);
+                            if(paramAnnotation != null){
+                                if(paramAnnotation.name() != null){
+                                    String typeName = paramAnnotation.name();
+                                    if(meta.getTypes().get(typeName) == null){
+                                        throw new TrackException(TrackException.ExceptionCode.NotFoundType, String.format("%s-%s-%s抽象类型未找到",meta.getInstanceClass().getName() ,method.getName(),paramAnnotation.name()));
+                                    }
+                                }
+                            }
+                            else if(meta.getTypes().get(parameter.getParameterizedType()) == null){
+                                meta.getTypes().add(parameter.getName(),parameter.getType());
+                            }
                         }
+                        requests.put(requestMapping.getMapping(), method);
                     }
-                    requests.put(requestMapping.getMapping(), method);
                 }
+                checkClass = checkClass.getSuperclass();
             }
         }
         catch (Exception e){
@@ -101,24 +107,6 @@ public abstract class Request implements IRequest {
         }
     }
 
-    public RequestMapping getRequestMapping(Method method){
-        RequestMapping requestMapping = new RequestMapping();
-        if(method.getAnnotation(PostRequest.class) != null){
-            PostRequest annotation = method.getAnnotation(PostRequest.class);
-            requestMapping.setMapping(annotation.value());
-            requestMapping.setInvoke(annotation.invoke());
-            requestMapping.setTimeout(annotation.timeout());
-            requestMapping.setMethod(RequestType.Post);
-        }
-        else if(method.getAnnotation(GetRequest.class) != null){
-            GetRequest annotation = method.getAnnotation(GetRequest.class);
-            requestMapping.setMapping(annotation.value());
-            requestMapping.setInvoke(annotation.invoke());
-            requestMapping.setTimeout(annotation.timeout());
-            requestMapping.setMethod(RequestType.Get);
-        }
-        return requestMapping;
-    }
     public Object intercept(Object instance, Method method, Object[] args, MethodProxy methodProxy, INetwork network){
         try {
             RequestMapping requestMapping = getRequestMapping(method);
@@ -129,19 +117,17 @@ public abstract class Request implements IRequest {
             Parameter[] parameterInfos = method.getParameters();
             RequestMeta request = new RequestMeta();
             request.setMapping(requestMapping.getMapping());
-            request.setParams(new HashMap<>(parameterInfos.length -1 ));
-            HashMap<String,Object> params = new HashMap<>(parameterInfos.length);
-            int idx = 0;
-            for(Parameter parameterInfo : parameterInfos){
-                AbstractType type = meta.getTypes().get(parameterInfo);
-                request.getParams().put(parameterInfo.getName(),type.serialize(args[idx]));
-                params.put(parameterInfo.getName(), args[idx++]);
+            request.setParams(new HashMap<>(parameterInfos.length));
+            for(int i=0;i<parameterInfos.length;i++){
+                request.getParams().put(parameterInfos[i].getName(),args[i]);
+                AbstractType type = meta.getTypes().get(parameterInfos[i]);
+                request.getRawParams().put(parameterInfos[i].getName(),type.serialize(args));
             }
             BeforeEvent beforeEvent = method.getAnnotation(BeforeEvent.class);
             if(beforeEvent != null){
-                eventContext = new BeforeEventContext(params,method);
+                eventContext = new BeforeEventContext(request.getParams(),method);
                 String iocObjectName = beforeEvent.function().substring(0, beforeEvent.function().indexOf("."));
-                meta.getEventManager().invokeEvent(meta.getInstanceManager().get(iocObjectName), beforeEvent.function(), params,eventContext);
+                meta.getEventManager().invokeEvent(meta.getInstanceManager().get(iocObjectName), beforeEvent.function(), request.getParams(),eventContext);
             }
             if((requestMapping.getInvoke() & InvokeTypeFlags.Local) == 0) {
                 try{
@@ -150,9 +136,9 @@ public abstract class Request implements IRequest {
                 catch (Throwable e){
                     ExceptionEvent exceptionEvent = method.getAnnotation(ExceptionEvent.class);
                     if(exceptionEvent != null){
-                        eventContext = new ExceptionEventContext(params,method,new Exception(e));
+                        eventContext = new ExceptionEventContext(request.getParams(),method,new Exception(e));
                         String iocObjectName = exceptionEvent.function().substring(0, exceptionEvent.function().indexOf("."));
-                        meta.getEventManager().invokeEvent(meta.getInstanceManager().get(iocObjectName), exceptionEvent.function(),params,eventContext);
+                        meta.getEventManager().invokeEvent(meta.getInstanceManager().get(iocObjectName), exceptionEvent.function(),request.getParams(),eventContext);
                         if(exceptionEvent.isThrow())throw new Exception(e);
                     }
                     else throw new Exception(e);
@@ -160,9 +146,9 @@ public abstract class Request implements IRequest {
             }
             AfterEvent afterEvent = method.getAnnotation(AfterEvent.class);
             if(afterEvent != null){
-                eventContext = new AfterEventContext(params,method,localResult);
+                eventContext = new AfterEventContext(request.getParams(),method,localResult);
                 String iocObjectName = afterEvent.function().substring(0,afterEvent.function().indexOf("."));
-                meta.getEventManager().invokeEvent(meta.getInstanceManager().get(iocObjectName), afterEvent.function(), params,eventContext);
+                meta.getEventManager().invokeEvent(meta.getInstanceManager().get(iocObjectName), afterEvent.function(), request.getParams(),eventContext);
             }
             if((requestMapping.getInvoke() & InvokeTypeFlags.Remote) != 0){
                 Class<?> return_type = method.getReturnType();
@@ -186,9 +172,9 @@ public abstract class Request implements IRequest {
                                 if(respond.getError()!=null){
                                     FailEvent failEvent = method.getAnnotation(FailEvent.class);
                                     if(failEvent != null){
-                                        eventContext = new FailEventContext(params,method,respond.getError());
+                                        eventContext = new FailEventContext(request.getParams(),method,respond.getError());
                                         String iocObjectName = failEvent.function().substring(0, failEvent.function().indexOf("."));
-                                        meta.getEventManager().invokeEvent(meta.getInstanceManager().get(iocObjectName), failEvent.function(), params,eventContext);
+                                        meta.getEventManager().invokeEvent(meta.getInstanceManager().get(iocObjectName), failEvent.function(), request.getParams(),eventContext);
                                     }
                                     else throw new TrackException(TrackException.ExceptionCode.Runtime,"来自服务端的报错信息：\n" + respond.getError().getMessage());
                                 }
@@ -200,17 +186,17 @@ public abstract class Request implements IRequest {
                                 remoteResult = type.deserialize(respond.getResult());
                                 SuccessEvent successEvent = method.getAnnotation(SuccessEvent.class);
                                 if(successEvent != null){
-                                    eventContext = new SuccessEventContext(params,method,respond.getResult());
+                                    eventContext = new SuccessEventContext(request.getParams(),method,respond.getResult());
                                     String iocObjectName = successEvent.function().substring(0, successEvent.function().indexOf("."));
-                                    meta.getEventManager().invokeEvent(meta.getInstanceManager().get(iocObjectName), successEvent.function(),params,eventContext);
+                                    meta.getEventManager().invokeEvent(meta.getInstanceManager().get(iocObjectName), successEvent.function(),request.getParams(),eventContext);
                                 }
                             }
                             TimeoutEvent timeoutEvent =  method.getAnnotation(TimeoutEvent.class);
                             if(timeoutEvent != null){
-                                eventContext = new TimeoutEventContext(params,method);
+                                eventContext = new TimeoutEventContext(request.getParams(),method);
                                 assert beforeEvent != null;
                                 String iocObjectName = beforeEvent.function().substring(0, timeoutEvent.function().indexOf("."));
-                                meta.getEventManager().invokeEvent(meta.getInstanceManager().get(iocObjectName), timeoutEvent.function(),params,eventContext);
+                                meta.getEventManager().invokeEvent(meta.getInstanceManager().get(iocObjectName), timeoutEvent.function(),request.getParams(),eventContext);
                             }
                         }
                     }
@@ -229,6 +215,36 @@ public abstract class Request implements IRequest {
         }
         catch (Exception e){
             meta.onException(e);
+        }
+        return null;
+    }
+    public RequestMapping getRequestMapping(Method method){
+        if(method.getAnnotation(PostRequest.class) != null){
+            RequestMapping requestMapping = new RequestMapping();
+            PostRequest annotation = method.getAnnotation(PostRequest.class);
+            requestMapping.setMapping(annotation.value());
+            requestMapping.setInvoke(annotation.invoke());
+            requestMapping.setTimeout(annotation.timeout());
+            requestMapping.setMethod(RequestType.Post);
+            return requestMapping;
+        }
+        else if(method.getAnnotation(GetRequest.class) != null){
+            RequestMapping requestMapping = new RequestMapping();
+            GetRequest annotation = method.getAnnotation(GetRequest.class);
+            requestMapping.setMapping(annotation.value());
+            requestMapping.setInvoke(annotation.invoke());
+            requestMapping.setTimeout(annotation.timeout());
+            requestMapping.setMethod(RequestType.Command);
+            return requestMapping;
+        }
+        else if(method.getAnnotation(MetaRequest.class) != null){
+            RequestMapping requestMapping = new RequestMapping();
+            MetaRequest annotation = method.getAnnotation(MetaRequest.class);
+            requestMapping.setMapping(annotation.value());
+            requestMapping.setInvoke(annotation.invoke());
+            requestMapping.setTimeout(annotation.timeout());
+            requestMapping.setMethod(RequestType.Command);
+            return requestMapping;
         }
         return null;
     }

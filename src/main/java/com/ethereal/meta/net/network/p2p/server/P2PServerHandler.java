@@ -55,7 +55,7 @@ public class P2PServerHandler extends SimpleChannelInboundHandler<FullHttpReques
             //处理请求头,生成请求元数据
             RequestMeta requestMeta = new RequestMeta();
             requestMeta.setMapping(url.getPath());
-            requestMeta.setParams(UrlUtil.getQuery(url.getQuery()));
+            requestMeta.setRawParams(UrlUtil.getQuery(url.getQuery()));
             requestMeta.setId(req.headers().get("id"));
             requestMeta.setProtocol(req.headers().get("protocol"));
             requestMeta.setMeta(req.headers().get("meta"));

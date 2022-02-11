@@ -13,6 +13,7 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.stream.ChunkedWriteHandler;
+import lombok.Getter;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.concurrent.ExecutorService;
@@ -22,7 +23,10 @@ public class Http2Server implements IServer {
     protected ExecutorService es;
     protected RootMeta root;
     protected ApplicationConfig config;
+    @Getter
     protected Channel channel;
+    NioEventLoopGroup boss=new NioEventLoopGroup();
+    NioEventLoopGroup work=new NioEventLoopGroup();
     public Http2Server(ApplicationConfig config, RootMeta root) {
         this.config = config;
         this.root = root;
@@ -31,8 +35,6 @@ public class Http2Server implements IServer {
     @Override
     public boolean start(){
         this.es = Executors.newFixedThreadPool(config.getThreadCount());
-        NioEventLoopGroup boss=new NioEventLoopGroup();
-        NioEventLoopGroup work=new NioEventLoopGroup();
         try {
             ServerBootstrap bootstrap = new ServerBootstrap();
             bootstrap.group(boss,work)                                //2
@@ -54,13 +56,9 @@ public class Http2Server implements IServer {
                 else {
 
                 }
-            }).channel();
-            channel.closeFuture().sync();
+            }).sync().channel();
         } catch (Exception e) {
             e.printStackTrace();
-        } finally {
-            boss.shutdownGracefully();
-            work.shutdownGracefully();
         }
         return true;
     }
@@ -68,6 +66,8 @@ public class Http2Server implements IServer {
     @Override
     public boolean close() {
         if(!channel.isActive()){
+            boss.shutdownGracefully();
+            work.shutdownGracefully();
             channel.close();
         }
         return true;

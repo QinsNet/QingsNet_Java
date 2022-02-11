@@ -7,6 +7,7 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
@@ -15,6 +16,8 @@ import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.stream.ChunkedWriteHandler;
 
 import java.lang.reflect.InvocationTargetException;
+import java.net.InetSocketAddress;
+import java.net.SocketOption;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -37,6 +40,8 @@ public class P2PServer implements IServer {
             ServerBootstrap bootstrap = new ServerBootstrap();
             bootstrap.group(boss,work)                                //2
                     .channel(NioServerSocketChannel.class)            //3
+                    .option(ChannelOption.SO_REUSEADDR,true)
+                    .childOption(ChannelOption.SO_REUSEADDR,true)
                     .childHandler(new ChannelInitializer<SocketChannel>() {    //5
                         @Override
                         public void initChannel(SocketChannel ch) throws IllegalAccessException, InvocationTargetException, NoSuchMethodException, InstantiationException {

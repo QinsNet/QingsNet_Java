@@ -2,5 +2,6 @@ package com.ethereal.meta.request.annotation;
 
 public enum RequestType {
     Get,
-    Post
+    Post,
+    Command
 }
