@@ -1,6 +1,6 @@
 package com.ethereal.meta.net.core.event;
 
-import com.ethereal.meta.net.core.Net;
+import com.ethereal.meta.net.core.Node;
 import com.ethereal.meta.net.core.event.Delegate.InactiveDelegate;
 
 import java.util.Iterator;
@@ -30,10 +30,10 @@ public class InactiveEvent {
             }
         }
     }
-    public void onEvent(Net net){
+    public void onEvent(Node node){
         synchronized (listeners){
             for (InactiveDelegate delegate:listeners) {
-                delegate.onInactive(net);
+                delegate.onInactive(node);
             }
         }
     }

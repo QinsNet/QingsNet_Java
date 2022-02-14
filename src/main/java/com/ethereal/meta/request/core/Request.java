@@ -11,8 +11,9 @@ import com.ethereal.meta.core.entity.*;
 import com.ethereal.meta.core.type.AbstractType;
 import com.ethereal.meta.core.type.Param;
 import com.ethereal.meta.meta.Meta;
-import com.ethereal.meta.meta.annotation.MetaMapping;
-import com.ethereal.meta.net.network.INetwork;
+import com.ethereal.meta.net.core.Node;
+import com.ethereal.meta.net.p2p.sender.RemoteInfo;
+import com.ethereal.meta.net.p2p.sender.Sender;
 import com.ethereal.meta.request.annotation.*;
 import com.ethereal.meta.request.aop.annotation.FailEvent;
 import com.ethereal.meta.request.aop.annotation.SuccessEvent;
@@ -23,7 +24,6 @@ import com.ethereal.meta.request.aop.context.TimeoutEventContext;
 import lombok.Getter;
 import net.sf.cglib.proxy.MethodProxy;
 
-import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.HashMap;
@@ -44,15 +44,10 @@ public abstract class Request implements IRequest {
     @Getter
     protected Meta meta;
 
-    public void receive(ResponseMeta responseMeta) {
+    public void receive(RequestContext context) {
         try {
-            if(!tasks.containsKey(responseMeta.getId())){
-                throw new TrackException(TrackException.ExceptionCode.NotFoundRequest, String.format("请求:%s ID：%s 未找到",meta.getPrefixes(),responseMeta.getId()));
-            }
-            RequestMeta requestMeta = tasks.remove(responseMeta.getId());
-            synchronized (requestMeta){
-                requestMeta.setResult(responseMeta);
-                requestMeta.notify();
+            synchronized (context){
+                context.notify();
             }
         }
         catch (Exception e){
@@ -107,7 +102,7 @@ public abstract class Request implements IRequest {
         }
     }
 
-    public Object intercept(Object instance, Method method, Object[] args, MethodProxy methodProxy, INetwork network){
+    public Object intercept(Object instance, Method method, Object[] args, MethodProxy methodProxy, RemoteInfo remote){
         try {
             RequestMapping requestMapping = getRequestMapping(method);
             Object localResult = null;
@@ -115,19 +110,21 @@ public abstract class Request implements IRequest {
             Object methodResult = null;
             EventContext eventContext;
             Parameter[] parameterInfos = method.getParameters();
-            RequestMeta request = new RequestMeta();
-            request.setMapping(requestMapping.getMapping());
-            request.setParams(new HashMap<>(parameterInfos.length));
+            RequestContext context = new RequestContext();
+            context.getRequest().setMapping(requestMapping.getMapping());
+            context.setInstance(instance);
+            context.setMethod(method);
+            context.setParams(new HashMap<>(parameterInfos.length));
             for(int i=0;i<parameterInfos.length;i++){
-                request.getParams().put(parameterInfos[i].getName(),args[i]);
+                context.getParams().put(parameterInfos[i].getName(),args[i]);
                 AbstractType type = meta.getTypes().get(parameterInfos[i]);
-                request.getRawParams().put(parameterInfos[i].getName(),type.serialize(args));
+                context.getRequest().getParams().put(parameterInfos[i].getName(),type.serialize(args));
             }
             BeforeEvent beforeEvent = method.getAnnotation(BeforeEvent.class);
             if(beforeEvent != null){
-                eventContext = new BeforeEventContext(request.getParams(),method);
+                eventContext = new BeforeEventContext(context.getParams(),method);
                 String iocObjectName = beforeEvent.function().substring(0, beforeEvent.function().indexOf("."));
-                meta.getEventManager().invokeEvent(meta.getInstanceManager().get(iocObjectName), beforeEvent.function(), request.getParams(),eventContext);
+                meta.getEventManager().invokeEvent(meta.getInstanceManager().get(iocObjectName), beforeEvent.function(), context.getParams(),eventContext);
             }
             if((requestMapping.getInvoke() & InvokeTypeFlags.Local) == 0) {
                 try{
@@ -136,9 +133,9 @@ public abstract class Request implements IRequest {
                 catch (Throwable e){
                     ExceptionEvent exceptionEvent = method.getAnnotation(ExceptionEvent.class);
                     if(exceptionEvent != null){
-                        eventContext = new ExceptionEventContext(request.getParams(),method,new Exception(e));
+                        eventContext = new ExceptionEventContext(context.getParams(),method,new Exception(e));
                         String iocObjectName = exceptionEvent.function().substring(0, exceptionEvent.function().indexOf("."));
-                        meta.getEventManager().invokeEvent(meta.getInstanceManager().get(iocObjectName), exceptionEvent.function(),request.getParams(),eventContext);
+                        meta.getEventManager().invokeEvent(meta.getInstanceManager().get(iocObjectName), exceptionEvent.function(),context.getParams(),eventContext);
                         if(exceptionEvent.isThrow())throw new Exception(e);
                     }
                     else throw new Exception(e);
@@ -146,35 +143,32 @@ public abstract class Request implements IRequest {
             }
             AfterEvent afterEvent = method.getAnnotation(AfterEvent.class);
             if(afterEvent != null){
-                eventContext = new AfterEventContext(request.getParams(),method,localResult);
+                eventContext = new AfterEventContext(context.getParams(),method,localResult);
                 String iocObjectName = afterEvent.function().substring(0,afterEvent.function().indexOf("."));
-                meta.getEventManager().invokeEvent(meta.getInstanceManager().get(iocObjectName), afterEvent.function(), request.getParams(),eventContext);
+                meta.getEventManager().invokeEvent(meta.getInstanceManager().get(iocObjectName), afterEvent.function(), context.getParams(),eventContext);
             }
             if((requestMapping.getInvoke() & InvokeTypeFlags.Remote) != 0){
-                Class<?> return_type = method.getReturnType();
-                if(return_type.equals(Void.TYPE)){
-                    network.send(request);
-                }
-                else{
-                    String  id = String.valueOf(random.nextInt());
-                    while (tasks.containsKey(id)){
-                        id = String.valueOf(random.nextInt());
+                Node sender = new Sender(meta,context);
+                try {
+                    Class<?> return_type = method.getReturnType();
+                    if(return_type.equals(Void.TYPE)){
+                        sender.send(context.getRequest());
                     }
-                    request.setId(id);
-                    tasks.put(request.getId(),request);
-                    try {
+                    else{
                         int timeout = requestConfig.getTimeout();
                         if(requestMapping.getTimeout() != -1)timeout = requestMapping.getTimeout();
-                        if(network.send(request)){
-                            request.wait(timeout);
-                            ResponseMeta respond = request.getResult();
+                        if(sender.send(context.getRequest())){
+                            synchronized (context){
+                                context.wait(timeout);
+                            }
+                            ResponseMeta respond = context.getResult();
                             if(respond != null){
                                 if(respond.getError()!=null){
                                     FailEvent failEvent = method.getAnnotation(FailEvent.class);
                                     if(failEvent != null){
-                                        eventContext = new FailEventContext(request.getParams(),method,respond.getError());
+                                        eventContext = new FailEventContext(context.getParams(),method,respond.getError());
                                         String iocObjectName = failEvent.function().substring(0, failEvent.function().indexOf("."));
-                                        meta.getEventManager().invokeEvent(meta.getInstanceManager().get(iocObjectName), failEvent.function(), request.getParams(),eventContext);
+                                        meta.getEventManager().invokeEvent(meta.getInstanceManager().get(iocObjectName), failEvent.function(), context.getParams(),eventContext);
                                     }
                                     else throw new TrackException(TrackException.ExceptionCode.Runtime,"来自服务端的报错信息：\n" + respond.getError().getMessage());
                                 }
@@ -186,23 +180,23 @@ public abstract class Request implements IRequest {
                                 remoteResult = type.deserialize(respond.getResult());
                                 SuccessEvent successEvent = method.getAnnotation(SuccessEvent.class);
                                 if(successEvent != null){
-                                    eventContext = new SuccessEventContext(request.getParams(),method,respond.getResult());
+                                    eventContext = new SuccessEventContext(context.getParams(),method,respond.getResult());
                                     String iocObjectName = successEvent.function().substring(0, successEvent.function().indexOf("."));
-                                    meta.getEventManager().invokeEvent(meta.getInstanceManager().get(iocObjectName), successEvent.function(),request.getParams(),eventContext);
+                                    meta.getEventManager().invokeEvent(meta.getInstanceManager().get(iocObjectName), successEvent.function(),context.getParams(),eventContext);
                                 }
                             }
                             TimeoutEvent timeoutEvent =  method.getAnnotation(TimeoutEvent.class);
                             if(timeoutEvent != null){
-                                eventContext = new TimeoutEventContext(request.getParams(),method);
+                                eventContext = new TimeoutEventContext(context.getParams(),method);
                                 assert beforeEvent != null;
                                 String iocObjectName = beforeEvent.function().substring(0, timeoutEvent.function().indexOf("."));
-                                meta.getEventManager().invokeEvent(meta.getInstanceManager().get(iocObjectName), timeoutEvent.function(),request.getParams(),eventContext);
+                                meta.getEventManager().invokeEvent(meta.getInstanceManager().get(iocObjectName), timeoutEvent.function(),context.getParams(),eventContext);
                             }
                         }
                     }
-                    finally {
-                        tasks.remove(id);
-                    }
+                }
+                finally {
+                    sender.close();
                 }
             }
             if((requestMapping.getInvoke() & InvokeTypeFlags.ReturnRemote) != 0){

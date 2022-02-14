@@ -6,18 +6,17 @@ import lombok.Setter;
 import lombok.ToString;
 
 import java.lang.reflect.Method;
+import java.net.SocketAddress;
 import java.util.HashMap;
 
 @ToString
 @Getter
 @Setter
 public class RequestMeta {
-    private ResponseMeta result;
     private String protocol = "Meta-Request-1.0";
     private String mapping;
-    private HashMap<String,Object> params;
-    private HashMap<String,String> rawParams;
-    private String id = "";
+    private HashMap<String,String> params;
     private String meta = "";
-    private Object instance;
+    private String host;
+    private String port;
 }

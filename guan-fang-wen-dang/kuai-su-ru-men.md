@@ -167,10 +167,10 @@ types.Add<long>("Long");
 types.Add<string>("String");
 types.Add<bool>("Bool");
 types.Add<User>("User");
-Net net = NetCore.Register("name", Net.NetType.WebSocket); //注册网关
-server server = ServerCore.Register(net,"127.0.0.1:28015/NetDemo/");//注册服务端
-Service serviceNet = ServiceCore.Register<ServerService>(net, "server", types);//注册服务
-net.Publish();//启动
+Net node = NetCore.Register("name", Net.NetType.WebSocket); //注册网关
+server server = ServerCore.Register(node,"127.0.0.1:28015/NetDemo/");//注册服务端
+Service serviceNet = ServiceCore.Register<ServerService>(node, "server", types);//注册服务
+node.Publish();//启动
 ```
 
 #### Client\[Java\]
@@ -188,10 +188,10 @@ types.add(Long,"Long");
 types.add(String,"String");
 types.add(Boolean,"Bool");
 types.add(User.class,"User");
-Net net = NetCore.register("name", Net.NetType.WebSocket); //注册网关
-Client client = ClientCore.Register(net,"127.0.0.1:28015/NetDemo/");//注册客户端
-Request requestMeta = RequestCore.register(ServerRequest.class,net, "server", types);//注册请求
-net.publish();//启动
+Net node = NetCore.register("name", Net.NetType.WebSocket); //注册网关
+Client client = ClientCore.Register(node,"127.0.0.1:28015/NetDemo/");//注册客户端
+Request requestMeta = RequestCore.register(ServerRequest.class,node, "server", types);//注册请求
+node.publish();//启动
 ```
 
 ### 架构
@@ -242,31 +242,31 @@ Ethereal中心配置涵盖了注册中心、管理中心的功能。
 **server\[C\#\]**
 
 ```text
-Net net = NetCore.Register("name", Net.NetType.WebSocket); //注册网关
+Net node = NetCore.Register("name", Net.NetType.WebSocket); //注册网关
 //开启集群模式
-net.Config.NetNodeMode = true;
+node.Config.NetNodeMode = true;
 List<Tuple<string, ClientConfig>> ips = new();
 //添加集群地址
 ips.Add(new Tuple<string,ClientConfig>($"{ip}:{28015}/NetDemo/", new ClientConfig()));
 ips.Add(new Tuple<string,ClientConfig>($"{ip}:{28016}/NetDemo/", new ClientConfig()));
 ips.Add(new Tuple<string,ClientConfig>($"{ip}:{28017}/NetDemo/", new ClientConfig()));
 ips.Add(new Tuple<string,ClientConfig>($"{ip}:{28018}/NetDemo/", new ClientConfig()));
-net.Config.NetNodeIps = ips;
+node.Config.NetNodeIps = ips;
 ```
 
 **Client\[Java\]**
 
 ```java
-Net net = NetCore.register("name", Net.NetType.WebSocket); //注册网关
+Net node = NetCore.register("name", Net.NetType.WebSocket); //注册网关
 //开启集群模式
-net.getConfig().setNetNodeMode(true);
+node.getConfig().setNetNodeMode(true);
 ArrayList<Pair<String, ClientConfig>> ips = new ArrayList<>();
 //添加集群地址
 ips.add("127.0.0.1:28015/NetDemo/",new ClientConfig());
 ips.add("127.0.0.1:28016/NetDemo/",new ClientConfig());
 ips.add("127.0.0.1:28017/NetDemo/",new ClientConfig());
 ips.add("127.0.0.1:28018/NetDemo/",new ClientConfig());
-net.getConfig().setNetNodeIps(ips);
+node.getConfig().setNetNodeIps(ips);
 ```
 
 > Ethereal的中心服务部署在Net，与正常Service属于同一层级，这也意味着不需要额外的端口，一个Net节点，就是一个中心，不需要关心集群部署时的端口配置问题，您在**部署服务的同时，也是在部署集群！**
@@ -287,9 +287,9 @@ BaseToken内含有唯一Key值属性，Ethereal通过用户给予的Key值属性
 
 ```text
 [Service]
-public bool Login(BaseToken net, string username,string password)
+public bool Login(BaseToken node, string username,string password)
 {
-    net.Key = username;//为该token设置键值属性
+    node.Key = username;//为该token设置键值属性
     BaseToken.Register();//将token注册，受Ethereal管理其生命周期
 }
 ```
@@ -300,7 +300,7 @@ public bool Login(BaseToken net, string username,string password)
 public class ServerService
 {
     [Service]
-    public int Add(BaseToken net,int a,int b)
+    public int Add(BaseToken node,int a,int b)
     {
         return a + b;
     }
@@ -401,7 +401,7 @@ TrackLog中含有Net、Request\Service、Client\Server实体，输出日志时�
 通常捕获Net事件，代表了该Net节点的所有日志输出。
 
 ```text
-net.ExceptionEvent += ExceptionEventFunction;
+node.ExceptionEvent += ExceptionEventFunction;
 private static void ExceptionEventFunction(TrackException exception)
 {
     Console.WriteLine(exception.Message);
@@ -421,7 +421,7 @@ TrackException中含有Net、Request\Service、Client\Server实体，抛出异�
 **与Log不同的是，TrackException内部包含了一个Exception字段，该字段是真正的异常事件，有时为TrackException本身，但也有时是一些其他异常，Ethereal捕获所有异常并封装在其内部。**
 
 > ```text
-> net.ExceptionEvent += ExceptionEventFunction;
+> node.ExceptionEvent += ExceptionEventFunction;
 > private static void ExceptionEventFunction(TrackException exception)
 > {
 >     Console.WriteLine(exception.Message);
@@ -436,9 +436,9 @@ Ethereal的服务拦截分为Net层拦截，以及Service层拦截，且两层�
 
 ```text
 serviceNet.InterceptorEvent += Interceptor;
-private static bool Interceptor(Net net, Service serviceNet, MethodInfo method, Token net)
+private static bool Interceptor(Net node, Service serviceNet, MethodInfo method, Token node)
 {
-    if (net.Key == "123")
+    if (node.Key == "123")
     {
         return false;
     }

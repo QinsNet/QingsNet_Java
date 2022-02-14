@@ -1,7 +1,7 @@
 package com.ethereal.meta.net.core.event.Delegate;
 
-import com.ethereal.meta.net.core.Net;
+import com.ethereal.meta.net.core.Node;
 
 public interface ActiveDelegate {
-    void onActive(Net net);
+    void onActive(Node node);
 }

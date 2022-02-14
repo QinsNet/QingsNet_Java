@@ -89,7 +89,8 @@ public abstract class Service implements IService {
         }
         return true;
     }
-    public Object receive(RequestMeta requestMeta) {
+    public Object receive(ServiceContext context) {
+        RequestMeta requestMeta = context.getRequestMeta();
         try {
             Method method = null;
             LinkedList<String> mappings = new LinkedList<>(Arrays.asList(requestMeta.getMapping().split("/")));
@@ -97,24 +98,24 @@ public abstract class Service implements IService {
                method = services.get(mappings.getLast());
             }
             else {
-                return new ResponseMeta(requestMeta,new Error(Error.ErrorCode.NotFoundMethod, String.format("Mapping:%s 未找到",requestMeta.getMapping())));
+                return new ResponseMeta(requestMeta, new Error(Error.ErrorCode.NotFoundMethod, String.format("Mapping:%s 未找到",requestMeta.getMapping())));
             }
             if(onInterceptor(requestMeta)){
                 EventContext eventContext;
                 Parameter[] parameterInfos = method.getParameters();
                 for(Parameter parameterInfo : parameterInfos){
-                    if(requestMeta.getRawParams().containsKey(parameterInfo.getName())){
-                        String value = requestMeta.getRawParams().get(parameterInfo.getName());
+                    if(requestMeta.getParams().containsKey(parameterInfo.getName())){
+                        String value = requestMeta.getParams().get(parameterInfo.getName());
                         AbstractType type = meta.getTypes().get(parameterInfo);
-                        requestMeta.getParams().put(parameterInfo.getName(),type.deserialize(value));
+                        context.getParams().put(parameterInfo.getName(),type.deserialize(value));
                     }
                     else return new ResponseMeta(requestMeta,new Error(Error.ErrorCode.NotFoundParam, String.format("%s实例中%s方法的%s参数未提供注入方案", getClass().getName(),method.getName(),parameterInfo.getName())));
                 }
                 BeforeEvent beforeEvent = method.getAnnotation(BeforeEvent.class);
                 if(beforeEvent != null){
-                    eventContext = new BeforeEventContext(requestMeta.getParams(),method);
+                    eventContext = new BeforeEventContext(context.getParams(),method);
                     String iocObjectName = beforeEvent.function().substring(0, beforeEvent.function().indexOf("."));
-                    meta.getEventManager().invokeEvent(meta.getInstanceManager().get(iocObjectName), beforeEvent.function(), requestMeta.getParams(),eventContext);
+                    meta.getEventManager().invokeEvent(meta.getInstanceManager().get(iocObjectName), beforeEvent.function(), context.getParams(),eventContext);
                 }
                 Object localResult = null;
                 try{
@@ -127,18 +128,18 @@ public abstract class Service implements IService {
                 catch (Exception e){
                     com.ethereal.meta.core.aop.annotation.ExceptionEvent exceptionEvent = method.getAnnotation(com.ethereal.meta.core.aop.annotation.ExceptionEvent.class);
                     if(exceptionEvent != null){
-                        eventContext = new ExceptionEventContext(requestMeta.getParams(),method,e);
+                        eventContext = new ExceptionEventContext(context.getParams(),method,e);
                         String iocObjectName = exceptionEvent.function().substring(0, exceptionEvent.function().indexOf("."));
-                        meta.getEventManager().invokeEvent(meta.getInstanceManager().get(iocObjectName), exceptionEvent.function(),requestMeta.getParams(),eventContext);
+                        meta.getEventManager().invokeEvent(meta.getInstanceManager().get(iocObjectName), exceptionEvent.function(),context.getParams(),eventContext);
                         if(exceptionEvent.isThrow())throw e;
                     }
                     else throw e;
                 }
                 AfterEvent afterEvent = method.getAnnotation(AfterEvent.class);
                 if(afterEvent != null){
-                    eventContext = new AfterEventContext(requestMeta.getParams(),method,localResult);
+                    eventContext = new AfterEventContext(context.getParams(),method,localResult);
                     String iocObjectName = afterEvent.function().substring(0,afterEvent.function().indexOf("."));
-                    meta.getEventManager().invokeEvent(meta.getInstanceManager().get(iocObjectName), afterEvent.function(), requestMeta.getParams(),eventContext);
+                    meta.getEventManager().invokeEvent(meta.getInstanceManager().get(iocObjectName), afterEvent.function(), context.getParams(),eventContext);
                 }
                 Class<?> return_type = method.getReturnType();
                 if(return_type != void.class){

@@ -1,8 +1,7 @@
-package com.ethereal.meta.net.network.p2p.server;
+package com.ethereal.meta.net.p2p.recevier;
 
 import com.ethereal.meta.core.boot.ApplicationConfig;
-import com.ethereal.meta.meta.root.RootMeta;
-import com.ethereal.meta.net.network.IServer;
+import com.ethereal.meta.meta.Meta;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
@@ -16,40 +15,36 @@ import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.stream.ChunkedWriteHandler;
 
 import java.lang.reflect.InvocationTargetException;
-import java.net.InetSocketAddress;
-import java.net.SocketOption;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class P2PServer implements IServer {
+public class Receiver {
     protected ExecutorService es;
-    protected RootMeta root;
+    protected Meta root;
     protected ApplicationConfig config;
     protected Channel channel;
-    public P2PServer(ApplicationConfig config, RootMeta root) {
+    public Receiver(ApplicationConfig config, Meta root) {
         this.config = config;
         this.root = root;
     }
 
-    @Override
     public boolean start(){
         this.es = Executors.newFixedThreadPool(config.getThreadCount());
         NioEventLoopGroup boss=new NioEventLoopGroup();
-        NioEventLoopGroup work=new NioEventLoopGroup();
         try {
             ServerBootstrap bootstrap = new ServerBootstrap();
-            bootstrap.group(boss,work)                                //2
+            bootstrap.group(boss)                                //2
                     .channel(NioServerSocketChannel.class)            //3
                     .option(ChannelOption.SO_REUSEADDR,true)
-                    .childOption(ChannelOption.SO_REUSEADDR,true)
                     .childHandler(new ChannelInitializer<SocketChannel>() {    //5
                         @Override
                         public void initChannel(SocketChannel ch) throws IllegalAccessException, InvocationTargetException, NoSuchMethodException, InstantiationException {
-                            //数据处理
+                            //Http
                             ch.pipeline().addLast(new HttpServerCodec());
                             ch.pipeline().addLast(new HttpObjectAggregator(config.getMaxBufferSize()));
                             ch.pipeline().addLast(new ChunkedWriteHandler());
-                            ch.pipeline().addLast(new P2PServerHandler(es, root));
+                            //Service
+                            ch.pipeline().addLast(new ServiceHandler(es, root));
                         }
                     });
             channel = bootstrap.bind(config.getPort()).addListener((ChannelFutureListener) future -> {
@@ -65,15 +60,6 @@ public class P2PServer implements IServer {
             e.printStackTrace();
         } finally {
             boss.shutdownGracefully();
-            work.shutdownGracefully();
-        }
-        return true;
-    }
-
-    @Override
-    public boolean close() {
-        if(!channel.isActive()){
-            channel.close();
         }
         return true;
     }

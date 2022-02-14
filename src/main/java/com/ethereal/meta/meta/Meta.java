@@ -8,13 +8,10 @@ import com.ethereal.meta.core.instance.InstanceManager;
 import com.ethereal.meta.core.type.AbstractTypeManager;
 import com.ethereal.meta.meta.annotation.Components;
 import com.ethereal.meta.meta.annotation.MetaMapping;
-import com.ethereal.meta.net.core.Net;
-import com.ethereal.meta.net.network.INetwork;
-import com.ethereal.meta.request.annotation.RequestAnnotation;
+import com.ethereal.meta.net.p2p.sender.RemoteInfo;
 import com.ethereal.meta.request.core.Request;
 import com.ethereal.meta.request.core.RequestInterceptor;
 import com.ethereal.meta.service.core.Service;
-import com.ethereal.meta.util.AnnotationUtil;
 import lombok.Getter;
 import net.sf.cglib.proxy.Callback;
 import net.sf.cglib.proxy.Enhancer;
@@ -43,8 +40,6 @@ public abstract class Meta{
     protected Request request;
     @Getter
     protected Service service;
-    @Getter
-    protected Net net;
     @Getter
     protected Class<?> instanceClass;
     @Getter
@@ -89,12 +84,13 @@ public abstract class Meta{
     }
 
     public abstract void onLog(TrackLog log);
-    public <T> T newInstance(INetwork network){
+
+    public <T> T newInstance(RemoteInfo remote){
         //Proxy Instance
         Enhancer enhancer = new Enhancer();
         enhancer.setSuperclass(instanceClass);
         Callback noOp= NoOp.INSTANCE;
-        enhancer.setCallbacks(new Callback[]{noOp,new RequestInterceptor(request,network)});
+        enhancer.setCallbacks(new Callback[]{noOp,new RequestInterceptor(request, remote)});
         enhancer.setCallbackFilter(method ->
         {
             if(getRequest().getRequests().containsValue(method)){
@@ -105,7 +101,7 @@ public abstract class Meta{
         Object instance = enhancer.create();
         for (Meta meta: metas.values()){
             try {
-                meta.getField().set(instance,meta.newInstance(network));
+                meta.getField().set(instance,meta.newInstance(remote));
             }
             catch (IllegalAccessException e) {
                 onException(e);
@@ -129,7 +125,10 @@ public abstract class Meta{
         try {
             meta = components.meta().getConstructor().newInstance();
             meta.mapping = mapping;
-            parent.link(meta);
+            if(parent != null) parent.link(meta);
+            else {
+                meta.prefixes = mapping;
+            }
         }
         catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
             Console.error(e.getMessage());
@@ -140,7 +139,6 @@ public abstract class Meta{
             //Life Cycle
             meta.service = components.service().getConstructor(Meta.class).newInstance(meta);
             meta.request = components.request().getConstructor(Meta.class).newInstance(meta);
-            meta.net = components.net().getConstructor(Meta.class).newInstance(meta);
 
             meta.onConfigure();
 

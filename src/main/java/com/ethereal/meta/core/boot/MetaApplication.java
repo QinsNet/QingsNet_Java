@@ -4,7 +4,6 @@ import com.ethereal.meta.core.entity.TrackException;
 import com.ethereal.meta.meta.Meta;
 import com.ethereal.meta.meta.annotation.MetaMapping;
 import com.ethereal.meta.net.network.http.server.Http2Server;
-import com.ethereal.meta.net.network.p2p.client.P2PClient;
 import com.ethereal.meta.util.SerializeUtil;
 import lombok.Getter;
 

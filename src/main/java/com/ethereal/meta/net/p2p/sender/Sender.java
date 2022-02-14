@@ -1,21 +1,21 @@
-package com.ethereal.meta.net.network.p2p.client;
+package com.ethereal.meta.net.p2p.sender;
 
 import com.ethereal.meta.core.entity.RequestMeta;
 import com.ethereal.meta.core.entity.ResponseMeta;
 import com.ethereal.meta.meta.Meta;
-import com.ethereal.meta.net.network.INetwork;
+import com.ethereal.meta.request.core.RequestContext;
 import com.ethereal.meta.util.SerializeUtil;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.nio.NioChannelOption;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.*;
+import io.netty.handler.codec.string.StringDecoder;
+import io.netty.handler.codec.string.StringEncoder;
 import io.netty.handler.timeout.IdleStateHandler;
 
-import java.net.SocketAddress;
 import java.nio.charset.StandardCharsets;
 
 /**
@@ -30,16 +30,11 @@ import java.nio.charset.StandardCharsets;
  * @UpdateRemark: 类的第一次生成
  * @Version: 1.0
  */
-public class P2PClient implements INetwork {
-    private final Meta meta;
-    private final SocketAddress remote;
-    private final SocketAddress local;
-    private Channel channel;
+public class Sender extends com.ethereal.meta.net.core.Node {
 
-    public P2PClient(Meta meta, SocketAddress remote, SocketAddress local) {
-        this.meta = meta;
-        this.remote = remote;
-        this.local = local;
+    private Channel channel;
+    public Sender(Meta meta, RequestContext context) {
+        super(meta,context);
     }
 
     @Override
@@ -53,16 +48,19 @@ public class P2PClient implements INetwork {
                     .handler(new ChannelInitializer<SocketChannel>() {    //5
                         @Override
                         public void initChannel(SocketChannel ch) {
-                            //数据处理
+                            //编解码
+                            ch.pipeline().addLast(new StringEncoder());
+                            ch.pipeline().addLast(new StringDecoder());
+                            //Http
                             ch.pipeline().addLast(new HttpClientCodec());
-                            ch.pipeline().addLast(new HttpObjectAggregator(meta.getNet().getNetConfig().getMaxBufferSize()));
-                            //心跳包
+                            ch.pipeline().addLast(new HttpObjectAggregator(nodeConfig.getMaxBufferSize()));
+                            //Request
                             ch.pipeline().addLast(new IdleStateHandler(0,0,5));
-                            ch.pipeline().addLast(new P2PClientHandler(meta));
+                            ch.pipeline().addLast(new RequestHandler(meta,context));
                         }
                     });
-            if(meta.getNet().getNetConfig().isSyncConnect()){
-                channel = bootstrap.connect(remote,local).addListener(new ChannelFutureListener() {
+            if(nodeConfig.isSyncConnect()){
+                channel = bootstrap.connect(context.getRemoteInfo().getRemote()).addListener(new ChannelFutureListener() {
                     @Override
                     public void operationComplete(ChannelFuture future) throws Exception {
                         if (!future.isSuccess()) {
@@ -73,7 +71,7 @@ public class P2PClient implements INetwork {
                 return channel.isActive();
             }
             else {
-                 channel = bootstrap.connect(remote,local).addListener((ChannelFutureListener) future -> {
+                 channel = bootstrap.bind().addListener((ChannelFutureListener) future -> {
                     if (future.isSuccess()) {
 
                     }
@@ -100,7 +98,6 @@ public class P2PClient implements INetwork {
         else if(data instanceof ResponseMeta){
             ResponseMeta responseMeta = (ResponseMeta) data;
             DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST,responseMeta.getMapping(), Unpooled.copiedBuffer(SerializeUtil.gson.toJson(responseMeta.getResult()).getBytes(StandardCharsets.UTF_8)));
-            request.headers().set("id",responseMeta.getId());
             request.headers().set("error", SerializeUtil.gson.toJson(responseMeta.getError()));
             request.headers().set("protocol",responseMeta.getProtocol());
             request.headers().set("meta",responseMeta.getMeta());
@@ -109,8 +106,7 @@ public class P2PClient implements INetwork {
         }
         else if(data instanceof RequestMeta){
             RequestMeta requestMeta = (RequestMeta) data;
-            DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1,HttpMethod.POST,requestMeta.getMapping(),Unpooled.copiedBuffer(SerializeUtil.gson.toJson(requestMeta.getRawParams()).getBytes(StandardCharsets.UTF_8)));
-            request.headers().set("id", requestMeta.getId());
+            DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1,HttpMethod.POST,requestMeta.getMapping(),Unpooled.copiedBuffer(SerializeUtil.gson.toJson(requestMeta.getParams()).getBytes(StandardCharsets.UTF_8)));
             request.headers().set("protocol", requestMeta.getProtocol());
             request.headers().set("meta", requestMeta.getMeta());
             request.headers().set("value", requestMeta.getMapping());
@@ -130,6 +126,12 @@ public class P2PClient implements INetwork {
 
     @Override
     public boolean close() {
-        return false;
+        try {
+            channel.close().sync();
+            return true;
+        } catch (InterruptedException e) {
+            meta.onException(e);
+            return false;
+        }
     }
 }

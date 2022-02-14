@@ -14,8 +14,6 @@ public class ResponseMeta {
     @Expose
     private Error error;
     @Expose
-    private String id;
-    @Expose
     private String mapping;
     @Expose
     private String meta;
