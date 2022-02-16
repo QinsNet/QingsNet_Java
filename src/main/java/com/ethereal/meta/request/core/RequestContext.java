@@ -1,8 +1,8 @@
 package com.ethereal.meta.request.core;
 
+import com.ethereal.meta.core.entity.NodeAddress;
 import com.ethereal.meta.core.entity.RequestMeta;
 import com.ethereal.meta.core.entity.ResponseMeta;
-import com.ethereal.meta.node.core.RemoteInfo;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -17,5 +17,5 @@ public class RequestContext {
     private Object instance;
     private Method method;
     private HashMap<String,Object> params;
-    private RemoteInfo remoteInfo;
+    private NodeAddress remote;
 }

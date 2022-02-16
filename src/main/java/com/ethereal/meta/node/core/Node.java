@@ -1,5 +1,6 @@
 package com.ethereal.meta.node.core;
 
+import com.ethereal.meta.core.entity.RequestMeta;
 import com.ethereal.meta.meta.Meta;
 import com.ethereal.meta.request.core.RequestContext;
 import lombok.Getter;

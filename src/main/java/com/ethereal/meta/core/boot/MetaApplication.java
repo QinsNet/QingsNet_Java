@@ -1,5 +1,6 @@
 package com.ethereal.meta.core.boot;
 
+import com.ethereal.meta.core.entity.NodeAddress;
 import com.ethereal.meta.meta.Meta;
 import com.ethereal.meta.meta.util.MetaUtil;
 import com.ethereal.meta.node.p2p.recevier.Receiver;
@@ -13,21 +14,22 @@ import java.util.LinkedList;
 
 public class MetaApplication {
     @Getter
-    private static ApplicationContext context;
+    private ApplicationContext context;
 
-    public static <T> T publish(String mapping, RemoteInfo remoteInfo){
+    public <T> T publish(String mapping, NodeAddress address){
         LinkedList<String> mappings = new LinkedList<>(Arrays.asList(mapping.split("/")));
         mappings.removeFirst();
-        return MetaUtil.findMeta(context.getRoot(),mappings).newInstance(remoteInfo);
+        return MetaUtil.findMeta(context.getRoot(),mappings).newInstance(context.getServer().getLocal(),address);
     }
 
     public static MetaApplication run(Class<?> instanceClass,String path){
         MetaApplication application = new MetaApplication();
-        context = new ApplicationContext();
+        ApplicationContext context = new ApplicationContext();
+        application.context = context;
         Meta root = Meta.newMeta(null,"", instanceClass);
         context.setRoot(root);
         context.setConfig(application.loadConfig(path));
-        context.setServer(new Receiver(context.getConfig(), root));
+        context.setServer(new Receiver(context.getConfig(),new NodeAddress("localhost",context.getConfig().getPort()), root));
         context.getServer().start();
         return application;
     }

@@ -12,7 +12,6 @@ import com.ethereal.meta.core.type.AbstractType;
 import com.ethereal.meta.core.type.Param;
 import com.ethereal.meta.meta.Meta;
 import com.ethereal.meta.node.core.Node;
-import com.ethereal.meta.node.core.RemoteInfo;
 import com.ethereal.meta.node.p2p.sender.Sender;
 import com.ethereal.meta.request.annotation.*;
 import com.ethereal.meta.request.aop.annotation.FailEvent;
@@ -102,7 +101,7 @@ public abstract class Request implements IRequest {
         }
     }
 
-    public Object intercept(Object instance, Method method, Object[] args, MethodProxy methodProxy, RemoteInfo remote){
+    public Object intercept(Object instance, Method method, Object[] args, MethodProxy methodProxy, NodeAddress local,NodeAddress remote){
         try {
             RequestMapping requestMapping = getRequestMapping(method);
             Object localResult = null;
@@ -112,11 +111,13 @@ public abstract class Request implements IRequest {
             Parameter[] parameterInfos = method.getParameters();
             RequestContext context = new RequestContext();
             context.setRequest(new RequestMeta());
-            context.setRemoteInfo(remote);
             context.getRequest().setMapping(meta.getPrefixes() + "/" + requestMapping.getMapping());
             context.setInstance(instance);
             context.setMethod(method);
             context.setParams(new HashMap<>(parameterInfos.length));
+            context.getRequest().setHost(local.getHost());
+            context.getRequest().setPort(String.valueOf(local.getPort()));
+            context.setRemote(remote);
             for(int i=0;i<parameterInfos.length;i++){
                 context.getParams().put(parameterInfos[i].getName(),args[i]);
                 AbstractType type = meta.getTypes().get(parameterInfos[i]);
@@ -143,63 +144,58 @@ public abstract class Request implements IRequest {
                     else throw new Exception(e);
                 }
             }
+            if((requestMapping.getInvoke() & InvokeTypeFlags.Remote) != 0){
+                Node sender = new Sender(meta,context);
+                Class<?> return_type = method.getReturnType();
+                if(return_type.equals(Void.TYPE)){
+                    sender.send(context.getRequest());
+                }
+                else{
+                    int timeout = requestConfig.getTimeout();
+                    if(requestMapping.getTimeout() != -1)timeout = requestMapping.getTimeout();
+                    if(sender.send(context.getRequest())){
+                        synchronized (context){
+                            context.wait(timeout);
+                        }
+                        ResponseMeta respond = context.getResult();
+                        if(respond != null){
+                            if(respond.getError()!=null){
+                                FailEvent failEvent = method.getAnnotation(FailEvent.class);
+                                if(failEvent != null){
+                                    eventContext = new FailEventContext(context.getParams(),method,respond.getError());
+                                    String iocObjectName = failEvent.function().substring(0, failEvent.function().indexOf("."));
+                                    meta.getEventManager().invokeEvent(meta.getInstanceManager().get(iocObjectName), failEvent.function(), context.getParams(),eventContext);
+                                }
+                                else throw new TrackException(TrackException.ExceptionCode.Runtime,"来自服务端的报错信息：\n" + respond.getError().getMessage());
+                            }
+                            Param paramAnnotation = method.getAnnotation(Param.class);
+                            AbstractType type = null;
+                            if(paramAnnotation != null) type = meta.getTypes().getTypesByName().get(paramAnnotation.name());
+                            if(type == null)type = meta.getTypes().getTypesByType().get(return_type);
+                            if(type == null)throw new TrackException(TrackException.ExceptionCode.Runtime,String.format("RPC中的%s类型参数尚未被注册！",return_type));
+                            remoteResult = type.deserialize(respond.getResult());
+                            SuccessEvent successEvent = method.getAnnotation(SuccessEvent.class);
+                            if(successEvent != null){
+                                eventContext = new SuccessEventContext(context.getParams(),method,respond.getResult());
+                                String iocObjectName = successEvent.function().substring(0, successEvent.function().indexOf("."));
+                                meta.getEventManager().invokeEvent(meta.getInstanceManager().get(iocObjectName), successEvent.function(),context.getParams(),eventContext);
+                            }
+                        }
+                        TimeoutEvent timeoutEvent =  method.getAnnotation(TimeoutEvent.class);
+                        if(timeoutEvent != null){
+                            eventContext = new TimeoutEventContext(context.getParams(),method);
+                            assert beforeEvent != null;
+                            String iocObjectName = beforeEvent.function().substring(0, timeoutEvent.function().indexOf("."));
+                            meta.getEventManager().invokeEvent(meta.getInstanceManager().get(iocObjectName), timeoutEvent.function(),context.getParams(),eventContext);
+                        }
+                    }
+                }
+            }
             AfterEvent afterEvent = method.getAnnotation(AfterEvent.class);
             if(afterEvent != null){
                 eventContext = new AfterEventContext(context.getParams(),method,localResult);
                 String iocObjectName = afterEvent.function().substring(0,afterEvent.function().indexOf("."));
                 meta.getEventManager().invokeEvent(meta.getInstanceManager().get(iocObjectName), afterEvent.function(), context.getParams(),eventContext);
-            }
-            if((requestMapping.getInvoke() & InvokeTypeFlags.Remote) != 0){
-                Node sender = new Sender(meta,context);
-                try {
-                    Class<?> return_type = method.getReturnType();
-                    if(return_type.equals(Void.TYPE)){
-                        sender.send(context.getRequest());
-                    }
-                    else{
-                        int timeout = requestConfig.getTimeout();
-                        if(requestMapping.getTimeout() != -1)timeout = requestMapping.getTimeout();
-                        if(sender.send(context.getRequest())){
-                            synchronized (context){
-                                context.wait(timeout);
-                            }
-                            ResponseMeta respond = context.getResult();
-                            if(respond != null){
-                                if(respond.getError()!=null){
-                                    FailEvent failEvent = method.getAnnotation(FailEvent.class);
-                                    if(failEvent != null){
-                                        eventContext = new FailEventContext(context.getParams(),method,respond.getError());
-                                        String iocObjectName = failEvent.function().substring(0, failEvent.function().indexOf("."));
-                                        meta.getEventManager().invokeEvent(meta.getInstanceManager().get(iocObjectName), failEvent.function(), context.getParams(),eventContext);
-                                    }
-                                    else throw new TrackException(TrackException.ExceptionCode.Runtime,"来自服务端的报错信息：\n" + respond.getError().getMessage());
-                                }
-                                Param paramAnnotation = method.getAnnotation(Param.class);
-                                AbstractType type = null;
-                                if(paramAnnotation != null) type = meta.getTypes().getTypesByName().get(paramAnnotation.name());
-                                if(type == null)type = meta.getTypes().getTypesByType().get(return_type);
-                                if(type == null)throw new TrackException(TrackException.ExceptionCode.Runtime,String.format("RPC中的%s类型参数尚未被注册！",return_type));
-                                remoteResult = type.deserialize(respond.getResult());
-                                SuccessEvent successEvent = method.getAnnotation(SuccessEvent.class);
-                                if(successEvent != null){
-                                    eventContext = new SuccessEventContext(context.getParams(),method,respond.getResult());
-                                    String iocObjectName = successEvent.function().substring(0, successEvent.function().indexOf("."));
-                                    meta.getEventManager().invokeEvent(meta.getInstanceManager().get(iocObjectName), successEvent.function(),context.getParams(),eventContext);
-                                }
-                            }
-                            TimeoutEvent timeoutEvent =  method.getAnnotation(TimeoutEvent.class);
-                            if(timeoutEvent != null){
-                                eventContext = new TimeoutEventContext(context.getParams(),method);
-                                assert beforeEvent != null;
-                                String iocObjectName = beforeEvent.function().substring(0, timeoutEvent.function().indexOf("."));
-                                meta.getEventManager().invokeEvent(meta.getInstanceManager().get(iocObjectName), timeoutEvent.function(),context.getParams(),eventContext);
-                            }
-                        }
-                    }
-                }
-                finally {
-                    sender.close();
-                }
             }
             if((requestMapping.getInvoke() & InvokeTypeFlags.ReturnRemote) != 0){
                 methodResult = remoteResult;

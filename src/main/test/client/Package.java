@@ -7,7 +7,6 @@ public class Package {
 
     @MetaService("hello")
     public void hello(){
-        System.out.printf("背包:%s%n", id);
+        System.out.printf("背包:%s%n", 2);
     }
-
 }

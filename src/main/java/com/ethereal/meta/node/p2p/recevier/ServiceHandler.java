@@ -1,4 +1,6 @@
 package com.ethereal.meta.node.p2p.recevier;
+import com.ethereal.meta.core.console.Console;
+import com.ethereal.meta.core.entity.NodeAddress;
 import com.ethereal.meta.core.entity.RequestMeta;
 import com.ethereal.meta.core.entity.ResponseMeta;
 import com.ethereal.meta.meta.Meta;
@@ -24,9 +26,11 @@ public class ServiceHandler extends SimpleChannelInboundHandler<FullHttpRequest>
     private ChannelHandlerContext ctx;
     static final Type gson_type = new TypeToken<HashMap<String,String>>(){}.getType();
     private final Meta root;
-    public ServiceHandler(ExecutorService executorService, Meta root) {
+    private final NodeAddress local;
+    public ServiceHandler(ExecutorService executorService, Meta root, NodeAddress local) {
         this.es = executorService;
         this.root = root;
+        this.local = local;
     }
 
     @Override
@@ -56,7 +60,9 @@ public class ServiceHandler extends SimpleChannelInboundHandler<FullHttpRequest>
         requestMeta.setHost(req.headers().get("host"));
         requestMeta.setPort(req.headers().get("port"));
         ServiceContext context = new ServiceContext();
+        context.setLocal(local);
         context.setMappings(new LinkedList<>(Arrays.asList(requestMeta.getMapping().split("/"))));
+        context.getMappings().removeFirst();
         context.setRequestMeta(requestMeta);
         //Body体中获取参数
         if(req.method() == HttpMethod.GET){
@@ -65,9 +71,11 @@ public class ServiceHandler extends SimpleChannelInboundHandler<FullHttpRequest>
         else if(req.method() == HttpMethod.POST){
             String raw_body = req.content().toString(StandardCharsets.UTF_8);
             HashMap<String,String> body = SerializeUtil.gson.fromJson(raw_body,gson_type);
-            for (String key : body.keySet()){
-                if(!requestMeta.getParams().containsKey(key)){
-                    requestMeta.getParams().put(key,body.get(key));
+            if(body != null){
+                for (String key : body.keySet()){
+                    if(!requestMeta.getParams().containsKey(key)){
+                        requestMeta.getParams().put(key,body.get(key));
+                    }
                 }
             }
         }
@@ -81,8 +89,8 @@ public class ServiceHandler extends SimpleChannelInboundHandler<FullHttpRequest>
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        super.exceptionCaught(ctx, cause);
         root.onException(new Exception(cause));
+        super.exceptionCaught(ctx, cause);
     }
 
     public boolean send(Object data) {
@@ -90,19 +98,14 @@ public class ServiceHandler extends SimpleChannelInboundHandler<FullHttpRequest>
             return true;
         }
         else if(data instanceof ResponseMeta){
+            Console.debug(data.toString());
             ResponseMeta responseMeta = (ResponseMeta) data;
             DefaultFullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,HttpResponseStatus.OK,Unpooled.copiedBuffer(SerializeUtil.gson.toJson(responseMeta.getResult()).getBytes(StandardCharsets.UTF_8)));
             response.headers().set("error", SerializeUtil.gson.toJson(responseMeta.getError()));
             response.headers().set("protocol",responseMeta.getProtocol());
             response.headers().set("meta",responseMeta.getMeta());
             send(response);
-        }
-        else if(data instanceof RequestMeta){
-            RequestMeta requestMeta = (RequestMeta) data;
-            DefaultFullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,HttpResponseStatus.OK,Unpooled.copiedBuffer(SerializeUtil.gson.toJson(requestMeta.getParams()).getBytes(StandardCharsets.UTF_8)));
-            response.headers().set("protocol", requestMeta.getProtocol());
-            response.headers().set("meta", requestMeta.getMeta());
-            send(response);
+            ctx.close();
         }
         else if(data instanceof byte[]){
             send(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,HttpResponseStatus.OK, Unpooled.copiedBuffer((byte[]) data)));

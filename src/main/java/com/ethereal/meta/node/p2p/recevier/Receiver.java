@@ -1,6 +1,9 @@
 package com.ethereal.meta.node.p2p.recevier;
 
 import com.ethereal.meta.core.boot.ApplicationConfig;
+import com.ethereal.meta.core.console.Console;
+import com.ethereal.meta.core.entity.NodeAddress;
+import com.ethereal.meta.core.entity.TrackLog;
 import com.ethereal.meta.meta.Meta;
 import com.ethereal.meta.node.core.Server;
 import io.netty.bootstrap.ServerBootstrap;
@@ -25,8 +28,9 @@ public class Receiver extends Server {
     EventLoopGroup work = new NioEventLoopGroup();
     @Getter
     protected Channel channel;
-    public Receiver(ApplicationConfig config, Meta root) {
+    public Receiver(ApplicationConfig config,NodeAddress local, Meta root) {
         this.config = config;
+        this.local = local;
         this.root = root;
     }
     @Override
@@ -36,7 +40,6 @@ public class Receiver extends Server {
             ServerBootstrap bootstrap = new ServerBootstrap();
             bootstrap.group(boss,work)                                //2
                     .channel(NioServerSocketChannel.class)            //3
-                    .option(ChannelOption.SO_REUSEADDR,true)
                     .childHandler(new ChannelInitializer<SocketChannel>() {    //5
                         @Override
                         public void initChannel(SocketChannel ch) throws IllegalAccessException, InvocationTargetException, NoSuchMethodException, InstantiationException {
@@ -45,15 +48,15 @@ public class Receiver extends Server {
                             ch.pipeline().addLast(new HttpObjectAggregator(config.getMaxBufferSize()));
                             ch.pipeline().addLast(new ChunkedWriteHandler());
                             //Service
-                            ch.pipeline().addLast(new ServiceHandler(es, root));
+                            ch.pipeline().addLast(new ServiceHandler(es, root,local));
                         }
                     });
-            channel = bootstrap.bind(config.getPort()).addListener((ChannelFutureListener) future -> {
+            channel = bootstrap.bind(local.getHost(),Integer.parseInt(local.getPort())).addListener((ChannelFutureListener) future -> {
                 if (future.isSuccess()){
-
+                    root.onLog(TrackLog.LogCode.Runtime, String.format("%s-%s 服务器部署成功", local.getHost(),local.getPort()));
                 }
                 else {
-
+                    root.onLog(TrackLog.LogCode.Runtime, String.format("%s-%s 服务器部署失败", local.getHost(),local.getPort()));
                 }
             }).channel();
         } catch (Exception e) {

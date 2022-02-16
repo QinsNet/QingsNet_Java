@@ -2,13 +2,13 @@ package com.ethereal.meta.meta;
 
 import com.ethereal.meta.core.aop.EventManager;
 import com.ethereal.meta.core.console.Console;
+import com.ethereal.meta.core.entity.NodeAddress;
 import com.ethereal.meta.core.entity.TrackException;
 import com.ethereal.meta.core.entity.TrackLog;
 import com.ethereal.meta.core.instance.InstanceManager;
 import com.ethereal.meta.core.type.AbstractTypeManager;
 import com.ethereal.meta.meta.annotation.Components;
 import com.ethereal.meta.meta.annotation.MetaMapping;
-import com.ethereal.meta.node.core.RemoteInfo;
 import com.ethereal.meta.request.core.Request;
 import com.ethereal.meta.request.core.RequestInterceptor;
 import com.ethereal.meta.service.core.Service;
@@ -85,12 +85,12 @@ public abstract class Meta{
 
     public abstract void onLog(TrackLog log);
 
-    public <T> T newInstance(RemoteInfo remote){
+    public <T> T newInstance(NodeAddress local,NodeAddress remote){
         //Proxy Instance
         Enhancer enhancer = new Enhancer();
         enhancer.setSuperclass(instanceClass);
         Callback noOp= NoOp.INSTANCE;
-        enhancer.setCallbacks(new Callback[]{noOp,new RequestInterceptor(request, remote)});
+        enhancer.setCallbacks(new Callback[]{noOp,new RequestInterceptor(request, local,remote)});
         enhancer.setCallbackFilter(method ->
         {
             if(getRequest().getMethods().containsValue(method)){
@@ -101,7 +101,7 @@ public abstract class Meta{
         Object instance = enhancer.create();
         for (Meta meta: metas.values()){
             try {
-                meta.getField().set(instance,meta.newInstance(remote));
+                meta.getField().set(instance,meta.newInstance(local,remote));
             }
             catch (IllegalAccessException e) {
                 onException(e);

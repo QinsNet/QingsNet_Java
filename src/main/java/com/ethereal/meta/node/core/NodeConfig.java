@@ -11,5 +11,4 @@ public class NodeConfig {
     private int maxBufferSize = 10240;
     private int threadCount = 5;
     private boolean syncConnect = true;
-    private boolean Independence = true;
 }

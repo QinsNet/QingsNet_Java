@@ -1,6 +1,6 @@
 package com.ethereal.meta.request.core;
 
-import com.ethereal.meta.node.core.RemoteInfo;
+import com.ethereal.meta.core.entity.NodeAddress;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
@@ -16,9 +16,12 @@ public class RequestInterceptor implements MethodInterceptor {
     private Request request;
     @Getter
     @Setter
-    private RemoteInfo remote;
+    private NodeAddress local;
+    @Getter
+    @Setter
+    private NodeAddress remote;
     @Override
     public Object intercept(Object o, Method method, Object[] args, MethodProxy methodProxy) {
-        return request.intercept(o,method,args,methodProxy, remote);
+        return request.intercept(o,method,args,methodProxy, local,remote);
     }
 }

@@ -34,7 +34,6 @@ public class RequestHandler extends SimpleChannelInboundHandler<FullHttpResponse
     @Override
     protected void channelRead0(ChannelHandlerContext channelHandlerContext, FullHttpResponse res) throws TrackException {
         ResponseMeta responseMeta = new ResponseMeta();
-        responseMeta.setMapping(context.getRequest().getMapping());
         responseMeta.setError(SerializeUtil.gson.fromJson(res.headers().get("error"), Error.class));
         responseMeta.setProtocol(res.headers().get("protocol"));
         //instance 处理

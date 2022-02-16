@@ -1,6 +1,7 @@
 package com.ethereal.meta.core.entity;
 
 import com.ethereal.meta.meta.Meta;
+import com.ethereal.meta.node.core.Node;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;

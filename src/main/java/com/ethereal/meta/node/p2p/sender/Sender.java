@@ -1,5 +1,6 @@
 package com.ethereal.meta.node.p2p.sender;
 
+import com.ethereal.meta.core.console.Console;
 import com.ethereal.meta.core.entity.RequestMeta;
 import com.ethereal.meta.core.entity.ResponseMeta;
 import com.ethereal.meta.meta.Meta;
@@ -60,11 +61,11 @@ public class Sender extends com.ethereal.meta.node.core.Node {
                         }
                     });
             if(nodeConfig.isSyncConnect()){
-                channel = bootstrap.connect(context.getRemoteInfo().getHost(),Integer.parseInt(context.getRemoteInfo().getPort())).addListener(new ChannelFutureListener() {
+                channel = bootstrap.connect(context.getRemote().getHost(),Integer.parseInt(context.getRemote().getPort())).addListener(new ChannelFutureListener() {
                     @Override
                     public void operationComplete(ChannelFuture future) throws Exception {
                         if (!future.isSuccess()) {
-
+                            Console.debug(String.format("%s-%s 连接成功", context.getRemote().getHost(),context.getRemote().getPort()));
                         }
                     }
                 }).sync().channel();
@@ -88,28 +89,20 @@ public class Sender extends com.ethereal.meta.node.core.Node {
     private void send(DefaultFullHttpRequest res) {
         start();
         channel.writeAndFlush(res);
-        close();
     }
     @Override
     public boolean send(Object data) {
+
         if(data == null){
             return true;
-        }
-        else if(data instanceof ResponseMeta){
-            ResponseMeta responseMeta = (ResponseMeta) data;
-            DefaultFullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,HttpResponseStatus.OK,Unpooled.copiedBuffer(SerializeUtil.gson.toJson(responseMeta.getResult()).getBytes(StandardCharsets.UTF_8)));
-            response.headers().set("error", SerializeUtil.gson.toJson(responseMeta.getError()));
-            response.headers().set("protocol",responseMeta.getProtocol());
-            response.headers().set("instance",responseMeta.getMeta());
-            send(response);
         }
         else if(data instanceof RequestMeta){
             RequestMeta requestMeta = (RequestMeta) data;
             DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1,HttpMethod.POST,requestMeta.getMapping(),Unpooled.copiedBuffer(SerializeUtil.gson.toJson(requestMeta.getParams()).getBytes(StandardCharsets.UTF_8)));
             request.headers().set("protocol", requestMeta.getProtocol());
             request.headers().set("instance", requestMeta.getMeta());
-            request.headers().set("host", requestMeta.getMapping());
-            request.headers().set("port", requestMeta.getMapping());
+            request.headers().set("host", requestMeta.getHost());
+            request.headers().set("port", requestMeta.getPort());
             send(request);
         }
         else if(data instanceof byte[]){
@@ -127,7 +120,9 @@ public class Sender extends com.ethereal.meta.node.core.Node {
     @Override
     public boolean close() {
         try {
-            channel.close().sync();
+            if(channel != null){
+                channel.close().sync();
+            }
             return true;
         } catch (InterruptedException e) {
             meta.onException(e);

@@ -11,7 +11,6 @@ import com.ethereal.meta.core.aop.context.ExceptionEventContext;
 import com.ethereal.meta.core.entity.*;
 import com.ethereal.meta.core.entity.Error;
 import com.ethereal.meta.meta.Meta;
-import com.ethereal.meta.node.core.RemoteInfo;
 import com.ethereal.meta.service.annotation.*;
 import com.ethereal.meta.service.event.InterceptorEvent;
 import com.ethereal.meta.service.event.delegate.InterceptorDelegate;
@@ -103,7 +102,7 @@ public abstract class Service implements IService {
             if(method == null){
                 return new ResponseMeta(requestMeta, new Error(Error.ErrorCode.NotFoundMethod, String.format("Mapping:%s 未找到",requestMeta.getMapping())));
             }
-            context.setInstance(meta.newInstance(new RemoteInfo(requestMeta.getHost(), requestMeta.getPort())));
+            context.setInstance(meta.newInstance(context.getLocal(),new NodeAddress(context.getRequestMeta().getHost(),context.getRequestMeta().getPort())));
             if(onInterceptor(requestMeta)){
                 EventContext eventContext;
                 Parameter[] parameterInfos = method.getParameters();
@@ -127,7 +126,7 @@ public abstract class Service implements IService {
                     for (int i=0;i<parameterInfos.length;i++){
                         args[i] = requestMeta.getParams().get(parameterInfos[i].getName());
                     }
-                    localResult = method.invoke(this,args);
+                    localResult = method.invoke(context.getInstance(),args);
                 }
                 catch (Exception e){
                     com.ethereal.meta.core.aop.annotation.ExceptionEvent exceptionEvent = method.getAnnotation(com.ethereal.meta.core.aop.annotation.ExceptionEvent.class);
