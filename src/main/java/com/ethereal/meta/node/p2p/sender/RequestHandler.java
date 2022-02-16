@@ -1,4 +1,4 @@
-package com.ethereal.meta.net.p2p.sender;
+package com.ethereal.meta.node.p2p.sender;
 import com.ethereal.meta.core.entity.Error;
 import com.ethereal.meta.core.entity.ResponseMeta;
 import com.ethereal.meta.core.entity.TrackException;

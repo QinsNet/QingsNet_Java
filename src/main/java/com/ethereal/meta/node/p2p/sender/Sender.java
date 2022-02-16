@@ -1,4 +1,4 @@
-package com.ethereal.meta.net.p2p.sender;
+package com.ethereal.meta.node.p2p.sender;
 
 import com.ethereal.meta.core.entity.RequestMeta;
 import com.ethereal.meta.core.entity.ResponseMeta;
@@ -30,7 +30,7 @@ import java.nio.charset.StandardCharsets;
  * @UpdateRemark: 类的第一次生成
  * @Version: 1.0
  */
-public class Sender extends com.ethereal.meta.net.core.Node {
+public class Sender extends com.ethereal.meta.node.core.Node {
 
     private Channel channel;
     public Sender(Meta meta, RequestContext context) {
@@ -60,7 +60,7 @@ public class Sender extends com.ethereal.meta.net.core.Node {
                         }
                     });
             if(nodeConfig.isSyncConnect()){
-                channel = bootstrap.connect(context.getRemoteInfo().getRemote()).addListener(new ChannelFutureListener() {
+                channel = bootstrap.connect(context.getRemoteInfo().getHost(),Integer.parseInt(context.getRemoteInfo().getPort())).addListener(new ChannelFutureListener() {
                     @Override
                     public void operationComplete(ChannelFuture future) throws Exception {
                         if (!future.isSuccess()) {
@@ -97,19 +97,19 @@ public class Sender extends com.ethereal.meta.net.core.Node {
         }
         else if(data instanceof ResponseMeta){
             ResponseMeta responseMeta = (ResponseMeta) data;
-            DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST,responseMeta.getMapping(), Unpooled.copiedBuffer(SerializeUtil.gson.toJson(responseMeta.getResult()).getBytes(StandardCharsets.UTF_8)));
-            request.headers().set("error", SerializeUtil.gson.toJson(responseMeta.getError()));
-            request.headers().set("protocol",responseMeta.getProtocol());
-            request.headers().set("meta",responseMeta.getMeta());
-            request.headers().set("value",responseMeta.getMapping());
-            send(request);
+            DefaultFullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,HttpResponseStatus.OK,Unpooled.copiedBuffer(SerializeUtil.gson.toJson(responseMeta.getResult()).getBytes(StandardCharsets.UTF_8)));
+            response.headers().set("error", SerializeUtil.gson.toJson(responseMeta.getError()));
+            response.headers().set("protocol",responseMeta.getProtocol());
+            response.headers().set("instance",responseMeta.getMeta());
+            send(response);
         }
         else if(data instanceof RequestMeta){
             RequestMeta requestMeta = (RequestMeta) data;
             DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1,HttpMethod.POST,requestMeta.getMapping(),Unpooled.copiedBuffer(SerializeUtil.gson.toJson(requestMeta.getParams()).getBytes(StandardCharsets.UTF_8)));
             request.headers().set("protocol", requestMeta.getProtocol());
-            request.headers().set("meta", requestMeta.getMeta());
-            request.headers().set("value", requestMeta.getMapping());
+            request.headers().set("instance", requestMeta.getMeta());
+            request.headers().set("host", requestMeta.getMapping());
+            request.headers().set("port", requestMeta.getMapping());
             send(request);
         }
         else if(data instanceof byte[]){

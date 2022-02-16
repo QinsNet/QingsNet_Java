@@ -1,6 +1,7 @@
 package com.ethereal.meta.core.boot;
 
 import com.ethereal.meta.meta.Meta;
+import com.ethereal.meta.node.core.Server;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -9,5 +10,5 @@ import lombok.Setter;
 public class ApplicationContext {
     private ApplicationConfig config;
     private Meta root;
-    private IServer server;
+    private Server server;
 }

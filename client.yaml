@@ -1,0 +1,2 @@
+!!com.ethereal.meta.core.boot.ApplicationConfig {maxBufferSize: 10240, port: 28015,
+  threadCount: 5}

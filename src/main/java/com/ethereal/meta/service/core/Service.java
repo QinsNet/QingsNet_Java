@@ -11,7 +11,7 @@ import com.ethereal.meta.core.aop.context.ExceptionEventContext;
 import com.ethereal.meta.core.entity.*;
 import com.ethereal.meta.core.entity.Error;
 import com.ethereal.meta.meta.Meta;
-import com.ethereal.meta.request.annotation.*;
+import com.ethereal.meta.node.core.RemoteInfo;
 import com.ethereal.meta.service.annotation.*;
 import com.ethereal.meta.service.event.InterceptorEvent;
 import com.ethereal.meta.service.event.delegate.InterceptorDelegate;
@@ -21,7 +21,6 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.LinkedList;
 
 
 @ServiceAnnotation
@@ -29,7 +28,7 @@ public abstract class Service implements IService {
     @Getter
     private ServiceConfig serviceConfig;
     @Getter
-    private final HashMap<String,Method> services = new HashMap<>();
+    private final HashMap<String,Method> methods = new HashMap<>();
     @Getter
     private Meta meta;
     @Getter
@@ -71,7 +70,7 @@ public abstract class Service implements IService {
                                 meta.getTypes().add(parameter.getName(),parameter.getType());
                             }
                         }
-                        services.put(serviceMapping.getMapping(), method);
+                        methods.put(serviceMapping.getMapping(), method);
                     }
                 }
                 checkClass = checkClass.getSuperclass();
@@ -92,14 +91,19 @@ public abstract class Service implements IService {
     public Object receive(ServiceContext context) {
         RequestMeta requestMeta = context.getRequestMeta();
         try {
-            Method method = null;
-            LinkedList<String> mappings = new LinkedList<>(Arrays.asList(requestMeta.getMapping().split("/")));
-            if(services.containsKey(mappings.getLast())){
-               method = services.get(mappings.getLast());
-            }
-            else {
+            if(context.getMappings().isEmpty()){
                 return new ResponseMeta(requestMeta, new Error(Error.ErrorCode.NotFoundMethod, String.format("Mapping:%s 未找到",requestMeta.getMapping())));
             }
+            Meta nextMeta = this.meta.getMetas().get(context.getMappings().getFirst());
+            if(nextMeta != null){
+                context.getMappings().removeFirst();
+                return nextMeta.getService().receive(context);
+            }
+            Method method = methods.get(context.getMappings().getFirst());
+            if(method == null){
+                return new ResponseMeta(requestMeta, new Error(Error.ErrorCode.NotFoundMethod, String.format("Mapping:%s 未找到",requestMeta.getMapping())));
+            }
+            context.setInstance(meta.newInstance(new RemoteInfo(requestMeta.getHost(), requestMeta.getPort())));
             if(onInterceptor(requestMeta)){
                 EventContext eventContext;
                 Parameter[] parameterInfos = method.getParameters();

@@ -1,4 +1,4 @@
-package com.ethereal.meta.net.core;
+package com.ethereal.meta.node.core;
 
 public interface INode {
 

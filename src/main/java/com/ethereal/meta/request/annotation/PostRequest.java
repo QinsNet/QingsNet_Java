@@ -1,6 +1,6 @@
 package com.ethereal.meta.request.annotation;
 
-import com.ethereal.meta.net.p2p.sender.Sender;
+import com.ethereal.meta.node.p2p.sender.Sender;
 
 import java.lang.annotation.*;
 

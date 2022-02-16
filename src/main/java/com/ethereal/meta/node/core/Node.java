@@ -1,4 +1,4 @@
-package com.ethereal.meta.net.core;
+package com.ethereal.meta.node.core;
 
 import com.ethereal.meta.meta.Meta;
 import com.ethereal.meta.request.core.RequestContext;

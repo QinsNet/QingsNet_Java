@@ -8,7 +8,7 @@ import com.ethereal.meta.core.instance.InstanceManager;
 import com.ethereal.meta.core.type.AbstractTypeManager;
 import com.ethereal.meta.meta.annotation.Components;
 import com.ethereal.meta.meta.annotation.MetaMapping;
-import com.ethereal.meta.net.p2p.sender.RemoteInfo;
+import com.ethereal.meta.node.core.RemoteInfo;
 import com.ethereal.meta.request.core.Request;
 import com.ethereal.meta.request.core.RequestInterceptor;
 import com.ethereal.meta.service.core.Service;
@@ -93,7 +93,7 @@ public abstract class Meta{
         enhancer.setCallbacks(new Callback[]{noOp,new RequestInterceptor(request, remote)});
         enhancer.setCallbackFilter(method ->
         {
-            if(getRequest().getRequests().containsValue(method)){
+            if(getRequest().getMethods().containsValue(method)){
                 return 1;
             }
             else return 0;
@@ -112,8 +112,8 @@ public abstract class Meta{
 
     public void link(Meta child){
         child.parent = this;
-        child.prefixes = this.prefixes + child.mapping;
-        metas.put(child.prefixes, child);
+        child.prefixes = this.prefixes + "/" + child.mapping;
+        metas.put(child.mapping, child);
     }
 
     public static Meta newMeta(Meta parent,String mapping,Class<?> instanceClass)  {

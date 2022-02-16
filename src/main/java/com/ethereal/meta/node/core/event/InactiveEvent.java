@@ -1,7 +1,7 @@
-package com.ethereal.meta.net.core.event;
+package com.ethereal.meta.node.core.event;
 
-import com.ethereal.meta.net.core.Node;
-import com.ethereal.meta.net.core.event.Delegate.InactiveDelegate;
+import com.ethereal.meta.node.core.Node;
+import com.ethereal.meta.node.core.event.Delegate.InactiveDelegate;
 
 import java.util.Iterator;
 import java.util.Vector;

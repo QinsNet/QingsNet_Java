@@ -1,4 +1,4 @@
-package com.ethereal.meta.net.annotation;
+package com.ethereal.meta.node.annotation;
 
 import java.lang.annotation.*;
 

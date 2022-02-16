@@ -1,6 +1,6 @@
 package com.ethereal.meta.request.core;
 
-import com.ethereal.meta.net.p2p.sender.RemoteInfo;
+import com.ethereal.meta.node.core.RemoteInfo;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;

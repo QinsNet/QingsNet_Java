@@ -5,6 +5,7 @@ import java.util.HashMap;
 public class UrlUtil {
     public static HashMap<String,String> getQuery(String raw_query) throws IllegalArgumentException {
         HashMap<String,String> query = new HashMap<>();
+        if(raw_query == null)return query;
         for(String raw_pair : raw_query.split("&")){
             String[] pair = raw_pair.split("=");
             if(pair.length == 2){

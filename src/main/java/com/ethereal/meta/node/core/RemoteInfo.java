@@ -1,14 +1,13 @@
-package com.ethereal.meta.net.p2p.sender;
+package com.ethereal.meta.node.core;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.net.SocketAddress;
-
+@AllArgsConstructor
 @Getter
 @Setter
-@AllArgsConstructor
 public class RemoteInfo {
-    SocketAddress remote;
+    String host;
+    String port;
 }

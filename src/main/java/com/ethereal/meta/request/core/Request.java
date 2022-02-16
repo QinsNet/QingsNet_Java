@@ -11,9 +11,9 @@ import com.ethereal.meta.core.entity.*;
 import com.ethereal.meta.core.type.AbstractType;
 import com.ethereal.meta.core.type.Param;
 import com.ethereal.meta.meta.Meta;
-import com.ethereal.meta.net.core.Node;
-import com.ethereal.meta.net.p2p.sender.RemoteInfo;
-import com.ethereal.meta.net.p2p.sender.Sender;
+import com.ethereal.meta.node.core.Node;
+import com.ethereal.meta.node.core.RemoteInfo;
+import com.ethereal.meta.node.p2p.sender.Sender;
 import com.ethereal.meta.request.annotation.*;
 import com.ethereal.meta.request.aop.annotation.FailEvent;
 import com.ethereal.meta.request.aop.annotation.SuccessEvent;
@@ -36,7 +36,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public abstract class Request implements IRequest {
     private final Random random = new Random();
     @Getter
-    protected final HashMap<String, Method> requests = new HashMap<>();
+    protected final HashMap<String, Method> methods = new HashMap<>();
     @Getter
     protected final ConcurrentHashMap<String,RequestMeta> tasks = new ConcurrentHashMap<>();
     @Getter
@@ -91,7 +91,7 @@ public abstract class Request implements IRequest {
                                 meta.getTypes().add(parameter.getName(),parameter.getType());
                             }
                         }
-                        requests.put(requestMapping.getMapping(), method);
+                        methods.put(requestMapping.getMapping(), method);
                     }
                 }
                 checkClass = checkClass.getSuperclass();
@@ -111,7 +111,9 @@ public abstract class Request implements IRequest {
             EventContext eventContext;
             Parameter[] parameterInfos = method.getParameters();
             RequestContext context = new RequestContext();
-            context.getRequest().setMapping(requestMapping.getMapping());
+            context.setRequest(new RequestMeta());
+            context.setRemoteInfo(remote);
+            context.getRequest().setMapping(meta.getPrefixes() + "/" + requestMapping.getMapping());
             context.setInstance(instance);
             context.setMethod(method);
             context.setParams(new HashMap<>(parameterInfos.length));
