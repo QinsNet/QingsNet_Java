@@ -10,7 +10,7 @@ public class Player {
     Package aPackage;
 
     @MetaRequest("hello")
-    public void hello(){
-
+    public String hello(){
+        return "";
     }
 }

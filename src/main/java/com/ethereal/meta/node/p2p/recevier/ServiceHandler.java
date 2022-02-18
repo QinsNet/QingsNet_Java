@@ -52,13 +52,13 @@ public class ServiceHandler extends SimpleChannelInboundHandler<FullHttpRequest>
         RequestMeta requestMeta = new RequestMeta();
         requestMeta.setMapping(uri.getPath());
         requestMeta.setProtocol(req.headers().get("protocol"));
-        requestMeta.setMeta(req.headers().get("meta"));
+        requestMeta.setInstance(req.headers().get("instance"));
         requestMeta.setHost(req.headers().get("host"));
         requestMeta.setPort(req.headers().get("port"));
         ServiceContext context = new ServiceContext();
         context.setLocal(local);
         context.setMappings(new LinkedList<>(Arrays.asList(requestMeta.getMapping().split("/"))));
-        context.getMappings().removeFirst();
+        if(!context.getMappings().isEmpty()) context.getMappings().removeFirst();
         context.setRequestMeta(requestMeta);
 
         //获取参数
@@ -73,6 +73,7 @@ public class ServiceHandler extends SimpleChannelInboundHandler<FullHttpRequest>
         else {
             send(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,HttpResponseStatus.OK, Unpooled.copiedBuffer((String.format("%s请求不支持", req.method())),StandardCharsets.UTF_8)));
         }
+        if(requestMeta.getParams() == null)requestMeta.setParams(new HashMap<>());
         es.submit(() -> {
             send(root.getService().receive(context));
         });
@@ -94,7 +95,7 @@ public class ServiceHandler extends SimpleChannelInboundHandler<FullHttpRequest>
             DefaultFullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,HttpResponseStatus.OK,Unpooled.copiedBuffer(SerializeUtil.gson.toJson(responseMeta.getResult()).getBytes(StandardCharsets.UTF_8)));
             response.headers().set("error", SerializeUtil.gson.toJson(responseMeta.getError()));
             response.headers().set("protocol",responseMeta.getProtocol());
-            response.headers().set("meta",responseMeta.getMeta());
+            response.headers().set("instance",responseMeta.getInstance());
             send(response);
             ctx.close();
         }

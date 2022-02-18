@@ -18,4 +18,5 @@ public class RequestContext {
     private Method method;
     private HashMap<String,Object> params;
     private NodeAddress remote;
+    private boolean isVoid = false;
 }

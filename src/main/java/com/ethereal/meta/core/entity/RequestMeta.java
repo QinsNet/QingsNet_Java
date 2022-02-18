@@ -18,7 +18,7 @@ public class RequestMeta {
     private String protocol = "Meta-Request-1.0";
     private String mapping;
     private Map<String,String> params;
-    private String meta = "";
+    private String instance = "";
     private String host;
     private String port;
 }

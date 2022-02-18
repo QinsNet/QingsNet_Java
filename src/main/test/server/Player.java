@@ -10,7 +10,8 @@ public class Player {
     Package aPackage;
 
     @MetaService("hello")
-    public void hello(){
+    public String hello(){
         aPackage.hello(123);
+        return "你好";
     }
 }

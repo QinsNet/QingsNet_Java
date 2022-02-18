@@ -1,6 +1,7 @@
 package com.ethereal.meta.request.annotation;
 
-import com.ethereal.meta.node.p2p.sender.Sender;
+import com.ethereal.meta.node.core.Node;
+import com.ethereal.meta.node.p2p.sender.HttpPostRequest;
 
 import java.lang.annotation.*;
 
@@ -10,7 +11,7 @@ import java.lang.annotation.*;
 @RequestAnnotation
 public @interface PostRequest {
     String value();
-    int invoke() default InvokeTypeFlags.Remote;
+    int invoke() default InvokeTypeFlags.Remote | InvokeTypeFlags.ReturnRemote;
     int timeout() default -1;
-    Class<? extends Sender> node() default Sender.class;
+    Class<? extends Node> node() default HttpPostRequest.class;
 }

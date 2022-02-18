@@ -115,7 +115,8 @@ public abstract class Meta{
         child.prefixes = this.prefixes + "/" + child.mapping;
         metas.put(child.mapping, child);
     }
-
+    public abstract String serialize(Object instance);
+    public abstract Object deserialize(String instance);
     public static Meta newMeta(Meta parent,String mapping,Class<?> instanceClass)  {
         Components components = instanceClass.getAnnotation(Components.class);
         if(components == null){

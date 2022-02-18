@@ -14,16 +14,16 @@ public class ResponseMeta {
     @Expose
     private Error error;
     @Expose
-    private String meta;
-    @Expose
     private String instance;
+
     public ResponseMeta(){
 
     }
-    public ResponseMeta(RequestMeta requestMeta, Error error) {
+    public ResponseMeta(Error error) {
         this.error = error;
     }
-    public ResponseMeta(RequestMeta requestMeta,String result) {
+    public ResponseMeta(String instance, String result) {
         this.result = result;
+        this.instance = instance;
     }
 }

@@ -1,5 +1,6 @@
 package com.ethereal.meta.request.annotation;
 
+import com.ethereal.meta.node.core.Node;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -10,4 +11,5 @@ public class RequestMapping {
         String mapping;
         int invoke;
         int timeout;
+        Class<? extends Node> nodeClass;
 }
