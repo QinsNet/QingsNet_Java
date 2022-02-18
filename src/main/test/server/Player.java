@@ -11,6 +11,6 @@ public class Player {
 
     @MetaService("hello")
     public void hello(){
-        aPackage.hello();
+        aPackage.hello(123);
     }
 }

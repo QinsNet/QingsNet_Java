@@ -12,9 +12,11 @@ import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.Headers;
 import io.netty.handler.codec.http.*;
 import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
+import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.handler.timeout.IdleStateHandler;
 
 import java.nio.charset.StandardCharsets;
@@ -49,14 +51,10 @@ public class Sender extends com.ethereal.meta.node.core.Node {
                     .handler(new ChannelInitializer<SocketChannel>() {    //5
                         @Override
                         public void initChannel(SocketChannel ch) {
-                            //编解码
-                            ch.pipeline().addLast(new StringEncoder());
-                            ch.pipeline().addLast(new StringDecoder());
                             //Http
                             ch.pipeline().addLast(new HttpClientCodec());
                             ch.pipeline().addLast(new HttpObjectAggregator(nodeConfig.getMaxBufferSize()));
-                            //Request
-                            ch.pipeline().addLast(new IdleStateHandler(0,0,5));
+
                             ch.pipeline().addLast(new RequestHandler(meta,context));
                         }
                     });
@@ -92,13 +90,14 @@ public class Sender extends com.ethereal.meta.node.core.Node {
     }
     @Override
     public boolean send(Object data) {
-
         if(data == null){
             return true;
         }
         else if(data instanceof RequestMeta){
+            Console.debug(data.toString());
             RequestMeta requestMeta = (RequestMeta) data;
             DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1,HttpMethod.POST,requestMeta.getMapping(),Unpooled.copiedBuffer(SerializeUtil.gson.toJson(requestMeta.getParams()).getBytes(StandardCharsets.UTF_8)));
+            request.headers().set(HttpHeaderNames.CONTENT_TYPE,HttpHeaderValues.APPLICATION_JSON);
             request.headers().set("protocol", requestMeta.getProtocol());
             request.headers().set("instance", requestMeta.getMeta());
             request.headers().set("host", requestMeta.getHost());

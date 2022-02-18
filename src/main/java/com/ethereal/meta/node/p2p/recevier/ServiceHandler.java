@@ -5,8 +5,8 @@ import com.ethereal.meta.core.entity.RequestMeta;
 import com.ethereal.meta.core.entity.ResponseMeta;
 import com.ethereal.meta.meta.Meta;
 import com.ethereal.meta.service.core.ServiceContext;
+import com.ethereal.meta.util.Http2Util;
 import com.ethereal.meta.util.SerializeUtil;
-import com.ethereal.meta.util.UrlUtil;
 import com.google.gson.reflect.TypeToken;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
@@ -16,15 +16,12 @@ import io.netty.handler.codec.http.*;
 import java.lang.reflect.Type;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.LinkedList;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 
 public class ServiceHandler extends SimpleChannelInboundHandler<FullHttpRequest>  {
     private final ExecutorService es;
     private ChannelHandlerContext ctx;
-    static final Type gson_type = new TypeToken<HashMap<String,String>>(){}.getType();
     private final Meta root;
     private final NodeAddress local;
     public ServiceHandler(ExecutorService executorService, Meta root, NodeAddress local) {
@@ -54,7 +51,6 @@ public class ServiceHandler extends SimpleChannelInboundHandler<FullHttpRequest>
         //处理请求头,生成请求元数据
         RequestMeta requestMeta = new RequestMeta();
         requestMeta.setMapping(uri.getPath());
-        requestMeta.setParams(UrlUtil.getQuery(uri.getQuery()));
         requestMeta.setProtocol(req.headers().get("protocol"));
         requestMeta.setMeta(req.headers().get("meta"));
         requestMeta.setHost(req.headers().get("host"));
@@ -64,20 +60,15 @@ public class ServiceHandler extends SimpleChannelInboundHandler<FullHttpRequest>
         context.setMappings(new LinkedList<>(Arrays.asList(requestMeta.getMapping().split("/"))));
         context.getMappings().removeFirst();
         context.setRequestMeta(requestMeta);
-        //Body体中获取参数
-        if(req.method() == HttpMethod.GET){
+
+        //获取参数
+        requestMeta.setParams(Http2Util.getURLParamsFromChannel(req));
+        if (req.method() == HttpMethod.GET) {
 
         }
-        else if(req.method() == HttpMethod.POST){
-            String raw_body = req.content().toString(StandardCharsets.UTF_8);
-            HashMap<String,String> body = SerializeUtil.gson.fromJson(raw_body,gson_type);
-            if(body != null){
-                for (String key : body.keySet()){
-                    if(!requestMeta.getParams().containsKey(key)){
-                        requestMeta.getParams().put(key,body.get(key));
-                    }
-                }
-            }
+        else if (req.method() == HttpMethod.POST) {
+            Map<String ,String > params = Http2Util.getBodyParamsChannel(req);
+            if(params != null)requestMeta.getParams().putAll(params);
         }
         else {
             send(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,HttpResponseStatus.OK, Unpooled.copiedBuffer((String.format("%s请求不支持", req.method())),StandardCharsets.UTF_8)));

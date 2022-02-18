@@ -112,7 +112,7 @@ public abstract class Service implements IService {
                         AbstractType type = meta.getTypes().get(parameterInfo);
                         context.getParams().put(parameterInfo.getName(),type.deserialize(value));
                     }
-                    else return new ResponseMeta(requestMeta,new Error(Error.ErrorCode.NotFoundParam, String.format("%s实例中%s方法的%s参数未提供注入方案", getClass().getName(),method.getName(),parameterInfo.getName())));
+                    else return new ResponseMeta(requestMeta,new Error(Error.ErrorCode.NotFoundParam, String.format("%s实例中%s方法的%s参数未提供注入方案", meta.getPrefixes(),method.getName(),parameterInfo.getName())));
                 }
                 BeforeEvent beforeEvent = method.getAnnotation(BeforeEvent.class);
                 if(beforeEvent != null){

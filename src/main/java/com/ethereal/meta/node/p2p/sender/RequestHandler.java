@@ -41,7 +41,7 @@ public class RequestHandler extends SimpleChannelInboundHandler<FullHttpResponse
         ///////
         responseMeta.setInstance(responseMeta.getInstance());
         responseMeta.setResult(res.content().toString(StandardCharsets.UTF_8));
-        context.setResult(responseMeta);
+        context.setResponseMeta(responseMeta);
         es.submit(() -> this.meta.getRequest().receive(context));
     }
 

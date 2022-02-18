@@ -6,7 +6,7 @@ public class Package {
     String id;
 
     @MetaService("hello")
-    public void hello(){
-        System.out.printf("背包:%s%n", 2);
+    public void hello(Integer id){
+        System.out.printf("背包:%s%n", id);
     }
 }

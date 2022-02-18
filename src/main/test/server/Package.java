@@ -10,7 +10,7 @@ public class Package {
     String id;
 
     @MetaRequest("hello")
-    public void hello(){
+    public void hello(Integer id){
 
     }
 

@@ -110,18 +110,20 @@ public abstract class Request implements IRequest {
             EventContext eventContext;
             Parameter[] parameterInfos = method.getParameters();
             RequestContext context = new RequestContext();
-            context.setRequest(new RequestMeta());
-            context.getRequest().setMapping(meta.getPrefixes() + "/" + requestMapping.getMapping());
             context.setInstance(instance);
             context.setMethod(method);
             context.setParams(new HashMap<>(parameterInfos.length));
-            context.getRequest().setHost(local.getHost());
-            context.getRequest().setPort(String.valueOf(local.getPort()));
             context.setRemote(remote);
+
+            context.setRequestMeta(new RequestMeta());
+            context.getRequestMeta().setMapping(meta.getPrefixes() + "/" + requestMapping.getMapping());
+            context.getRequestMeta().setHost(local.getHost());
+            context.getRequestMeta().setPort(String.valueOf(local.getPort()));
+            context.getRequestMeta().setParams(new HashMap<>());
             for(int i=0;i<parameterInfos.length;i++){
                 context.getParams().put(parameterInfos[i].getName(),args[i]);
                 AbstractType type = meta.getTypes().get(parameterInfos[i]);
-                context.getRequest().getParams().put(parameterInfos[i].getName(),type.serialize(args));
+                context.getRequestMeta().getParams().put(parameterInfos[i].getName(),type.serialize(args[i]));
             }
             BeforeEvent beforeEvent = method.getAnnotation(BeforeEvent.class);
             if(beforeEvent != null){
@@ -148,16 +150,16 @@ public abstract class Request implements IRequest {
                 Node sender = new Sender(meta,context);
                 Class<?> return_type = method.getReturnType();
                 if(return_type.equals(Void.TYPE)){
-                    sender.send(context.getRequest());
+                    sender.send(context.getRequestMeta());
                 }
                 else{
                     int timeout = requestConfig.getTimeout();
                     if(requestMapping.getTimeout() != -1)timeout = requestMapping.getTimeout();
-                    if(sender.send(context.getRequest())){
+                    if(sender.send(context.getRequestMeta())){
                         synchronized (context){
                             context.wait(timeout);
                         }
-                        ResponseMeta respond = context.getResult();
+                        ResponseMeta respond = context.getResponseMeta();
                         if(respond != null){
                             if(respond.getError()!=null){
                                 FailEvent failEvent = method.getAnnotation(FailEvent.class);

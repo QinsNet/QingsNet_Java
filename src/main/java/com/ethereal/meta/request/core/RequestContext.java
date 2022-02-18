@@ -12,8 +12,8 @@ import java.util.HashMap;
 @Getter
 @Setter
 public class RequestContext {
-    private ResponseMeta result;
-    private RequestMeta request;
+    private ResponseMeta responseMeta;
+    private RequestMeta requestMeta;
     private Object instance;
     private Method method;
     private HashMap<String,Object> params;
