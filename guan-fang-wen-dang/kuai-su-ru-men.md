@@ -335,11 +335,11 @@ public interface ServerService
 {
     //Player继承BaseToken
     @Request
-    public void Move(Player player);
+    public void Move(Player user);
     @Request
-    public void Attack(Player player);
+    public void Attack(Player user);
     @Request
-    public void Chat(Player player);
+    public void Chat(Player user);
 }
 ```
 
