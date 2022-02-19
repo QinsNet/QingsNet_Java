@@ -1,4 +1,4 @@
-package com.ethereal.meta.node.p2p.recevier;
+package com.ethereal.meta.node.http.recevier;
 import com.ethereal.meta.core.console.Console;
 import com.ethereal.meta.core.entity.NodeAddress;
 import com.ethereal.meta.core.entity.RequestMeta;
@@ -7,14 +7,15 @@ import com.ethereal.meta.meta.Meta;
 import com.ethereal.meta.service.core.ServiceContext;
 import com.ethereal.meta.util.Http2Util;
 import com.ethereal.meta.util.SerializeUtil;
-import com.google.gson.reflect.TypeToken;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.*;
 
-import java.lang.reflect.Type;
+import java.io.UnsupportedEncodingException;
 import java.net.URI;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
@@ -52,7 +53,7 @@ public class ServiceHandler extends SimpleChannelInboundHandler<FullHttpRequest>
         RequestMeta requestMeta = new RequestMeta();
         requestMeta.setMapping(uri.getPath());
         requestMeta.setProtocol(req.headers().get("protocol"));
-        requestMeta.setInstance(req.headers().get("instance"));
+        requestMeta.setInstance(URLDecoder.decode(req.headers().get("instance"),"UTF-8"));
         requestMeta.setHost(req.headers().get("host"));
         requestMeta.setPort(req.headers().get("port"));
         ServiceContext context = new ServiceContext();
@@ -95,7 +96,11 @@ public class ServiceHandler extends SimpleChannelInboundHandler<FullHttpRequest>
             DefaultFullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,HttpResponseStatus.OK,Unpooled.copiedBuffer(SerializeUtil.gson.toJson(responseMeta.getResult()).getBytes(StandardCharsets.UTF_8)));
             response.headers().set("error", SerializeUtil.gson.toJson(responseMeta.getError()));
             response.headers().set("protocol",responseMeta.getProtocol());
-            response.headers().set("instance",responseMeta.getInstance());
+            try {
+                response.headers().set("instance", URLEncoder.encode(responseMeta.getInstance(),"UTF-8"));
+            } catch (UnsupportedEncodingException e) {
+                e.printStackTrace();
+            }
             send(response);
             ctx.close();
         }

@@ -3,7 +3,7 @@ package com.ethereal.meta.core.boot;
 import com.ethereal.meta.core.entity.NodeAddress;
 import com.ethereal.meta.meta.Meta;
 import com.ethereal.meta.meta.util.MetaUtil;
-import com.ethereal.meta.node.p2p.recevier.Receiver;
+import com.ethereal.meta.node.http.recevier.Receiver;
 import com.ethereal.meta.util.SerializeUtil;
 import lombok.Getter;
 
@@ -16,7 +16,7 @@ public class MetaApplication {
     @Getter
     private ApplicationContext context;
 
-    public <T> T publish(String mapping, NodeAddress address){
+    public <T> T create(String mapping, NodeAddress address){
         LinkedList<String> mappings = new LinkedList<>(Arrays.asList(mapping.split("/")));
         mappings.removeFirst();
         return MetaUtil.findMeta(context.getRoot(),mappings).newInstance(context.getServer().getLocal(),address);

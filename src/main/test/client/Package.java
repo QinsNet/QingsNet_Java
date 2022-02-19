@@ -1,12 +1,13 @@
 package client;
 
 import com.ethereal.meta.service.annotation.MetaService;
+import com.google.gson.annotations.Expose;
 
 public class Package {
-    String id;
+    @Expose
+    String name;
 
-    @MetaService("hello")
-    public void hello(Integer id){
-        System.out.printf("背包:%s%n", id);
+    public void pack(){
+        System.out.printf("%s已经打包", name);
     }
 }

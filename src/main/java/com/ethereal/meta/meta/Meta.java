@@ -12,13 +12,16 @@ import com.ethereal.meta.meta.annotation.MetaMapping;
 import com.ethereal.meta.request.core.Request;
 import com.ethereal.meta.request.core.RequestInterceptor;
 import com.ethereal.meta.service.core.Service;
+import com.ethereal.meta.util.SerializeUtil;
+import com.google.gson.*;
+import com.google.gson.stream.JsonReader;
 import lombok.Getter;
-import net.sf.cglib.proxy.Callback;
-import net.sf.cglib.proxy.Enhancer;
-import net.sf.cglib.proxy.NoOp;
+import net.sf.cglib.proxy.*;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Type;
+import java.sql.ClientInfoStatus;
 import java.util.HashMap;
 
 public abstract class Meta{
@@ -43,8 +46,13 @@ public abstract class Meta{
     @Getter
     protected Class<?> instanceClass;
     @Getter
+    protected Class<?> proxyClass;
+    @Getter
     protected Field field;
 
+    public abstract String serialize(Object instance);
+    public abstract Object deserialize(String instance);
+    public abstract void sync(Object oldInstance,Object newInstance);
     protected abstract void onConfigure();
     protected abstract void onRegister();
     protected abstract void onInstance();
@@ -85,25 +93,20 @@ public abstract class Meta{
 
     public abstract void onLog(TrackLog log);
 
-    public <T> T newInstance(NodeAddress local,NodeAddress remote){
-        //Proxy Instance
-        Enhancer enhancer = new Enhancer();
-        enhancer.setSuperclass(instanceClass);
-        Callback noOp= NoOp.INSTANCE;
-        enhancer.setCallbacks(new Callback[]{noOp,new RequestInterceptor(request, local,remote)});
-        enhancer.setCallbackFilter(method ->
-        {
-            if(getRequest().getMethods().containsValue(method)){
-                return 1;
-            }
-            else return 0;
-        });
-        Object instance = enhancer.create();
-        for (Meta meta: metas.values()){
+    public <T> T newInstance(NodeAddress local, NodeAddress remote){
+        return newInstance(null,local,remote);
+    }
+
+    public <T> T newInstance(String raw_instance,NodeAddress local, NodeAddress remote){
+        Factory instance = (Factory) deserialize(raw_instance);
+        instance.setCallback(0,NoOp.INSTANCE);
+        instance.setCallback(1,new RequestInterceptor(request,local,remote));
+        for (Meta meta:metas.values()){
             try {
-                meta.getField().set(instance,meta.newInstance(local,remote));
-            }
-            catch (IllegalAccessException e) {
+                if(meta.field.get(instance) == null){
+                    meta.field.set(instance,meta.newInstance(null,local,remote));
+                }
+            } catch (IllegalAccessException e) {
                 onException(e);
             }
         }
@@ -115,9 +118,7 @@ public abstract class Meta{
         child.prefixes = this.prefixes + "/" + child.mapping;
         metas.put(child.mapping, child);
     }
-    public abstract String serialize(Object instance);
-    public abstract Object deserialize(String instance);
-    public static Meta newMeta(Meta parent,String mapping,Class<?> instanceClass)  {
+    public static Meta newMeta(Meta parent, String mapping, Class<?> instanceClass)  {
         Components components = instanceClass.getAnnotation(Components.class);
         if(components == null){
             components = Components.class.getAnnotation(Components.class);
@@ -140,7 +141,20 @@ public abstract class Meta{
             //Life Cycle
             meta.service = components.service().getConstructor(Meta.class).newInstance(meta);
             meta.request = components.request().getConstructor(Meta.class).newInstance(meta);
-
+            //Proxy Instance
+            Enhancer enhancer = new Enhancer();
+            enhancer.setSuperclass(instanceClass);
+            enhancer.setCallbackTypes(new Class[]{NoOp.class,RequestInterceptor.class});
+            Meta finalMeta = meta;
+            enhancer.setCallbackFilter(method ->
+            {
+                if(finalMeta.request.getMethods().containsValue(method)){
+                    return 1;
+                }
+                else return 0;
+            });
+            meta.proxyClass = enhancer.createClass();
+            //Life Cycle
             meta.onConfigure();
 
             meta.onRegister();

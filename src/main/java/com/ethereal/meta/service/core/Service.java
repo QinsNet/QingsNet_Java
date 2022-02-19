@@ -11,11 +11,13 @@ import com.ethereal.meta.core.aop.context.ExceptionEventContext;
 import com.ethereal.meta.core.entity.*;
 import com.ethereal.meta.core.entity.Error;
 import com.ethereal.meta.meta.Meta;
+import com.ethereal.meta.meta.annotation.FieldMapping;
 import com.ethereal.meta.service.annotation.*;
 import com.ethereal.meta.service.event.InterceptorEvent;
 import com.ethereal.meta.service.event.delegate.InterceptorDelegate;
 import lombok.Getter;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
@@ -104,7 +106,7 @@ public abstract class Service implements IService {
                 return new ResponseMeta(new Error(Error.ErrorCode.NotFoundMethod, String.format("Mapping:%s 未找到",requestMeta.getMapping())));
             }
 
-            context.setInstance(meta.newInstance(context.getLocal(),new NodeAddress(context.getRequestMeta().getHost(),context.getRequestMeta().getPort())));
+            context.setInstance(meta.newInstance(context.getRequestMeta().getInstance(),context.getLocal(),new NodeAddress(context.getRequestMeta().getHost(),context.getRequestMeta().getPort())));
 
             if(onInterceptor(requestMeta)){
                 context.setParams(new HashMap<>());

@@ -47,6 +47,9 @@ public abstract class Request implements IRequest {
 
     public void receive(RequestContext context) {
         try {
+            Object oldInstance = context.getInstance();
+            Object newInstance = meta.newInstance(context.getResponseMeta().getInstance(),new NodeAddress(context.getRequestMeta().getHost(),context.getRequestMeta().getPort()),context.getRemote());
+            meta.sync(oldInstance,newInstance);
             synchronized (context){
                 context.notify();
             }
@@ -102,7 +105,14 @@ public abstract class Request implements IRequest {
             meta.onException(e);
         }
     }
-
+    public void prepareRequestMeta(RequestContext context,RequestMapping requestMapping,NodeAddress local,Object instance){
+        context.setRequestMeta(new RequestMeta());
+        context.getRequestMeta().setMapping(meta.getPrefixes() + "/" + requestMapping.getMapping());
+        context.getRequestMeta().setHost(local.getHost());
+        context.getRequestMeta().setPort(String.valueOf(local.getPort()));
+        context.getRequestMeta().setParams(new HashMap<>());
+        context.getRequestMeta().setInstance(meta.serialize(instance));
+    }
     public Object intercept(Object instance, Method method, Object[] args, MethodProxy methodProxy, NodeAddress local,NodeAddress remote){
         try {
             RequestMapping requestMapping = getRequestMapping(method);
@@ -117,18 +127,14 @@ public abstract class Request implements IRequest {
             context.setParams(new HashMap<>(parameterInfos.length));
             context.setRemote(remote);
 
-            context.setRequestMeta(new RequestMeta());
-            context.getRequestMeta().setMapping(meta.getPrefixes() + "/" + requestMapping.getMapping());
-            context.getRequestMeta().setHost(local.getHost());
-            context.getRequestMeta().setPort(String.valueOf(local.getPort()));
-            context.getRequestMeta().setParams(new HashMap<>());
+            prepareRequestMeta(context,requestMapping,local,instance);
             for(int i=0;i<parameterInfos.length;i++){
                 context.getParams().put(parameterInfos[i].getName(),args[i]);
                 AbstractType type = meta.getTypes().get(parameterInfos[i]);
                 context.getRequestMeta().getParams().put(parameterInfos[i].getName(),type.serialize(args[i]));
             }
             beforeEvent(method,context);
-            if((requestMapping.getInvoke() & InvokeTypeFlags.Local) == 0) {
+            if((requestMapping.getInvoke() & InvokeTypeFlags.Local) != 0) {
                 try{
                     localResult = methodProxy.invokeSuper(instance,args);
                 }

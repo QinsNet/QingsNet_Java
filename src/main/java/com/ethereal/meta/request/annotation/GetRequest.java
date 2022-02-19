@@ -1,7 +1,7 @@
 package com.ethereal.meta.request.annotation;
 
 import com.ethereal.meta.node.core.Node;
-import com.ethereal.meta.node.p2p.sender.HttpGetRequest;
+import com.ethereal.meta.node.http.sender.HttpGetRequest;
 
 import java.lang.annotation.*;
 

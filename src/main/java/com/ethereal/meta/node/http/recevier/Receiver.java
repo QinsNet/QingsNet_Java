@@ -1,7 +1,6 @@
-package com.ethereal.meta.node.p2p.recevier;
+package com.ethereal.meta.node.http.recevier;
 
 import com.ethereal.meta.core.boot.ApplicationConfig;
-import com.ethereal.meta.core.console.Console;
 import com.ethereal.meta.core.entity.NodeAddress;
 import com.ethereal.meta.core.entity.TrackLog;
 import com.ethereal.meta.meta.Meta;

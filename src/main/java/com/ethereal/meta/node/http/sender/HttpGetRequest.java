@@ -1,11 +1,9 @@
-package com.ethereal.meta.node.p2p.sender;
+package com.ethereal.meta.node.http.sender;
 
 import com.ethereal.meta.core.console.Console;
 import com.ethereal.meta.core.entity.Error;
 import com.ethereal.meta.core.entity.RequestMeta;
 import com.ethereal.meta.core.entity.ResponseMeta;
-import com.ethereal.meta.meta.Meta;
-import com.ethereal.meta.request.core.RequestContext;
 import com.ethereal.meta.util.SerializeUtil;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
@@ -36,9 +34,6 @@ public class HttpGetRequest extends com.ethereal.meta.node.core.Node {
             ResponseMeta responseMeta = new ResponseMeta();
             responseMeta.setError(SerializeUtil.gson.fromJson(response.headers().get("error"), Error.class));
             responseMeta.setProtocol(response.headers().get("protocol"));
-            //instance 处理
-            //省略
-            ///////
             responseMeta.setInstance(responseMeta.getInstance());
             responseMeta.setResult(response.body().string());
             context.setResponseMeta(responseMeta);

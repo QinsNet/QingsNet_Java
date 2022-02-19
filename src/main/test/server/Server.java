@@ -1,7 +1,7 @@
 package server;
 
 import com.ethereal.meta.core.boot.MetaApplication;
-import com.ethereal.meta.node.p2p.recevier.Receiver;
+import com.ethereal.meta.node.http.recevier.Receiver;
 
 public class Server {
     public static void main(String[] args) throws InterruptedException {
