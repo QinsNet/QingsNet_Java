@@ -21,7 +21,7 @@ public class RequestInterceptor implements MethodInterceptor {
     @Setter
     private NodeAddress remote;
     @Override
-    public Object intercept(Object o, Method method, Object[] args, MethodProxy methodProxy) {
+    public Object intercept(Object o, Method method, Object[] args, MethodProxy methodProxy) throws Exception {
         return request.intercept(o,method,args,methodProxy, local,remote);
     }
 }

@@ -6,6 +6,7 @@ import java.lang.annotation.*;
 @Inherited
 @Target(value = {ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
-public @interface ErrorEvent {
+public @interface ExceptionEvent {
     String function();
+    boolean isThrow() default true;
 }

@@ -18,5 +18,5 @@ import lombok.Setter;
 @Getter
 @Setter
 public class RequestConfig {
-    int timeout = 3000;
+    int timeout = 10000;
 }

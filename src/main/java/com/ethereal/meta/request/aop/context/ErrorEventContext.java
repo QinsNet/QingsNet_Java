@@ -1,6 +1,6 @@
 package com.ethereal.meta.request.aop.context;
 
-import com.ethereal.meta.core.entity.Error;
+import com.ethereal.meta.core.entity.ResponseException;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -10,10 +10,10 @@ import java.util.HashMap;
 @Getter
 @Setter
 public class ErrorEventContext extends RequestContext {
-    private Error error;
+    private String exception;
 
-    public ErrorEventContext(HashMap<String, Object> parameters, Method method, Error error) {
+    public ErrorEventContext(HashMap<String, Object> parameters, Method method, String exception) {
         super(parameters, method);
-        this.error = error;
+        this.exception = exception;
     }
 }

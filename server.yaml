@@ -1,2 +1,2 @@
 !!com.ethereal.meta.core.boot.ApplicationConfig {maxBufferSize: 10240, port: 28003,
-  threadCount: 5}
+  threadCount: 5,serverSync: true}

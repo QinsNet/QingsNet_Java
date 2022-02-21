@@ -1,5 +1,6 @@
 package com.ethereal.meta.core.entity;
 
+import com.ethereal.meta.util.SerializeUtil;
 import com.google.gson.annotations.Expose;
 import lombok.*;
 
@@ -12,16 +13,18 @@ public class ResponseMeta {
     @Expose
     private String result;
     @Expose
-    private Error error;
+    private String exception;
     @Expose
     private String instance;
 
     public ResponseMeta(){
 
     }
-    public ResponseMeta(Error error) {
-        this.error = error;
+
+    public ResponseMeta(String exception) {
+        this.exception = exception;
     }
+
     public ResponseMeta(String instance, String result) {
         this.result = result;
         this.instance = instance;

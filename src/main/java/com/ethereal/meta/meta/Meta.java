@@ -12,17 +12,12 @@ import com.ethereal.meta.meta.annotation.MetaMapping;
 import com.ethereal.meta.request.core.Request;
 import com.ethereal.meta.request.core.RequestInterceptor;
 import com.ethereal.meta.service.core.Service;
-import com.ethereal.meta.util.SerializeUtil;
-import com.google.gson.*;
-import com.google.gson.stream.JsonReader;
 import lombok.Getter;
 import net.sf.cglib.proxy.*;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Type;
-import java.sql.ClientInfoStatus;
-import java.util.HashMap;
+import java.util.*;
 
 public abstract class Meta{
     @Getter
@@ -46,6 +41,8 @@ public abstract class Meta{
     @Getter
     protected Class<?> instanceClass;
     @Getter
+    protected Class<?> collectionClass;
+    @Getter
     protected Class<?> proxyClass;
     @Getter
     protected Field field;
@@ -57,20 +54,24 @@ public abstract class Meta{
     protected abstract void onRegister();
     protected abstract void onInstance();
 
-    protected void onLink() {
+    protected void onLink(){
         Class<?> checkClass = instanceClass;
         while (checkClass != null){
             for (Field field : checkClass.getDeclaredFields()){
                 MetaMapping metaMapping = field.getAnnotation(MetaMapping.class);
                 if(metaMapping != null){
-                    Meta meta = newMeta(this,metaMapping.value(), field.getType());
-                    if(meta != null){
+                    Meta meta;
+                    if(metaMapping.elementClass()!=MetaMapping.class){
+                        meta = newMeta(this,metaMapping.value(),metaMapping.elementClass());
+                        if(meta != null){
+                            meta.collectionClass = field.getType();
+                        }
+                    }
+                    else meta = newMeta(this,metaMapping.value(), field.getType());
+                    if (meta != null){
                         link(meta);
                         field.setAccessible(true);
                         meta.field = field;
-                    }
-                    else {
-                        onException(TrackException.ExceptionCode.NewInstanceError, String.format("%s-%s 生成失败", prefixes, metaMapping.value()));
                     }
                 }
             }
@@ -82,7 +83,7 @@ public abstract class Meta{
     protected abstract void onUninitialize();
 
     public void onException(TrackException.ExceptionCode code, String message) {
-        onException(new TrackException(code,message,this));
+        onException(new TrackException(code,message));
     }
 
     public abstract void onException(Exception exception);
@@ -93,20 +94,39 @@ public abstract class Meta{
 
     public abstract void onLog(TrackLog log);
 
-    public <T> T newInstance(NodeAddress local, NodeAddress remote){
-        return newInstance(null,local,remote);
-    }
-
-    public <T> T newInstance(String raw_instance,NodeAddress local, NodeAddress remote){
-        Factory instance = (Factory) deserialize(raw_instance);
+    public void bindInstance(Factory instance,Request request,NodeAddress local,NodeAddress remote){
         instance.setCallback(0,NoOp.INSTANCE);
         instance.setCallback(1,new RequestInterceptor(request,local,remote));
+    }
+    public <T> T newInstance(String raw_instance,NodeAddress local, NodeAddress remote){
+        Factory instance = (Factory) deserialize(raw_instance);
+        bindInstance(instance,request,local,remote);
         for (Meta meta:metas.values()){
             try {
                 if(meta.field.get(instance) == null){
-                    meta.field.set(instance,meta.newInstance(null,local,remote));
+                    if(meta.collectionClass != null){
+                        meta.field.set(instance,meta.collectionClass.newInstance());
+                    }
+                    else meta.field.set(instance,meta.newInstance(null,local,remote));
                 }
-            } catch (IllegalAccessException e) {
+                if (meta.collectionClass != null){
+                    if(Iterable.class.isAssignableFrom(meta.collectionClass)){
+                        for (Factory item:(Iterable<Factory>)meta.field.get(instance)){
+                            bindInstance(item, meta.request,local,remote);
+                        }
+                    }
+                    else if(Map.class.isAssignableFrom(meta.collectionClass)){
+                        for(Map.Entry<Object,Object> item:((Map<Object,Object>)(meta.field.get(instance))).entrySet()){
+                            if(item.getKey().getClass().isAssignableFrom(Factory.class)){
+                                bindInstance((Factory) item.getKey(), meta.request, local,remote);
+                            }
+                            else if(item.getValue().getClass().isAssignableFrom(Factory.class)){
+                                bindInstance((Factory) item.getValue(),meta.request,local,remote);
+                            }
+                        }
+                    }
+                }
+            } catch (IllegalAccessException | InstantiationException e) {
                 onException(e);
             }
         }
@@ -118,7 +138,7 @@ public abstract class Meta{
         child.prefixes = this.prefixes + "/" + child.mapping;
         metas.put(child.mapping, child);
     }
-    public static Meta newMeta(Meta parent, String mapping, Class<?> instanceClass)  {
+    public static Meta newMeta(Meta parent, String mapping, Class<?> instanceClass) {
         Components components = instanceClass.getAnnotation(Components.class);
         if(components == null){
             components = Components.class.getAnnotation(Components.class);
@@ -165,9 +185,9 @@ public abstract class Meta{
 
             meta.onInitialize();
 
-        }
-        catch (Exception e){
+        } catch (InvocationTargetException | InstantiationException | IllegalAccessException | NoSuchMethodException e) {
             meta.onException(e);
+            return null;
         }
         return meta;
     }

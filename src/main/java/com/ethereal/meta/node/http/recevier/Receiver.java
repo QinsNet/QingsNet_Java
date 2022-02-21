@@ -58,6 +58,9 @@ public class Receiver extends Server {
                     root.onLog(TrackLog.LogCode.Runtime, String.format("%s-%s 服务器部署失败", local.getHost(),local.getPort()));
                 }
             }).channel();
+            if(config.isServerSync()){
+                channel.closeFuture().sync();
+            }
         } catch (Exception e) {
             e.printStackTrace();
             return false;

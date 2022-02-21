@@ -11,6 +11,6 @@ public class Console {
         System.out.println("Debug:::" + msg);
     }
     public static void error(String msg){
-        System.out.println("Error:::" + msg);
+        System.out.println("ResponseException:::" + msg);
     }
 }

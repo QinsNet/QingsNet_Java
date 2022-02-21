@@ -5,15 +5,14 @@ import com.ethereal.meta.core.aop.annotation.BeforeEvent;
 import com.ethereal.meta.core.aop.context.AfterEventContext;
 import com.ethereal.meta.core.aop.context.BeforeEventContext;
 import com.ethereal.meta.core.aop.context.EventContext;
-import com.ethereal.meta.core.aop.context.ExceptionEventContext;
 import com.ethereal.meta.core.entity.*;
-import com.ethereal.meta.core.entity.Error;
+import com.ethereal.meta.core.entity.ResponseException;
 import com.ethereal.meta.core.type.AbstractType;
 import com.ethereal.meta.core.type.Param;
 import com.ethereal.meta.meta.Meta;
 import com.ethereal.meta.node.core.Node;
 import com.ethereal.meta.request.annotation.*;
-import com.ethereal.meta.request.aop.annotation.ErrorEvent;
+import com.ethereal.meta.request.aop.annotation.ExceptionEvent;
 import com.ethereal.meta.request.aop.annotation.FailEvent;
 import com.ethereal.meta.request.aop.annotation.SuccessEvent;
 import com.ethereal.meta.request.aop.annotation.TimeoutEvent;
@@ -113,7 +112,8 @@ public abstract class Request implements IRequest {
         context.getRequestMeta().setParams(new HashMap<>());
         context.getRequestMeta().setInstance(meta.serialize(instance));
     }
-    public Object intercept(Object instance, Method method, Object[] args, MethodProxy methodProxy, NodeAddress local,NodeAddress remote){
+    public Object intercept(Object instance, Method method, Object[] args, MethodProxy methodProxy, NodeAddress local,NodeAddress remote) throws Exception {
+        RequestContext context = new RequestContext();
         try {
             RequestMapping requestMapping = getRequestMapping(method);
             Object localResult = null;
@@ -121,7 +121,6 @@ public abstract class Request implements IRequest {
             Object methodResult = null;
             EventContext eventContext;
             Parameter[] parameterInfos = method.getParameters();
-            RequestContext context = new RequestContext();
             context.setInstance(instance);
             context.setMethod(method);
             context.setParams(new HashMap<>(parameterInfos.length));
@@ -135,12 +134,7 @@ public abstract class Request implements IRequest {
             }
             beforeEvent(method,context);
             if((requestMapping.getInvoke() & InvokeTypeFlags.Local) != 0) {
-                try{
-                    localResult = methodProxy.invokeSuper(instance,args);
-                }
-                catch (Throwable e) {
-                    exceptionEvent(method,context,new Exception(e));
-                }
+                localResult = methodProxy.invokeSuper(instance,args);
             }
             if((requestMapping.getInvoke() & InvokeTypeFlags.Remote) != 0){
                 Node sender = requestMapping.getNodeClass().newInstance();
@@ -155,8 +149,8 @@ public abstract class Request implements IRequest {
                     }
                     ResponseMeta responseMeta = context.getResponseMeta();
                     if(responseMeta != null){
-                        if(responseMeta.getError()!=null){
-                            errorEvent(method,context, responseMeta.getError());
+                        if(responseMeta.getException()!=null){
+                            errorEvent(method,context, responseMeta.getException());
                         }
                         if(return_type != void.class && return_type != Void.class){
                             Param paramAnnotation = method.getAnnotation(Param.class);
@@ -183,6 +177,11 @@ public abstract class Request implements IRequest {
         }
         catch (Exception e){
             meta.onException(e);
+            exceptionEvent(method,context,e);
+        }
+        catch (Throwable e){
+            meta.onException(new Exception(e));
+            exceptionEvent(method,context,new Exception(e));
         }
         return null;
     }
@@ -205,21 +204,24 @@ public abstract class Request implements IRequest {
     private void exceptionEvent(Method method, RequestContext context, Exception e) throws Exception {
         com.ethereal.meta.core.aop.annotation.ExceptionEvent exceptionEvent = method.getAnnotation(com.ethereal.meta.core.aop.annotation.ExceptionEvent.class);
         if(exceptionEvent != null){
-            ExceptionEventContext eventContext = new ExceptionEventContext(context.getParams(),method,e);
+            com.ethereal.meta.core.aop.context.ExceptionEventContext eventContext = new com.ethereal.meta.core.aop.context.ExceptionEventContext(context.getParams(),method,e);
             String iocObjectName = exceptionEvent.function().substring(0, exceptionEvent.function().indexOf("."));
             meta.getEventManager().invokeEvent(meta.getInstanceManager().get(iocObjectName), exceptionEvent.function(),context.getParams(),eventContext);
             if(exceptionEvent.isThrow())throw e;
         }
         else throw e;
     }
-    private void errorEvent(Method method, RequestContext context, Error error) throws Exception {
-        ErrorEvent errorEvent = method.getAnnotation(ErrorEvent.class);
-        if(errorEvent != null){
-            ErrorEventContext eventContext = new ErrorEventContext(context.getParams(),method,error);
-            String iocObjectName = errorEvent.function().substring(0, errorEvent.function().indexOf("."));
-            meta.getEventManager().invokeEvent(meta.getInstanceManager().get(iocObjectName), errorEvent.function(), context.getParams(),eventContext);
+    private void errorEvent(Method method, RequestContext context, String exception) throws Exception {
+        ExceptionEvent exceptionEvent = method.getAnnotation(ExceptionEvent.class);
+        if(exceptionEvent != null){
+            ErrorEventContext eventContext = new ErrorEventContext(context.getParams(),method, exception);
+            String iocObjectName = exceptionEvent.function().substring(0, exceptionEvent.function().indexOf("."));
+            meta.getEventManager().invokeEvent(meta.getInstanceManager().get(iocObjectName), exceptionEvent.function(), context.getParams(),eventContext);
+            if(exceptionEvent.isThrow()){
+                throw new TrackException(TrackException.ExceptionCode.ResponseException,exception);
+            }
         }
-        else throw new TrackException(TrackException.ExceptionCode.Runtime,"来自服务端的报错信息：\n" + error.getMessage());
+        else throw new TrackException(TrackException.ExceptionCode.ResponseException,exception);
     }
     private void successEvent(Method method, RequestContext context,ResponseMeta responseMeta) throws Exception {
         SuccessEvent successEvent = method.getAnnotation(SuccessEvent.class);

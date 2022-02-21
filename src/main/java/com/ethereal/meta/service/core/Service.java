@@ -9,15 +9,13 @@ import com.ethereal.meta.core.aop.context.BeforeEventContext;
 import com.ethereal.meta.core.aop.context.EventContext;
 import com.ethereal.meta.core.aop.context.ExceptionEventContext;
 import com.ethereal.meta.core.entity.*;
-import com.ethereal.meta.core.entity.Error;
+import com.ethereal.meta.core.entity.ResponseException;
 import com.ethereal.meta.meta.Meta;
-import com.ethereal.meta.meta.annotation.FieldMapping;
 import com.ethereal.meta.service.annotation.*;
 import com.ethereal.meta.service.event.InterceptorEvent;
 import com.ethereal.meta.service.event.delegate.InterceptorDelegate;
 import lombok.Getter;
 
-import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
@@ -94,7 +92,7 @@ public abstract class Service implements IService {
         RequestMeta requestMeta = context.getRequestMeta();
         try {
             if(context.getMappings().isEmpty()){
-                return new ResponseMeta(new Error(Error.ErrorCode.NotFoundMethod, String.format("Mapping:%s 未找到",requestMeta.getMapping())));
+                throw new ResponseException(ResponseException.ExceptionCode.NotFoundMethod, String.format("Mapping:%s 未找到",requestMeta.getMapping()));
             }
             Meta nextMeta = this.meta.getMetas().get(context.getMappings().getFirst());
             if(nextMeta != null){
@@ -103,7 +101,7 @@ public abstract class Service implements IService {
             }
             Method method = methods.get(context.getMappings().getFirst());
             if(method == null){
-                return new ResponseMeta(new Error(Error.ErrorCode.NotFoundMethod, String.format("Mapping:%s 未找到",requestMeta.getMapping())));
+                throw new ResponseException(ResponseException.ExceptionCode.NotFoundMethod, String.format("Mapping:%s 未找到",requestMeta.getMapping()));
             }
 
             context.setInstance(meta.newInstance(context.getRequestMeta().getInstance(),context.getLocal(),new NodeAddress(context.getRequestMeta().getHost(),context.getRequestMeta().getPort())));
@@ -117,7 +115,7 @@ public abstract class Service implements IService {
                         AbstractType type = meta.getTypes().get(parameterInfo);
                         context.getParams().put(parameterInfo.getName(),type.deserialize(value));
                     }
-                    else return new ResponseMeta(new Error(Error.ErrorCode.NotFoundParam, String.format("%s实例中%s方法的%s参数未提供注入方案", meta.getPrefixes(),method.getName(),parameterInfo.getName())));
+                    else throw new ResponseException(ResponseException.ExceptionCode.NotFoundParam, String.format("%s实例中%s方法的%s参数未提供注入方案", meta.getPrefixes(),method.getName(),parameterInfo.getName()));
                 }
                 //Before
                 beforeEvent(method,context);
@@ -142,14 +140,15 @@ public abstract class Service implements IService {
                     AbstractType type = null;
                     if(paramAnnotation != null) type = meta.getTypes().getTypesByName().get(paramAnnotation.name());
                     if(type == null)type = meta.getTypes().getTypesByType().get(return_type);
-                    if(type == null)return new ResponseMeta(new Error(Error.ErrorCode.NotFoundAbstractType,String.format("RPC中的%s类型参数尚未被注册！",return_type),null));
+                    if(type == null)throw new ResponseException(ResponseException.ExceptionCode.NotFoundAbstractType,String.format("RPC中的%s类型参数尚未被注册！",return_type),null);
                     return new ResponseMeta(meta.serialize(context.getInstance()),type.serialize(localResult));
                 }
                 else return new ResponseMeta(meta.serialize(context.getInstance()),null);
             }
-            else return new ResponseMeta(new Error(com.ethereal.meta.core.entity.Error.ErrorCode.Intercepted,"请求已被拦截",null));        }
+            else throw new ResponseException(ResponseException.ExceptionCode.Intercepted,"请求已被拦截",null);
+        }
         catch (Exception e){
-            return new ResponseMeta(new Error(Error.ErrorCode.RemoteException, String.format("%s\n%s",e.getMessage(), Arrays.toString(e.getStackTrace()))));
+            return new ResponseMeta(e.getMessage() + "\n" + Arrays.toString(e.getStackTrace()));
         }
     }
     private void afterEvent(Method method,ServiceContext context,Object localResult) throws TrackException, InvocationTargetException, IllegalAccessException {

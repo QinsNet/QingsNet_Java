@@ -7,4 +7,5 @@ import java.lang.annotation.*;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface MetaMapping {
     String value();
+    Class<?> elementClass() default MetaMapping.class;
 }

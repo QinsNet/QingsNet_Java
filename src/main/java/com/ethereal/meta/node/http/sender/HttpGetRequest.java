@@ -1,16 +1,19 @@
 package com.ethereal.meta.node.http.sender;
 
 import com.ethereal.meta.core.console.Console;
-import com.ethereal.meta.core.entity.Error;
 import com.ethereal.meta.core.entity.RequestMeta;
+import com.ethereal.meta.core.entity.ResponseException;
 import com.ethereal.meta.core.entity.ResponseMeta;
 import com.ethereal.meta.util.SerializeUtil;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import okhttp3.*;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
+import java.net.URLDecoder;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -29,19 +32,28 @@ public class HttpGetRequest extends com.ethereal.meta.node.core.Node {
     OkHttpClient client;
 
     private void send(Request request) {
-        try {
-            Response response = client.newCall(request).execute();
-            ResponseMeta responseMeta = new ResponseMeta();
-            responseMeta.setError(SerializeUtil.gson.fromJson(response.headers().get("error"), Error.class));
-            responseMeta.setProtocol(response.headers().get("protocol"));
-            responseMeta.setInstance(responseMeta.getInstance());
-            responseMeta.setResult(response.body().string());
-            context.setResponseMeta(responseMeta);
-            this.meta.getRequest().receive(context);
-        }
-        catch (IOException e) {
-            meta.onException(e);
-        }
+        client.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(@NotNull Call call, @NotNull IOException e) {
+                context.setResponseMeta(new ResponseMeta("Http客户端:" + e.getMessage()));
+                meta.getRequest().receive(context);
+            }
+
+            @Override
+            public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
+                ResponseMeta responseMeta = new ResponseMeta();
+                if(response.headers().get("exception") != null){
+                    responseMeta.setException(URLDecoder.decode(response.headers().get("exception"),"UTF-8"));
+                }
+                responseMeta.setProtocol(response.headers().get("protocol"));
+                if(response.headers().get("instance") != null){
+                    responseMeta.setInstance(URLDecoder.decode(response.headers().get("instance"),"UTF-8"));
+                }
+                responseMeta.setResult(Objects.requireNonNull(response.body()).string());
+                context.setResponseMeta(responseMeta);
+                meta.getRequest().receive(context);
+            }
+        });
     }
 
     @Override

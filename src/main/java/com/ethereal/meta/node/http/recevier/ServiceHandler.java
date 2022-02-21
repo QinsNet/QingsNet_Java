@@ -91,18 +91,23 @@ public class ServiceHandler extends SimpleChannelInboundHandler<FullHttpRequest>
             return true;
         }
         else if(data instanceof ResponseMeta){
-            Console.debug(data.toString());
             ResponseMeta responseMeta = (ResponseMeta) data;
             DefaultFullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,HttpResponseStatus.OK,Unpooled.copiedBuffer(SerializeUtil.gson.toJson(responseMeta.getResult()).getBytes(StandardCharsets.UTF_8)));
-            response.headers().set("error", SerializeUtil.gson.toJson(responseMeta.getError()));
             response.headers().set("protocol",responseMeta.getProtocol());
             try {
-                response.headers().set("instance", URLEncoder.encode(responseMeta.getInstance(),"UTF-8"));
+                if(responseMeta.getException() != null){
+                    response.headers().set("exception",URLEncoder.encode(responseMeta.getException(),"UTF-8"));
+                }
+                if(responseMeta.getInstance() != null){
+                    response.headers().set("instance", URLEncoder.encode(responseMeta.getInstance(),"UTF-8"));
+                }
             } catch (UnsupportedEncodingException e) {
+                root.onException(e);
                 e.printStackTrace();
             }
             send(response);
             ctx.close();
+            Console.debug(data.toString());
         }
         else if(data instanceof byte[]){
             send(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,HttpResponseStatus.OK, Unpooled.copiedBuffer((byte[]) data)));
@@ -117,6 +122,6 @@ public class ServiceHandler extends SimpleChannelInboundHandler<FullHttpRequest>
     }
 
     private void send(DefaultFullHttpResponse res) {
-        ctx.channel().writeAndFlush(res);
+        ctx.writeAndFlush(res);
     }
 }

@@ -1,11 +1,16 @@
 package com.ethereal.meta.core.boot;
 
 import com.ethereal.meta.core.entity.NodeAddress;
+import com.ethereal.meta.core.entity.RequestMeta;
+import com.ethereal.meta.core.entity.TrackException;
 import com.ethereal.meta.meta.Meta;
 import com.ethereal.meta.meta.util.MetaUtil;
 import com.ethereal.meta.node.http.recevier.Receiver;
+import com.ethereal.meta.request.core.Request;
+import com.ethereal.meta.request.core.RequestInterceptor;
 import com.ethereal.meta.util.SerializeUtil;
 import lombok.Getter;
+import net.sf.cglib.proxy.Factory;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -17,9 +22,24 @@ public class MetaApplication {
     private ApplicationContext context;
 
     public <T> T create(String mapping, NodeAddress address){
+        return create(context.getRoot(),mapping,context.getServer().getLocal(),address);
+    }
+
+    public static <T> T create(Object instance,String mapping){
+        Factory factory = (Factory) instance;
+        RequestInterceptor interceptor = (RequestInterceptor) factory.getCallback(1);
+        return create(interceptor.getRequest().getMeta(),mapping,interceptor.getLocal(),interceptor.getRemote());
+    }
+
+    public static <T> T create(Meta root,String mapping,NodeAddress local,NodeAddress remote){
         LinkedList<String> mappings = new LinkedList<>(Arrays.asList(mapping.split("/")));
         mappings.removeFirst();
-        return MetaUtil.findMeta(context.getRoot(),mappings).newInstance(context.getServer().getLocal(),address);
+        Meta meta = MetaUtil.findMeta(root,mappings);
+        if(meta == null){
+            root.onException(new TrackException(TrackException.ExceptionCode.NotFoundMeta, String.format("%s%s 未找到", root.getPrefixes(),mapping)));
+            return null;
+        }
+        return meta.newInstance(null,local,remote);
     }
 
     public static MetaApplication run(Class<?> instanceClass,String path){

@@ -1,7 +1,7 @@
 package com.ethereal.meta.node.http.sender;
 
 import com.ethereal.meta.core.console.Console;
-import com.ethereal.meta.core.entity.Error;
+import com.ethereal.meta.core.entity.ResponseException;
 import com.ethereal.meta.core.entity.RequestMeta;
 import com.ethereal.meta.core.entity.ResponseMeta;
 import com.ethereal.meta.util.SerializeUtil;
@@ -36,16 +36,20 @@ public class HttpPostRequest extends com.ethereal.meta.node.core.Node {
         client.newCall(request).enqueue(new Callback() {
             @Override
             public void onFailure(@NotNull Call call, @NotNull IOException e) {
-                context.setResponseMeta(new ResponseMeta(new Error(Error.ErrorCode.HttpException,e.getMessage())));
+                context.setResponseMeta(new ResponseMeta("Http客户端:" + e.getMessage()));
                 meta.getRequest().receive(context);
             }
 
             @Override
             public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
                 ResponseMeta responseMeta = new ResponseMeta();
-                responseMeta.setError(SerializeUtil.gson.fromJson(response.headers().get("error"), Error.class));
+                if(response.headers().get("exception") != null){
+                    responseMeta.setException(URLDecoder.decode(response.headers().get("exception"),"UTF-8"));
+                }
                 responseMeta.setProtocol(response.headers().get("protocol"));
-                responseMeta.setInstance(URLDecoder.decode(Objects.requireNonNull(response.headers().get("instance")),"UTF-8"));
+                if(response.headers().get("instance") != null){
+                    responseMeta.setInstance(URLDecoder.decode(response.headers().get("instance"),"UTF-8"));
+                }
                 responseMeta.setResult(Objects.requireNonNull(response.body()).string());
                 context.setResponseMeta(responseMeta);
                 meta.getRequest().receive(context);
