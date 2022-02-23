@@ -1,9 +1,8 @@
 package mt.server;
 
-import com.ethereal.meta.core.boot.MetaApplication;
-import com.ethereal.meta.meta.annotation.MetaMapping;
-import com.ethereal.meta.request.annotation.MetaRequest;
-import com.ethereal.meta.service.annotation.MetaService;
+import com.qins.net.core.boot.MetaApplication;
+import com.qins.net.meta.annotation.MetaMapping;
+import com.qins.net.service.annotation.MetaService;
 import com.google.gson.annotations.Expose;
 import lombok.Getter;
 import lombok.Setter;

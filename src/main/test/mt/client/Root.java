@@ -1,8 +1,6 @@
 package mt.client;
 
-import com.ethereal.meta.meta.annotation.MetaMapping;
-
-import javax.swing.text.PlainDocument;
+import com.qins.net.meta.annotation.MetaMapping;
 
 public class Root {
     @MetaMapping("user")

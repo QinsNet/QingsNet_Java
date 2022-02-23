@@ -1,7 +1,7 @@
 package mt.client;
 
-import com.ethereal.meta.core.boot.MetaApplication;
-import com.ethereal.meta.core.entity.NodeAddress;
+import com.qins.net.core.boot.MetaApplication;
+import com.qins.net.core.entity.NodeAddress;
 
 public class Client {
     public static void main(String[] args) throws InstantiationException, IllegalAccessException {
