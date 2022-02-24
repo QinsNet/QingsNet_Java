@@ -2,7 +2,7 @@ package com.qins.net.node.http.recevier;
 
 import com.qins.net.core.boot.ApplicationConfig;
 import com.qins.net.core.entity.TrackLog;
-import com.qins.net.meta.Meta;
+import com.qins.net.meta.core.MetaNodeField;
 import com.qins.net.core.entity.NodeAddress;
 import com.qins.net.node.core.Server;
 import io.netty.bootstrap.ServerBootstrap;
@@ -21,13 +21,13 @@ import java.util.concurrent.Executors;
 
 public class Receiver extends Server {
     protected ExecutorService es;
-    protected Meta root;
+    protected MetaNodeField root;
     protected ApplicationConfig config;
     EventLoopGroup boss = new NioEventLoopGroup();
     EventLoopGroup work = new NioEventLoopGroup();
     @Getter
     protected Channel channel;
-    public Receiver(ApplicationConfig config,NodeAddress local, Meta root) {
+    public Receiver(ApplicationConfig config,NodeAddress local, MetaNodeField root) {
         this.config = config;
         this.local = local;
         this.root = root;

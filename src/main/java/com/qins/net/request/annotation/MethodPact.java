@@ -6,10 +6,8 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class RequestMapping {
-        RequestType method;
+public class MethodPact {
         String mapping;
-        int invoke;
         int timeout;
         Class<? extends Node> nodeClass;
 }

@@ -1,8 +1,8 @@
 package mt.server;
 
-import com.qins.net.meta.annotation.MetaMapping;
+import com.qins.net.meta.annotation.Meta;
 
 public class Root {
-    @MetaMapping("user")
+    @Meta("user")
     User user;
 }

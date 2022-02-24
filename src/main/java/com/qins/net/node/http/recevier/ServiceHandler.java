@@ -2,7 +2,7 @@ package com.qins.net.node.http.recevier;
 import com.qins.net.core.console.Console;
 import com.qins.net.core.entity.RequestMeta;
 import com.qins.net.core.entity.ResponseMeta;
-import com.qins.net.meta.Meta;
+import com.qins.net.meta.core.MetaNodeField;
 import com.qins.net.core.entity.NodeAddress;
 import com.qins.net.service.core.ServiceContext;
 import com.qins.net.util.Http2Util;
@@ -23,9 +23,9 @@ import java.util.concurrent.ExecutorService;
 public class ServiceHandler extends SimpleChannelInboundHandler<FullHttpRequest>  {
     private final ExecutorService es;
     private ChannelHandlerContext ctx;
-    private final Meta root;
+    private final MetaNodeField root;
     private final NodeAddress local;
-    public ServiceHandler(ExecutorService executorService, Meta root, NodeAddress local) {
+    public ServiceHandler(ExecutorService executorService, MetaNodeField root, NodeAddress local) {
         this.es = executorService;
         this.root = root;
         this.local = local;
@@ -98,9 +98,11 @@ public class ServiceHandler extends SimpleChannelInboundHandler<FullHttpRequest>
                 if(responseMeta.getException() != null){
                     response.headers().set("exception",URLEncoder.encode(responseMeta.getException(),"UTF-8"));
                 }
-                if(responseMeta.getInstance() != null){
+                else {
                     response.headers().set("instance", URLEncoder.encode(responseMeta.getInstance(),"UTF-8"));
+                    response.headers().set("params", URLEncoder.encode(SerializeUtil.gson.toJson(responseMeta.getParams()),"UTF-8"));
                 }
+
             } catch (UnsupportedEncodingException e) {
                 root.onException(e);
                 e.printStackTrace();

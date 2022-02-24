@@ -1,24 +1,24 @@
 package com.qins.net.meta.util;
 
-import com.qins.net.meta.Meta;
+import com.qins.net.meta.core.MetaNodeField;
 
 import java.util.Arrays;
 import java.util.LinkedList;
 
 public class MetaUtil {
-    public static Meta findMeta(Meta meta, String mapping){
+    public static MetaNodeField findMeta(MetaNodeField metaNodeField, String mapping){
         LinkedList<String> mappings = new LinkedList<>(Arrays.asList(mapping.split("/")));
-        return findMeta(meta,mappings);
+        return findMeta(metaNodeField,mappings);
     }
-    public static Meta findMeta(Meta meta,LinkedList<String> mappings){
+    public static MetaNodeField findMeta(MetaNodeField metaNodeField, LinkedList<String> mappings){
         for(String name : mappings){
-            if (meta.getMetas().containsKey(name)){
-                meta = meta.getMetas().get(name);
+            if (metaNodeField.getMetas().containsKey(name)){
+                metaNodeField = metaNodeField.getMetas().get(name);
             }
             else {
                 return null;
             }
         }
-        return meta;
+        return metaNodeField;
     }
 }

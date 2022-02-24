@@ -1,11 +1,12 @@
 package com.qins.net.core.boot;
 
 import com.qins.net.core.entity.TrackException;
-import com.qins.net.meta.Meta;
+import com.qins.net.meta.core.MetaNodeField;
 import com.qins.net.meta.util.MetaUtil;
 import com.qins.net.core.entity.NodeAddress;
 import com.qins.net.node.http.recevier.Receiver;
 import com.qins.net.request.core.RequestInterceptor;
+import com.qins.net.component.StandardMetaNodeField;
 import com.qins.net.util.SerializeUtil;
 import lombok.Getter;
 import net.sf.cglib.proxy.Factory;
@@ -26,25 +27,25 @@ public class MetaApplication {
     public static <T> T create(Object instance,String mapping){
         Factory factory = (Factory) instance;
         RequestInterceptor interceptor = (RequestInterceptor) factory.getCallback(1);
-        return create(interceptor.getRequest().getMeta(),mapping,interceptor.getLocal(),interceptor.getRemote());
+        return create(interceptor.getRequest().getMetaNodeField(),mapping,interceptor.getLocal(),interceptor.getRemote());
     }
 
-    public static <T> T create(Meta root, String mapping, NodeAddress local, NodeAddress remote){
+    public static <T> T create(MetaNodeField root, String mapping, NodeAddress local, NodeAddress remote){
         LinkedList<String> mappings = new LinkedList<>(Arrays.asList(mapping.split("/")));
         mappings.removeFirst();
-        Meta meta = MetaUtil.findMeta(root,mappings);
-        if(meta == null){
-            root.onException(new TrackException(TrackException.ExceptionCode.NotFoundMeta, String.format("%s%s 未找到", root.getPrefixes(),mapping)));
+        MetaNodeField metaNodeField = MetaUtil.findMeta(root,mappings);
+        if(metaNodeField == null){
+            root.onException(new TrackException(TrackException.ExceptionCode.NotFoundMeta, String.format("%s%s 未找到", root.getMapping(),mapping)));
             return null;
         }
-        return meta.newInstance(null,local,remote);
+        return metaNodeField.newInstance(null,local,remote);
     }
 
     public static MetaApplication run(Class<?> instanceClass,String path){
         MetaApplication application = new MetaApplication();
         ApplicationContext context = new ApplicationContext();
         application.context = context;
-        Meta root = Meta.newMeta(null,"", instanceClass);
+        MetaNodeField root = new StandardMetaNodeField(instanceClass);
         context.setRoot(root);
         context.setConfig(application.loadConfig(path));
         context.setServer(new Receiver(context.getConfig(),new NodeAddress("localhost",context.getConfig().getPort()), root));

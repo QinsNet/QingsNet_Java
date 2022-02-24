@@ -1,8 +1,8 @@
 package mt.client;
 
-import com.qins.net.meta.annotation.MetaMapping;
-import com.qins.net.request.annotation.MetaRequest;
-import com.google.gson.annotations.Expose;
+import com.qins.net.meta.annotation.Meta;
+import com.qins.net.meta.annotation.Sync;
+import com.qins.net.node.annotation.PostMapping;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -11,17 +11,17 @@ import java.util.ArrayList;
 @Getter
 @Setter
 public abstract class User{
-    @Expose
+    @Sync
     private String username;
-    @Expose
+    @Sync
     private String password;
-    @Expose
+    @Sync
     private Integer apiToken;
-    @Expose
-    @MetaMapping(value = "package",elementClass = Package.class)
+    @Sync
+    @Meta(value = "package",elementClass = Package.class)
     private ArrayList<Package> packages;
-    @MetaRequest("login")
+    @PostMapping("login")
     public abstract boolean login();
-    @MetaRequest("getPack")
+    @PostMapping("getPack")
     public abstract boolean getPack();
 }

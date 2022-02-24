@@ -8,13 +8,12 @@ import com.qins.net.core.aop.context.BeforeEventContext;
 import com.qins.net.core.aop.context.EventContext;
 import com.qins.net.core.aop.context.ExceptionEventContext;
 import com.qins.net.core.entity.*;
-import com.qins.net.core.type.AbstractType;
-import com.qins.net.core.type.Param;
-import com.qins.net.meta.Meta;
-import com.qins.net.service.annotation.*;
+import com.qins.net.meta.annotation.MethodMapping;
+import com.qins.net.meta.core.*;
 import com.qins.net.service.event.InterceptorEvent;
 import com.qins.net.service.event.delegate.InterceptorDelegate;
 import com.qins.net.core.entity.ResponseException;
+import com.qins.net.util.AnnotationUtil;
 import lombok.Getter;
 
 import java.lang.reflect.InvocationTargetException;
@@ -24,61 +23,41 @@ import java.util.Arrays;
 import java.util.HashMap;
 
 
-@ServiceAnnotation
 public abstract class Service implements IService {
     @Getter
     private ServiceConfig serviceConfig;
     @Getter
-    private final HashMap<String,Method> methods = new HashMap<>();
+    private final HashMap<String,MetaMethod> methods = new HashMap<>();
     @Getter
-    private Meta meta;
+    private MetaNodeField metaNodeField;
     @Getter
     protected final InterceptorEvent interceptorEvent = new InterceptorEvent();
 
-    public Service(Meta meta){
+    public Service(MetaNodeField metaNodeField){
         try {
-            this.meta = meta;
-            Class<?> checkClass = meta.getInstanceClass();
-            while (checkClass != null){
-                for (Method method : checkClass.getDeclaredMethods()){
-                    ServiceMapping serviceMapping = getServiceMapping(method);
-                    if(serviceMapping !=null){
-                        if(method.getReturnType() != void.class){
-                            Param paramAnnotation = method.getAnnotation(Param.class);
-                            if(paramAnnotation != null){
-                                if(paramAnnotation.name() != null){
-                                    String typeName = paramAnnotation.name();
-                                    if(meta.getTypes().get(typeName) == null){
-                                        throw new TrackException(TrackException.ExceptionCode.NotFoundType, String.format("%s-%s-%s抽象类型未找到", meta.getInstanceClass().getName() ,method.getName(),paramAnnotation.name()));
-                                    }
-                                }
-                            }
-                            else if(meta.getTypes().get(method.getReturnType()) == null){
-                                meta.getTypes().add(method.getName(),method.getReturnType());
-                            }
-                        }
-                        for (Parameter parameter : method.getParameters()){
-                            Param paramAnnotation = method.getAnnotation(Param.class);
-                            if(paramAnnotation != null){
-                                if(paramAnnotation.name() != null){
-                                    String typeName = paramAnnotation.name();
-                                    if(meta.getTypes().get(typeName) == null){
-                                        throw new TrackException(TrackException.ExceptionCode.NotFoundType, String.format("%s-%s-%s抽象类型未找到", meta.getInstanceClass().getName() ,method.getName(),paramAnnotation.name()));
-                                    }
-                                }
-                            }
-                            else if(meta.getTypes().get(parameter.getParameterizedType()) == null){
-                                meta.getTypes().add(parameter.getName(),parameter.getType());
-                            }
-                        }
-                        methods.put(serviceMapping.getMapping(), method);
+            this.metaNodeField = metaNodeField;
+            for (Method method: AnnotationUtil.getMethods(metaNodeField.getInstanceClass(), MethodMapping.class)){
+                if(!method.isDefault())return;
+                MetaMethod metaMethod = new MetaMethod();
+                metaMethod.setMethod(method);
+                metaMethod.setMethodPact(AnnotationUtil.getMethodPact(method));
+                if(metaMethod.getMethodPact() != null && !method.isDefault()){
+                    if(method.getReturnType() != void.class){
+                        metaMethod.setMetaReturn(metaNodeField.getComponents().metaReturn().getConstructor(Class.class).newInstance(method.getReturnType()));
                     }
+                    metaMethod.setMetaParameters(new HashMap<>());
+                    for (Parameter parameter : method.getParameters()){
+                        MetaParameter metaParameter = metaNodeField.getComponents().metaParameter()
+                                .getConstructor(Parameter.class)
+                                .newInstance(parameter);
+                        metaMethod.getMetaParameters().put(metaParameter.getName(),metaParameter);
+                    }
+                    methods.put(metaMethod.getMethodPact().getMapping(), metaMethod);
                 }
-                checkClass = checkClass.getSuperclass();
             }
         }
         catch (Exception e){
-            meta.onException(e);
+            metaNodeField.onException(e);
         }
     }
     public boolean onInterceptor(RequestMeta requestMeta)
@@ -95,56 +74,51 @@ public abstract class Service implements IService {
             if(context.getMappings().isEmpty()){
                 throw new ResponseException(ResponseException.ExceptionCode.NotFoundMethod, String.format("Mapping:%s 未找到",requestMeta.getMapping()));
             }
-            Meta nextMeta = this.meta.getMetas().get(context.getMappings().getFirst());
-            if(nextMeta != null){
+            MetaNodeField metaNodeField = this.metaNodeField.getMetas().get(context.getMappings().getFirst());
+            if(metaNodeField != null){
                 context.getMappings().removeFirst();
-                return nextMeta.getService().receive(context);
+                return metaNodeField.getService().receive(context);
             }
-            Method method = methods.get(context.getMappings().getFirst());
-            if(method == null){
+            MetaMethod metaMethod = methods.get(context.getMappings().getFirst());
+            if(metaMethod == null){
                 throw new ResponseException(ResponseException.ExceptionCode.NotFoundMethod, String.format("Mapping:%s 未找到",requestMeta.getMapping()));
             }
-
-            context.setInstance(meta.newInstance(context.getRequestMeta().getInstance(),context.getLocal(),new NodeAddress(context.getRequestMeta().getHost(),context.getRequestMeta().getPort())));
-
+            context.setInstance(metaNodeField.newInstance(context.getRequestMeta().getInstance(),context.getLocal(),new NodeAddress(context.getRequestMeta().getHost(),context.getRequestMeta().getPort())));
             if(onInterceptor(requestMeta)){
                 context.setParams(new HashMap<>());
-                Parameter[] parameterInfos = method.getParameters();
-                for(Parameter parameterInfo : parameterInfos){
-                    if(requestMeta.getParams().containsKey(parameterInfo.getName())){
-                        String value = requestMeta.getParams().get(parameterInfo.getName());
-                        AbstractType type = meta.getTypes().get(parameterInfo);
-                        context.getParams().put(parameterInfo.getName(),type.deserialize(value));
-                    }
-                    else throw new ResponseException(ResponseException.ExceptionCode.NotFoundParam, String.format("%s实例中%s方法的%s参数未提供注入方案", meta.getPrefixes(),method.getName(),parameterInfo.getName()));
+                for (MetaParameter metaParameter : metaMethod.getMetaParameters().values()){
+                    String rawParam = context.getRequestMeta().getParams().get(metaParameter.getName());
+                    Object param = metaParameter.deserialize(rawParam);
+                    context.getParams().put(metaParameter.getName(),param);
                 }
                 //Before
-                beforeEvent(method,context);
+                beforeEvent(metaMethod.getMethod(),context);
                 //Invoke
                 Object localResult = null;
                 try{
-                    Object[] args = new Object[parameterInfos.length];
-                    for (int i=0;i<parameterInfos.length;i++){
-                        args[i] = context.getParams().get(parameterInfos[i].getName());
+                    Object[] args = new Object[metaMethod.getMetaParameters().size()];
+                    int i=0;
+                    for (String name : metaMethod.getMetaParameters().keySet()){
+                        args[i++] = context.getParams().get(name);
                     }
-                    localResult = method.invoke(context.getInstance(),args);
+                    localResult = metaMethod.getMethod().invoke(context.getInstance(),args);
                 }
                 catch (Exception e){
-                    exceptionEvent(method,context,e);
+                    exceptionEvent(metaMethod.getMethod(),context,e);
                 }
                 //After
-                afterEvent(method,context,localResult);
-                //Return
-                Class<?> return_type = method.getReturnType();
-                if(return_type != void.class){
-                    Param paramAnnotation = method.getAnnotation(Param.class);
-                    AbstractType type = null;
-                    if(paramAnnotation != null) type = meta.getTypes().getTypesByName().get(paramAnnotation.name());
-                    if(type == null)type = meta.getTypes().getTypesByType().get(return_type);
-                    if(type == null)throw new ResponseException(ResponseException.ExceptionCode.NotFoundAbstractType,String.format("RPC中的%s类型参数尚未被注册！",return_type),null);
-                    return new ResponseMeta(meta.serialize(context.getInstance()),type.serialize(localResult));
+                afterEvent(metaMethod.getMethod(),context,localResult);
+                HashMap<String,String> syncParams = new HashMap<>();
+                for(MetaParameter metaParameter : metaMethod.getMetaSyncParameters().values()){
+                    Object param = context.getParams().get(metaParameter.getName());
+                    syncParams.put(metaParameter.getName(),metaParameter.serialize(param));
                 }
-                else return new ResponseMeta(meta.serialize(context.getInstance()),null);
+                //Return
+                MetaReturn metaReturn = metaMethod.getMetaReturn();
+                if(metaReturn != null){
+                    return new ResponseMeta(metaNodeField.serialize(context.getInstance()),syncParams,metaReturn.serialize(localResult));
+                }
+                else return new ResponseMeta(metaNodeField.serialize(context.getInstance()),syncParams,null);
             }
             else throw new ResponseException(ResponseException.ExceptionCode.Intercepted,"请求已被拦截",null);
         }
@@ -157,7 +131,7 @@ public abstract class Service implements IService {
         if(afterEvent != null){
             EventContext eventContext = new AfterEventContext(context.getParams(),method,localResult);
             String iocObjectName = afterEvent.function().substring(0,afterEvent.function().indexOf("."));
-            meta.getEventManager().invokeEvent(meta.getInstanceManager().get(iocObjectName), afterEvent.function(), context.getParams(),eventContext);
+            metaNodeField.getEventManager().invokeEvent(metaNodeField.getInstanceManager().get(iocObjectName), afterEvent.function(), context.getParams(),eventContext);
         }
     }
     private void beforeEvent(Method method,ServiceContext context) throws TrackException, InvocationTargetException, IllegalAccessException {
@@ -165,7 +139,7 @@ public abstract class Service implements IService {
         if(beforeEvent != null){
             EventContext eventContext = new BeforeEventContext(context.getParams(),method);
             String iocObjectName = beforeEvent.function().substring(0, beforeEvent.function().indexOf("."));
-            meta.getEventManager().invokeEvent(meta.getInstanceManager().get(iocObjectName), beforeEvent.function(), context.getParams(),eventContext);
+            metaNodeField.getEventManager().invokeEvent(metaNodeField.getInstanceManager().get(iocObjectName), beforeEvent.function(), context.getParams(),eventContext);
         }
     }
     private void exceptionEvent(Method method, ServiceContext context, Exception e) throws Exception {
@@ -173,36 +147,9 @@ public abstract class Service implements IService {
         if(exceptionEvent != null){
             ExceptionEventContext eventContext = new ExceptionEventContext(context.getParams(),method,e);
             String iocObjectName = exceptionEvent.function().substring(0, exceptionEvent.function().indexOf("."));
-            meta.getEventManager().invokeEvent(meta.getInstanceManager().get(iocObjectName), exceptionEvent.function(),context.getParams(),eventContext);
+            metaNodeField.getEventManager().invokeEvent(metaNodeField.getInstanceManager().get(iocObjectName), exceptionEvent.function(),context.getParams(),eventContext);
             if(exceptionEvent.isThrow())throw e;
         }
         else throw e;
-    }
-    public ServiceMapping getServiceMapping(Method method){
-        if(method.getAnnotation(PostService.class) != null){
-            ServiceMapping serviceMapping = new ServiceMapping();
-            PostService annotation = method.getAnnotation(PostService.class);
-            serviceMapping.setMapping(annotation.value());
-            serviceMapping.setTimeout(annotation.timeout());
-            serviceMapping.setMethod(ServiceType.Post);
-            return serviceMapping;
-        }
-        else if(method.getAnnotation(GetService.class) != null){
-            ServiceMapping serviceMapping = new ServiceMapping();
-            GetService annotation = method.getAnnotation(GetService.class);
-            serviceMapping.setMapping(annotation.value());
-            serviceMapping.setTimeout(annotation.timeout());
-            serviceMapping.setMethod(ServiceType.Get);
-            return serviceMapping;
-        }
-        else if(method.getAnnotation(MetaService.class) != null){
-            ServiceMapping serviceMapping = new ServiceMapping();
-            MetaService annotation = method.getAnnotation(MetaService.class);
-            serviceMapping.setMapping(annotation.value());
-            serviceMapping.setTimeout(annotation.timeout());
-            serviceMapping.setMethod(ServiceType.Command);
-            return serviceMapping;
-        }
-        return null;
     }
 }

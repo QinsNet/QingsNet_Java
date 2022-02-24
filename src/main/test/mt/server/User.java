@@ -1,9 +1,9 @@
 package mt.server;
 
 import com.qins.net.core.boot.MetaApplication;
-import com.qins.net.meta.annotation.MetaMapping;
-import com.qins.net.service.annotation.MetaService;
-import com.google.gson.annotations.Expose;
+import com.qins.net.meta.annotation.Meta;
+import com.qins.net.meta.annotation.Sync;
+import com.qins.net.node.annotation.PostMapping;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -12,16 +12,17 @@ import java.util.ArrayList;
 @Getter
 @Setter
 public class User{
-    @Expose
+    @Sync
     private String username;
-    @Expose
+    @Sync
     private String password;
-    @Expose
+    @Sync
     private Integer apiToken;
-    @Expose
-    @MetaMapping(value = "package",elementClass = Package.class)
+    @Sync
+    @Meta(value = "package",elementClass = Package.class)
     private ArrayList<Package> packages;
-    @MetaService("login")
+
+    @PostMapping("login")
     public boolean login(){
         if("m839336369".equals(username) && "password".equals(password)){
             this.apiToken = 1234;
@@ -29,7 +30,8 @@ public class User{
         }
         else return false;
     }
-    @MetaService("getPack")
+
+    @PostMapping("getPack")
     public boolean getPack(){
         Package aPackage = MetaApplication.create(this,"/package");
         aPackage.setName("A背包");

@@ -1,7 +1,7 @@
 package mt.client;
 
-import com.qins.net.request.annotation.MetaRequest;
 import com.google.gson.annotations.Expose;
+import com.qins.net.node.annotation.PostMapping;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -11,6 +11,6 @@ public abstract class Package {
     @Expose
     String name;
 
-    @MetaRequest("pack")
+    @PostMapping("pack")
     public abstract void pack();
 }
