@@ -14,6 +14,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
@@ -43,14 +44,22 @@ public class HttpPostRequest extends Node {
             @Override
             public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
                 ResponseMeta responseMeta = new ResponseMeta();
-                if(response.headers().get("exception") != null){
-                    responseMeta.setException(URLDecoder.decode(response.headers().get("exception"),"UTF-8"));
-                }
                 responseMeta.setProtocol(response.headers().get("protocol"));
-                if(response.headers().get("instance") != null){
-                    responseMeta.setInstance(URLDecoder.decode(response.headers().get("instance"),"UTF-8"));
+                String exception = response.headers().get("exception");
+                String instance = response.headers().get("instance");
+                String params = response.headers().get("params");
+                if(exception != null){
+                    responseMeta.setException(URLDecoder.decode(exception,"UTF-8"));
                 }
-                responseMeta.setResult(Objects.requireNonNull(response.body()).string());
+                else if(instance != null){
+                    responseMeta.setInstance(URLDecoder.decode(instance,"UTF-8"));
+                }
+                else if(params != null){
+                    responseMeta.setParams(SerializeUtil.gson.fromJson(URLDecoder.decode(params,"UTF-8"), HashMap.class));
+                }
+                if(response.body() != null){
+                    responseMeta.setResult(response.body().string());
+                }
                 context.setResponseMeta(responseMeta);
                 metaClass.getRequest().receive(context);
             }
@@ -70,7 +79,7 @@ public class HttpPostRequest extends Node {
                         .url(new HttpUrl.Builder()
                                 .scheme("http")
                                 .host(context.getRemote().getHost())
-                                .port(Integer.parseInt(context.getRemote().getPort()))
+                                .port(context.getRemote().getPort())
                                 .addPathSegments(requestMeta.getMapping())
                                 .build())
                         .post(requestBody)
@@ -78,7 +87,7 @@ public class HttpPostRequest extends Node {
                         .addHeader("protocol", requestMeta.getProtocol())
                         .addHeader("instance", URLEncoder.encode(requestMeta.getInstance(),"UTF-8"))
                         .addHeader("host", requestMeta.getHost())
-                        .addHeader("port", requestMeta.getPort());
+                        .addHeader("port", String.valueOf(requestMeta.getPort()));
                         send(request.build());
                         return true;
             } catch (UnsupportedEncodingException e) {

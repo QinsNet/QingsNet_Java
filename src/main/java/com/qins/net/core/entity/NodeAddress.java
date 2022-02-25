@@ -9,10 +9,10 @@ import lombok.Setter;
 @Setter
 public class NodeAddress {
     String host;
-    String port;
+    int port;
     public NodeAddress(String address){
         String[] value = address.split(":");
         host = value[0];
-        port = value[1];
+        port = Integer.parseInt(value[1]);
     }
 }

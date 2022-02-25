@@ -18,6 +18,7 @@ public class RequestContext {
     private Object instance;
     private MetaMethod metaMethod;
     private HashMap<String,Object> params;
+    private NodeAddress local;
     private NodeAddress remote;
     private boolean isVoid = false;
 }

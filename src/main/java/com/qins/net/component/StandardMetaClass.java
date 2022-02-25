@@ -17,7 +17,6 @@ public class StandardMetaClass extends MetaClass {
 
     @Override
     public void onException(Exception exception) {
-        Console.error(exception.getMessage());
         exception.printStackTrace();
     }
 
@@ -36,7 +35,7 @@ public class StandardMetaClass extends MetaClass {
                 if(object == null)continue;
                 jsonObject.add(metaField.getName(), new JsonPrimitive(metaField.getBaseClass().serialize(object)));
             }
-            return SerializeUtil.gson.toJson(jsonObject);
+            return SerializeUtil.gson.toJson(instance);
         } catch (IllegalAccessException e) {
             onException(e);
             return null;

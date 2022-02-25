@@ -51,7 +51,7 @@ public class Receiver extends Server {
                             ch.pipeline().addLast(new ServiceHandler(es, classLoader,local));
                         }
                     });
-            channel = bootstrap.bind(local.getHost(),Integer.parseInt(local.getPort())).addListener((ChannelFutureListener) future -> {
+            channel = bootstrap.bind(local.getHost(),local.getPort()).addListener((ChannelFutureListener) future -> {
                 if (future.isSuccess()){
                     Console.log(String.format("%s-%s 服务器部署成功", local.getHost(),local.getPort()));
                 }

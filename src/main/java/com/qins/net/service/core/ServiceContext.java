@@ -16,4 +16,5 @@ public class ServiceContext {
     private HashMap<String,Object> params;
     private LinkedList<String> mappings;
     private NodeAddress local;
+    private NodeAddress remote;
 }

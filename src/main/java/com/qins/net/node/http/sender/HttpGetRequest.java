@@ -36,6 +36,7 @@ public class HttpGetRequest extends Node {
             @Override
             public void onFailure(@NotNull Call call, @NotNull IOException e) {
                 context.setResponseMeta(new ResponseMeta("Http客户端:" + e.getMessage()));
+                if(context.getParams() == null)context.setParams(new HashMap<>());
                 metaClass.getRequest().receive(context);
             }
 
@@ -59,6 +60,7 @@ public class HttpGetRequest extends Node {
                     responseMeta.setResult(response.body().string());
                 }
                 context.setResponseMeta(responseMeta);
+                if(context.getParams() == null)context.setParams(new HashMap<>());
                 metaClass.getRequest().receive(context);
             }
         });
@@ -73,7 +75,7 @@ public class HttpGetRequest extends Node {
             HttpUrl.Builder url = new HttpUrl.Builder()
                     .scheme("http")
                     .host(context.getRemote().getHost())
-                    .port(Integer.parseInt(context.getRemote().getPort()))
+                    .port(context.getRemote().getPort())
                     .addPathSegments(requestMeta.getMapping());
             for (Map.Entry<String ,String > params : requestMeta.getParams().entrySet()){
                 url.addQueryParameter(params.getKey(),params.getValue());
@@ -85,7 +87,7 @@ public class HttpGetRequest extends Node {
                     .addHeader("protocol", requestMeta.getProtocol())
                     .addHeader("instance", requestMeta.getInstance())
                     .addHeader("host", requestMeta.getHost())
-                    .addHeader("port", requestMeta.getPort());
+                    .addHeader("port", String.valueOf(requestMeta.getPort()));
             send(request.build());
             return true;
         }

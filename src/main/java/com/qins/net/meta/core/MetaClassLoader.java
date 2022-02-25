@@ -17,7 +17,7 @@ public class MetaClassLoader extends ClassLoader{
                 if(bases.containsKey(instanceClass))return bases.get(instanceClass);
                 else {
                     Components components = Components.class.getAnnotation(Components.class);
-                    BaseClass baseClass = components.metaClass().getConstructor(Class.class).newInstance(instanceClass);
+                    BaseClass baseClass = components.baseClass().getConstructor(Class.class).newInstance(instanceClass);
                     bases.put(instanceClass,baseClass);
                     return baseClass;
                 }
@@ -31,7 +31,7 @@ public class MetaClassLoader extends ClassLoader{
 
     public MetaClass loadMetaClass(Meta meta, Class<?> instanceClass) throws LoadClassException {
         try {
-            String name = "".equals(meta.value()) ? instanceClass.getName() : meta.value();
+            String name = "".equals(meta.value()) ? instanceClass.getSimpleName() : meta.value();
             if(metas.containsKey(name))return metas.get(name);
             else {
                 Components components = instanceClass.getAnnotation(Components.class) != null ? instanceClass.getAnnotation(Components.class) : Components.class.getAnnotation(Components.class);

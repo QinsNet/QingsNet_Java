@@ -1,0 +1,2 @@
+!!com.qins.net.core.boot.ApplicationConfig {maxBufferSize: 10240, port: 28001, serverSync: false,
+  threadCount: 5}

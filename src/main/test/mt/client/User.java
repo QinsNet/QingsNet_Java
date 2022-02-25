@@ -8,6 +8,7 @@ import java.util.ArrayList;
 
 @Getter
 @Setter
+@Meta
 public abstract class User{
     @Meta
     private String username;
@@ -15,7 +16,7 @@ public abstract class User{
     private String password;
     @Meta
     private Integer apiToken;
-    @Meta
+    @Meta(element = Package.class)
     private ArrayList<Package> packages;
     @Meta
     public abstract boolean login();

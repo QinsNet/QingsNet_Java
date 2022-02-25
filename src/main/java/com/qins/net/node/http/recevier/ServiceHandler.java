@@ -60,6 +60,7 @@ public class ServiceHandler extends SimpleChannelInboundHandler<FullHttpRequest>
         requestMeta.setPort(req.headers().get("port"));
         ServiceContext context = new ServiceContext();
         context.setLocal(local);
+        context.setRemote(new NodeAddress(requestMeta.getHost(),Integer.parseInt(requestMeta.getPort())));
         context.setMappings(new LinkedList<>(Arrays.asList(requestMeta.getMapping().split("/"))));
         if(!context.getMappings().isEmpty()) context.getMappings().removeFirst();
         context.setRequestMeta(requestMeta);
@@ -78,7 +79,6 @@ public class ServiceHandler extends SimpleChannelInboundHandler<FullHttpRequest>
             return;
         }
         if(requestMeta.getParams() == null)requestMeta.setParams(new HashMap<>());
-        context.setMappings(new LinkedList<>(Arrays.asList(requestMeta.getMapping().split("/"))));
         MetaClass metaClass = classLoader.getMetaClass(context.getMappings().pop());
         if(metaClass == null){
             send(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,HttpResponseStatus.OK, Unpooled.copiedBuffer((String.format("%s请求类未找到", requestMeta.getMapping())),StandardCharsets.UTF_8)));

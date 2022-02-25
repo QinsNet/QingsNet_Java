@@ -20,7 +20,6 @@ public class StandardBaseClass extends BaseClass {
 
     @Override
     public void onException(Exception exception) {
-        Console.error(exception.getMessage());
         exception.printStackTrace();
     }
 
@@ -31,39 +30,12 @@ public class StandardBaseClass extends BaseClass {
 
     @Override
     public String serialize(Object instance) {
-        if(instance == null)return null;
-        try {
-            JsonObject jsonObject = new JsonObject();
-            for (MetaField metaField : fields.values()){
-                Object object = metaField.getField().get(instance);
-                if(object == null)continue;
-                jsonObject.add(metaField.getName(), new JsonPrimitive(metaField.getBaseClass().serialize(object)));
-            }
-            return SerializeUtil.gson.toJson(jsonObject);
-        } catch (IllegalAccessException e) {
-            onException(e);
-            return null;
-        }
+        return SerializeUtil.gson.toJson(instance,instanceClass);
     }
 
     @Override
     public Object deserialize(String instance) {
-        if(instance == null)return null;
-        try {
-            JsonObject jsonObject = SerializeUtil.gson.fromJson(instance,JsonObject.class);
-            Object proxyInstance = instanceClass.newInstance();
-            for (MetaField metaField : fields.values()){
-                JsonElement value = jsonObject.get(metaField.getName());
-                if(value == null)continue;
-                Object fieldInstance = metaField.getBaseClass().deserialize(value.getAsString());
-                metaField.getField().set(proxyInstance,fieldInstance);
-            }
-            return proxyInstance;
-        }
-        catch (Exception e){
-            onException(e);
-            return null;
-        }
+        return SerializeUtil.gson.fromJson(instance,instanceClass);
     }
 
     @Override

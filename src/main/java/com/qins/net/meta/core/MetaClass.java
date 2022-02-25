@@ -14,6 +14,7 @@ import net.sf.cglib.proxy.Factory;
 import net.sf.cglib.proxy.NoOp;
 
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Type;
 import java.util.*;
 
 @Getter
@@ -30,7 +31,8 @@ public abstract class MetaClass extends BaseClass {
     protected void onLink() throws NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException {
         super.onLink();
         for (MetaField metaField : fields.values()){
-            if(metaField.getField().getType().getAnnotation(Meta.class) != null){
+            Meta meta = metaField.getField().getType().getAnnotation(Meta.class);
+            if(meta != null){
                 metas.put(metaField.name,metaField);
             }
         }

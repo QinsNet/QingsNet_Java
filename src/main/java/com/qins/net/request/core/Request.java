@@ -48,24 +48,26 @@ public abstract class Request implements IRequest {
     public void receive(RequestContext context) {
         try {
             Object oldInstance = context.getInstance();
-            Object newInstance = metaClass.newInstance(context.getRequestMeta().getInstance(),new NodeAddress(context.getRequestMeta().getHost(),context.getRequestMeta().getPort()),context.getRemote());
+            Object newInstance = metaClass.newInstance(context.getRequestMeta().getInstance(),context.getLocal(),context.getRemote());
             metaClass.sync(oldInstance,newInstance);
             synchronized (context){
                 context.notify();
             }
-            for (Map.Entry<String,String> keyValue:context.getResponseMeta().getParams().entrySet()){
-                String name = keyValue.getKey();
-                String rawParam = keyValue.getValue();
-                MetaParameter metaParameter = context.getMetaMethod().getMetaParameters().get(name);
-                if(metaParameter == null){
-                    throw new TrackException(TrackException.ExceptionCode.NotFoundMetaParameter,String.format("%s从远程提供方同步时，%s方法的%s参数未找到", metaClass.getName(),context.getMetaMethod().getName(),name));
+            if(context.getResponseMeta().getParams() != null){
+                for (Map.Entry<String,String> keyValue:context.getResponseMeta().getParams().entrySet()){
+                    String name = keyValue.getKey();
+                    String rawParam = keyValue.getValue();
+                    MetaParameter metaParameter = context.getMetaMethod().getMetaParameters().get(name);
+                    if(metaParameter == null){
+                        throw new TrackException(TrackException.ExceptionCode.NotFoundMetaParameter,String.format("%s从远程提供方同步时，%s方法的%s参数未找到", metaClass.getName(),context.getMetaMethod().getName(),name));
+                    }
+                    Object oldParam = context.getParams().get(name);
+                    if(oldParam == null){
+                        throw new TrackException(TrackException.ExceptionCode.NotFoundParameter,String.format("%s从远程提供方同步时，%s方法的%s参数未找到", metaClass.getName(),context.getMetaMethod().getName(),name));
+                    }
+                    Object newParam = metaParameter.getBaseClass().deserialize(rawParam);
+                    metaParameter.getBaseClass().sync(oldParam,newParam);
                 }
-                Object oldParam = context.getParams().get(name);
-                if(oldParam == null){
-                    throw new TrackException(TrackException.ExceptionCode.NotFoundParameter,String.format("%s从远程提供方同步时，%s方法的%s参数未找到", metaClass.getName(),context.getMetaMethod().getName(),name));
-                }
-                Object newParam = metaParameter.getBaseClass().deserialize(rawParam);
-                metaParameter.getBaseClass().sync(oldParam,newParam);
             }
         }
         catch (Exception e){
@@ -110,8 +112,9 @@ public abstract class Request implements IRequest {
             context.setMetaMethod(metaMethod);
             context.setParams(new HashMap<>());
             context.setRemote(remote);
-
+            context.setLocal(local);
             context.setRequestMeta(prepareRequestMeta(metaMethod,local,instance));
+
             int i = 0;
             for (Map.Entry<String,MetaParameter> keyValue : metaMethod.getMetaParameters().entrySet()){
                 String name = keyValue.getKey();
@@ -139,7 +142,7 @@ public abstract class Request implements IRequest {
                     if(return_type != void.class && return_type != Void.class){
                         result = metaMethod.getMetaReturn().deserialize(responseMeta.getResult());
                         if(MetaClass.class.isAssignableFrom(metaMethod.getMetaReturn().getClass())){
-                            ((MetaClass) metaMethod.getMetaReturn()).updateNode(result,new NodeAddress(context.getRequestMeta().getHost(),context.getRequestMeta().getPort()),context.getRemote());
+                            ((MetaClass) metaMethod.getMetaReturn()).updateNode(result,local,remote);
                         }
                     }
                     successEvent(method,context, responseMeta);
@@ -150,12 +153,7 @@ public abstract class Request implements IRequest {
             afterEvent(method,context,result);
             return result;
         }
-        catch (Exception e){
-            metaClass.onException(e);
-            exceptionEvent(method,context,e);
-        }
         catch (Throwable e){
-            metaClass.onException(new Exception(e));
             exceptionEvent(method,context,new Exception(e));
         }
         return null;

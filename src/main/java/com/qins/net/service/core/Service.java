@@ -61,14 +61,14 @@ public abstract class Service implements IService {
             if(metaMethod == null){
                 throw new ResponseException(ResponseException.ExceptionCode.NotFoundMethod, String.format("Mapping:%s 未找到",requestMeta.getMapping()));
             }
-            context.setInstance(metaClass.newInstance(context.getRequestMeta().getInstance(),context.getLocal(),new NodeAddress(context.getRequestMeta().getHost(),context.getRequestMeta().getPort())));
+            context.setInstance(metaClass.newInstance(context.getRequestMeta().getInstance(),context.getLocal(),context.getRemote()));
             if(onInterceptor(requestMeta)){
                 context.setParams(new HashMap<>());
                 for (MetaParameter metaParameter : metaMethod.getMetaParameters().values()){
                     String rawParam = context.getRequestMeta().getParams().get(metaParameter.getName());
                     Object param = metaParameter.getBaseClass().deserialize(rawParam);
                     if(MetaClass.class.isAssignableFrom(metaParameter.getBaseClass().getClass())){
-                        ((MetaClass) metaParameter.getBaseClass()).updateNode(param,context.getLocal(),new NodeAddress(requestMeta.getHost(), requestMeta.getPort()));
+                        ((MetaClass) metaParameter.getBaseClass()).updateNode(param,context.getLocal(),context.getRemote());
                     }
                     context.getParams().put(metaParameter.getName(),param);
                 }

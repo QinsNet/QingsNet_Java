@@ -20,5 +20,6 @@ public abstract class MetaField {
         this.baseClass = metaClassLoader.loadClass(field.getType());
         Meta meta = field.getAnnotation(Meta.class);
         name = "".equals(meta.value()) ? field.getName() : meta.value();
+        if(meta.element() != Meta.class)metaClassLoader.loadClass(meta.element());
     }
 }

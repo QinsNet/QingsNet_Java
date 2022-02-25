@@ -19,7 +19,7 @@ public class User{
     private String password;
     @Meta
     private Integer apiToken;
-    @Meta
+    @Meta(element = Package.class)
     private ArrayList<Package> packages;
     @Meta
     public boolean login(){

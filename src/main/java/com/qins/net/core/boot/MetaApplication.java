@@ -46,11 +46,11 @@ public class MetaApplication {
         return application;
     }
 
-    public boolean publish(Class<?> instanceClass) throws LoadClassException {
+    public MetaApplication publish(Class<?> instanceClass) throws LoadClassException {
         Meta meta = instanceClass.getAnnotation(Meta.class);
         if(meta == null)throw new LoadClassException(String.format("%s 未定义@Meta", instanceClass.getName()));
         context.getMetaClassLoader().loadMetaClass(meta,instanceClass);
-        return true;
+        return this;
     }
 
     private ApplicationConfig loadConfig(String path){
