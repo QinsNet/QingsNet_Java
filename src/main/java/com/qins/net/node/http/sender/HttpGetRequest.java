@@ -36,7 +36,7 @@ public class HttpGetRequest extends Node {
             @Override
             public void onFailure(@NotNull Call call, @NotNull IOException e) {
                 context.setResponseMeta(new ResponseMeta("Http客户端:" + e.getMessage()));
-                metaNodeField.getRequest().receive(context);
+                metaClass.getRequest().receive(context);
             }
 
             @Override
@@ -59,7 +59,7 @@ public class HttpGetRequest extends Node {
                     responseMeta.setResult(response.body().string());
                 }
                 context.setResponseMeta(responseMeta);
-                metaNodeField.getRequest().receive(context);
+                metaClass.getRequest().receive(context);
             }
         });
     }
@@ -74,7 +74,7 @@ public class HttpGetRequest extends Node {
                     .scheme("http")
                     .host(context.getRemote().getHost())
                     .port(Integer.parseInt(context.getRemote().getPort()))
-                    .addPathSegments(requestMeta.getMapping().substring(1));
+                    .addPathSegments(requestMeta.getMapping());
             for (Map.Entry<String ,String > params : requestMeta.getParams().entrySet()){
                 url.addQueryParameter(params.getKey(),params.getValue());
             }

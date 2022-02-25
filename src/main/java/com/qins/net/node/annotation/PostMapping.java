@@ -9,9 +9,8 @@ import java.lang.annotation.*;
 @Documented
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
-@MethodMapping("")
+@MethodMapping
 public @interface PostMapping {
-    String value();
     int timeout() default -1;
     Class<? extends Node> node() default HttpPostRequest.class;
 }

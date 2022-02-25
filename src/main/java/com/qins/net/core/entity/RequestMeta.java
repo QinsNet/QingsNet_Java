@@ -10,7 +10,7 @@ import java.util.Map;
 @Getter
 @Setter
 public class RequestMeta {
-    private String protocol = "Meta-Request-1.0";
+    private String protocol = "Sync-Request-1.0";
     private String mapping;
     private Map<String,String> params;
     private String instance = "";

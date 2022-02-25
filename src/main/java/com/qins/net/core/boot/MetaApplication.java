@@ -1,56 +1,56 @@
 package com.qins.net.core.boot;
 
-import com.qins.net.core.entity.TrackException;
-import com.qins.net.meta.core.MetaNodeField;
-import com.qins.net.meta.util.MetaUtil;
+import com.qins.net.core.console.Console;
+import com.qins.net.core.exception.LoadClassException;
+import com.qins.net.core.exception.NewInstanceException;
+import com.qins.net.meta.annotation.Meta;
+import com.qins.net.meta.core.MetaClassLoader;
 import com.qins.net.core.entity.NodeAddress;
 import com.qins.net.node.http.recevier.Receiver;
 import com.qins.net.request.core.RequestInterceptor;
-import com.qins.net.component.StandardMetaNodeField;
 import com.qins.net.util.SerializeUtil;
 import lombok.Getter;
+import lombok.NonNull;
 import net.sf.cglib.proxy.Factory;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-import java.util.LinkedList;
 
 public class MetaApplication {
     @Getter
     private ApplicationContext context;
 
-    public <T> T create(String mapping, NodeAddress address){
-        return create(context.getRoot(),mapping,context.getServer().getLocal(),address);
+    public <T> T create(Class<?> instanceClass,NodeAddress remote) throws LoadClassException, NewInstanceException {
+        Meta meta = instanceClass.getAnnotation(Meta.class);
+        if(meta == null)throw new LoadClassException(String.format("%s 未定义@Meta", instanceClass.getName()));
+        return context.getMetaClassLoader().loadMetaClass(meta,instanceClass).newInstance(context.getServer().getLocal(),remote);
     }
 
-    public static <T> T create(Object instance,String mapping){
-        Factory factory = (Factory) instance;
-        RequestInterceptor interceptor = (RequestInterceptor) factory.getCallback(1);
-        return create(interceptor.getRequest().getMetaNodeField(),mapping,interceptor.getLocal(),interceptor.getRemote());
+    public @NonNull static <T> T create(Object instance, Class<?> instanceClass) throws LoadClassException, NewInstanceException {
+        Meta meta = instanceClass.getAnnotation(Meta.class);
+        if(meta == null)throw new LoadClassException(String.format("%s 未定义@Meta", instanceClass.getName()));
+        RequestInterceptor interceptor = (RequestInterceptor) ((Factory)(instance)).getCallback(1);
+        MetaClassLoader classLoader = (MetaClassLoader) Thread.currentThread().getContextClassLoader();
+        return classLoader.loadMetaClass(meta,instanceClass).newInstance(interceptor.getLocal(),interceptor.getRemote());
     }
 
-    public static <T> T create(MetaNodeField root, String mapping, NodeAddress local, NodeAddress remote){
-        LinkedList<String> mappings = new LinkedList<>(Arrays.asList(mapping.split("/")));
-        mappings.removeFirst();
-        MetaNodeField metaNodeField = MetaUtil.findMeta(root,mappings);
-        if(metaNodeField == null){
-            root.onException(new TrackException(TrackException.ExceptionCode.NotFoundMeta, String.format("%s%s 未找到", root.getMapping(),mapping)));
-            return null;
-        }
-        return metaNodeField.newInstance(null,local,remote);
-    }
-
-    public static MetaApplication run(Class<?> instanceClass,String path){
+    public static MetaApplication run(String path){
         MetaApplication application = new MetaApplication();
         ApplicationContext context = new ApplicationContext();
         application.context = context;
-        MetaNodeField root = new StandardMetaNodeField(instanceClass);
-        context.setRoot(root);
+        context.setMetaClassLoader(new MetaClassLoader());
+        Thread.currentThread().setContextClassLoader(context.getMetaClassLoader());
         context.setConfig(application.loadConfig(path));
-        context.setServer(new Receiver(context.getConfig(),new NodeAddress("localhost",context.getConfig().getPort()), root));
+        context.setServer(new Receiver(context.getConfig(),new NodeAddress("localhost",context.getConfig().getPort()), context.getMetaClassLoader()));
         context.getServer().start();
         return application;
+    }
+
+    public boolean publish(Class<?> instanceClass) throws LoadClassException {
+        Meta meta = instanceClass.getAnnotation(Meta.class);
+        if(meta == null)throw new LoadClassException(String.format("%s 未定义@Meta", instanceClass.getName()));
+        context.getMetaClassLoader().loadMetaClass(meta,instanceClass);
+        return true;
     }
 
     private ApplicationConfig loadConfig(String path){
@@ -61,7 +61,8 @@ public class MetaApplication {
                 config = SerializeUtil.yaml.load(new FileInputStream(file));
             }
             catch (FileNotFoundException e) {
-                context.getRoot().onException(e);
+                Console.error(e.getMessage());
+                e.printStackTrace();
             }
         }
         if(config == null){
@@ -70,7 +71,8 @@ public class MetaApplication {
                 String data = SerializeUtil.yaml.dump(config);
                 new FileOutputStream(file).write(data.getBytes(StandardCharsets.UTF_8));
             } catch (IOException e) {
-                context.getRoot().onException(e);
+                Console.error(e.getMessage());
+                e.printStackTrace();
             }
         }
         return config;

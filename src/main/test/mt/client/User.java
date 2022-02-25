@@ -1,8 +1,6 @@
 package mt.client;
 
 import com.qins.net.meta.annotation.Meta;
-import com.qins.net.meta.annotation.Sync;
-import com.qins.net.node.annotation.PostMapping;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -11,17 +9,16 @@ import java.util.ArrayList;
 @Getter
 @Setter
 public abstract class User{
-    @Sync
+    @Meta
     private String username;
-    @Sync
+    @Meta
     private String password;
-    @Sync
+    @Meta
     private Integer apiToken;
-    @Sync
-    @Meta(value = "package",elementClass = Package.class)
+    @Meta
     private ArrayList<Package> packages;
-    @PostMapping("login")
+    @Meta
     public abstract boolean login();
-    @PostMapping("getPack")
+    @Meta
     public abstract boolean getPack();
 }

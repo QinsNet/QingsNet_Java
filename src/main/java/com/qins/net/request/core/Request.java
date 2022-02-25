@@ -11,35 +11,31 @@ import com.qins.net.core.entity.NodeAddress;
 import com.qins.net.core.entity.RequestMeta;
 import com.qins.net.core.entity.ResponseMeta;
 import com.qins.net.core.entity.TrackException;
-import com.qins.net.meta.annotation.MethodMapping;
+import com.qins.net.meta.annotation.Meta;
+import com.qins.net.meta.core.MetaClass;
 import com.qins.net.meta.core.MetaMethod;
 import com.qins.net.meta.core.MetaParameter;
-import com.qins.net.meta.core.MetaNodeField;
 import com.qins.net.node.core.Node;
 import com.qins.net.request.aop.annotation.FailEvent;
 import com.qins.net.request.aop.context.FailEventContext;
-import com.qins.net.request.annotation.*;
 import com.qins.net.request.aop.annotation.SuccessEvent;
 import com.qins.net.request.aop.annotation.TimeoutEvent;
 import com.qins.net.request.aop.context.ErrorEventContext;
 import com.qins.net.request.aop.context.SuccessEventContext;
 import com.qins.net.request.aop.context.TimeoutEventContext;
-import com.qins.net.util.AnnotationUtil;
 import lombok.Getter;
 import net.sf.cglib.proxy.MethodProxy;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.lang.reflect.Parameter;
+import java.lang.reflect.Modifier;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 
 
 
 public abstract class Request implements IRequest {
-    private final Random random = new Random();
     @Getter
     protected final HashMap<String, MetaMethod> methods = new HashMap<>();
     @Getter
@@ -47,13 +43,13 @@ public abstract class Request implements IRequest {
     @Getter
     protected RequestConfig requestConfig = new RequestConfig();
     @Getter
-    protected MetaNodeField metaNodeField;
+    protected MetaClass metaClass;
 
     public void receive(RequestContext context) {
         try {
             Object oldInstance = context.getInstance();
-            Object newInstance = metaNodeField.newInstance(context.getRequestMeta().getInstance());
-            metaNodeField.sync(oldInstance,newInstance);
+            Object newInstance = metaClass.newInstance(context.getRequestMeta().getInstance(),new NodeAddress(context.getRequestMeta().getHost(),context.getRequestMeta().getPort()),context.getRemote());
+            metaClass.sync(oldInstance,newInstance);
             synchronized (context){
                 context.notify();
             }
@@ -62,84 +58,75 @@ public abstract class Request implements IRequest {
                 String rawParam = keyValue.getValue();
                 MetaParameter metaParameter = context.getMetaMethod().getMetaParameters().get(name);
                 if(metaParameter == null){
-                    metaNodeField.onException(TrackException.ExceptionCode.NotFoundMetaParameter,String.format("%s从远程提供方同步时，%s方法的%s参数未找到", metaNodeField.getMapping(),context.getMetaMethod().getMapping(),name));
+                    throw new TrackException(TrackException.ExceptionCode.NotFoundMetaParameter,String.format("%s从远程提供方同步时，%s方法的%s参数未找到", metaClass.getName(),context.getMetaMethod().getName(),name));
                 }
                 Object oldParam = context.getParams().get(name);
                 if(oldParam == null){
-                    metaNodeField.onException(TrackException.ExceptionCode.NotFoundParameter,String.format("%s从远程提供方同步时，%s方法的%s参数未找到", metaNodeField.getMapping(),context.getMetaMethod().getMapping(),name));
+                    throw new TrackException(TrackException.ExceptionCode.NotFoundParameter,String.format("%s从远程提供方同步时，%s方法的%s参数未找到", metaClass.getName(),context.getMetaMethod().getName(),name));
                 }
-                Object newParam = metaParameter.deserialize(rawParam);
-                metaParameter.sync(oldParam,newParam);
+                Object newParam = metaParameter.getBaseClass().deserialize(rawParam);
+                metaParameter.getBaseClass().sync(oldParam,newParam);
             }
         }
         catch (Exception e){
-            metaNodeField.onException(e);
+            metaClass.onException(e);
         }
     }
 
-    public Request(MetaNodeField metaNodeField){
+    public Request(MetaClass metaClass){
         try {
-            this.metaNodeField = metaNodeField;
-            for (Method method: AnnotationUtil.getMethods(metaNodeField.getInstanceClass(), MethodMapping.class)){
-                if(method.isDefault())return;
-                MetaMethod metaMethod = new MetaMethod();
-                metaMethod.setMethod(method);
-                metaMethod.setMethodPact(AnnotationUtil.getMethodPact(method));
-                if(metaMethod.getMethodPact() != null && !method.isDefault()){
-                    if(method.getReturnType() != void.class){
-                        metaMethod.setMetaReturn(metaNodeField.getComponents().metaReturn().getConstructor(Class.class).newInstance(method.getReturnType()));
-                    }
-                    metaMethod.setMetaParameters(new HashMap<>());
-                    for (Parameter parameter : method.getParameters()){
-                        MetaParameter metaParameter = metaNodeField.getComponents().metaParameter()
-                                .getConstructor(Parameter.class)
-                                .newInstance(parameter);
-                        metaMethod.getMetaParameters().put(metaMethod.getMethodPact().getMapping(),metaParameter);
-                    }
-                    methods.put(metaMethod.getMethodPact().getMapping(), metaMethod);
+            this.metaClass = metaClass;
+            Class<?> checkClass = metaClass.getInstanceClass();
+            while (checkClass != null){
+                for (Method method: checkClass.getDeclaredMethods()){
+                    if(method.getAnnotation(Meta.class) == null)continue;
+                    if((method.getModifiers() & Modifier.ABSTRACT) == 0)continue;
+                    MetaMethod metaMethod = new MetaMethod(method);
+                    methods.put(metaMethod.getName(), metaMethod);
                 }
+                checkClass = checkClass.getSuperclass();
             }
         }
         catch (Exception e){
-            metaNodeField.onException(e);
+            metaClass.onException(e);
         }
     }
-    public RequestMeta prepareRequestMeta(MethodPact methodPact, NodeAddress local, Object instance){
+    public RequestMeta prepareRequestMeta(MetaMethod metaMethod, NodeAddress local, Object instance){
         RequestMeta requestMeta = new RequestMeta();
-        requestMeta.setMapping(metaNodeField.getMapping() + "/" + methodPact.getMapping());
+        requestMeta.setMapping(metaClass.getName() + "/" + metaMethod.getName());
         requestMeta.setHost(local.getHost());
         requestMeta.setPort(String.valueOf(local.getPort()));
         requestMeta.setParams(new HashMap<>());
-        requestMeta.setInstance(metaNodeField.serialize(instance));
+        requestMeta.setInstance(metaClass.serialize(instance));
         return requestMeta;
     }
     public Object intercept(Object instance, Method method, Object[] args, MethodProxy methodProxy, NodeAddress local,NodeAddress remote) throws Exception {
         RequestContext context = new RequestContext();
         try {
-            MethodPact methodPact = AnnotationUtil.getMethodPact(method);
-            MetaMethod metaMethod = methods.get(methodPact.getMapping());
+            Meta meta = method.getAnnotation(Meta.class);
+            MetaMethod metaMethod = methods.get("".equals(meta.value()) ? method.getName() : meta.value());
             Object result = null;
             context.setInstance(instance);
             context.setMetaMethod(metaMethod);
             context.setParams(new HashMap<>());
             context.setRemote(remote);
 
-            context.setRequestMeta(prepareRequestMeta(methodPact,local,instance));
+            context.setRequestMeta(prepareRequestMeta(metaMethod,local,instance));
             int i = 0;
             for (Map.Entry<String,MetaParameter> keyValue : metaMethod.getMetaParameters().entrySet()){
                 String name = keyValue.getKey();
                 MetaParameter parameter = keyValue.getValue();
                 context.getParams().put(name,args[i]);
-                context.getRequestMeta().getParams().put(name,parameter.serialize(args[i]));
+                context.getRequestMeta().getParams().put(name,parameter.getBaseClass().serialize(args[i]));
                 i++;
             }
             beforeEvent(method,context);
-            Node sender = methodPact.getNodeClass().newInstance();
-            sender.setMetaNodeField(metaNodeField);
+            Node sender = metaMethod.getMethodPact().getNodeClass().newInstance();
+            sender.setMetaClass(metaClass);
             sender.setContext(context);
             Class<?> return_type = method.getReturnType();
             int timeout = requestConfig.getTimeout();
-            if(methodPact.getTimeout() != -1)timeout = methodPact.getTimeout();
+            if(metaMethod.getMethodPact().getTimeout() != -1)timeout = metaMethod.getMethodPact().getTimeout();
             if(sender.send(context.getRequestMeta(),timeout)){
                 synchronized (context){
                     context.wait();
@@ -151,6 +138,9 @@ public abstract class Request implements IRequest {
                     }
                     if(return_type != void.class && return_type != Void.class){
                         result = metaMethod.getMetaReturn().deserialize(responseMeta.getResult());
+                        if(MetaClass.class.isAssignableFrom(metaMethod.getMetaReturn().getClass())){
+                            ((MetaClass) metaMethod.getMetaReturn()).updateNode(result,new NodeAddress(context.getRequestMeta().getHost(),context.getRequestMeta().getPort()),context.getRemote());
+                        }
                     }
                     successEvent(method,context, responseMeta);
                 }
@@ -161,11 +151,11 @@ public abstract class Request implements IRequest {
             return result;
         }
         catch (Exception e){
-            metaNodeField.onException(e);
+            metaClass.onException(e);
             exceptionEvent(method,context,e);
         }
         catch (Throwable e){
-            metaNodeField.onException(new Exception(e));
+            metaClass.onException(new Exception(e));
             exceptionEvent(method,context,new Exception(e));
         }
         return null;
@@ -175,7 +165,7 @@ public abstract class Request implements IRequest {
         if(afterEvent != null){
             EventContext eventContext = new AfterEventContext(context.getParams(),method, result);
             String iocObjectName = afterEvent.function().substring(0,afterEvent.function().indexOf("."));
-            metaNodeField.getEventManager().invokeEvent(metaNodeField.getInstanceManager().get(iocObjectName), afterEvent.function(), context.getParams(),eventContext);
+            metaClass.getEventManager().invokeEvent(metaClass.getInstanceManager().get(iocObjectName), afterEvent.function(), context.getParams(),eventContext);
         }
     }
     private void beforeEvent(Method method,RequestContext context) throws TrackException, InvocationTargetException, IllegalAccessException {
@@ -183,7 +173,7 @@ public abstract class Request implements IRequest {
         if(beforeEvent != null){
             EventContext eventContext = new BeforeEventContext(context.getParams(),method);
             String iocObjectName = beforeEvent.function().substring(0, beforeEvent.function().indexOf("."));
-            metaNodeField.getEventManager().invokeEvent(metaNodeField.getInstanceManager().get(iocObjectName), beforeEvent.function(), context.getParams(),eventContext);
+            metaClass.getEventManager().invokeEvent(metaClass.getInstanceManager().get(iocObjectName), beforeEvent.function(), context.getParams(),eventContext);
         }
     }
     private void exceptionEvent(Method method, RequestContext context, Exception e) throws Exception {
@@ -191,7 +181,7 @@ public abstract class Request implements IRequest {
         if(exceptionEvent != null){
             ExceptionEventContext eventContext = new ExceptionEventContext(context.getParams(),method,e);
             String iocObjectName = exceptionEvent.function().substring(0, exceptionEvent.function().indexOf("."));
-            metaNodeField.getEventManager().invokeEvent(metaNodeField.getInstanceManager().get(iocObjectName), exceptionEvent.function(),context.getParams(),eventContext);
+            metaClass.getEventManager().invokeEvent(metaClass.getInstanceManager().get(iocObjectName), exceptionEvent.function(),context.getParams(),eventContext);
             if(exceptionEvent.isThrow())throw e;
         }
         else throw e;
@@ -201,7 +191,7 @@ public abstract class Request implements IRequest {
         if(exceptionEvent != null){
             ErrorEventContext eventContext = new ErrorEventContext(context.getParams(),method, exception);
             String iocObjectName = exceptionEvent.function().substring(0, exceptionEvent.function().indexOf("."));
-            metaNodeField.getEventManager().invokeEvent(metaNodeField.getInstanceManager().get(iocObjectName), exceptionEvent.function(), context.getParams(),eventContext);
+            metaClass.getEventManager().invokeEvent(metaClass.getInstanceManager().get(iocObjectName), exceptionEvent.function(), context.getParams(),eventContext);
             if(exceptionEvent.isThrow()){
                 throw new TrackException(TrackException.ExceptionCode.ResponseException,exception);
             }
@@ -213,7 +203,7 @@ public abstract class Request implements IRequest {
         if(successEvent != null){
             SuccessEventContext eventContext = new SuccessEventContext(context.getParams(),method,responseMeta.getResult());
             String iocObjectName = successEvent.function().substring(0, successEvent.function().indexOf("."));
-            metaNodeField.getEventManager().invokeEvent(metaNodeField.getInstanceManager().get(iocObjectName), successEvent.function(),context.getParams(),eventContext);
+            metaClass.getEventManager().invokeEvent(metaClass.getInstanceManager().get(iocObjectName), successEvent.function(),context.getParams(),eventContext);
         }
     }
     private void timeoutEvent(Method method, RequestContext context) throws Exception {
@@ -221,7 +211,7 @@ public abstract class Request implements IRequest {
         if(timeoutEvent != null){
             TimeoutEventContext eventContext = new TimeoutEventContext(context.getParams(),method);
             String iocObjectName = timeoutEvent.function().substring(0, timeoutEvent.function().indexOf("."));
-            metaNodeField.getEventManager().invokeEvent(metaNodeField.getInstanceManager().get(iocObjectName), timeoutEvent.function(),context.getParams(),eventContext);
+            metaClass.getEventManager().invokeEvent(metaClass.getInstanceManager().get(iocObjectName), timeoutEvent.function(),context.getParams(),eventContext);
         }
     }
     private void failEvent(Method method, RequestContext context) throws Exception {
@@ -229,7 +219,7 @@ public abstract class Request implements IRequest {
         if(timeoutEvent != null){
             FailEventContext eventContext = new FailEventContext(context.getParams(),method);
             String iocObjectName = timeoutEvent.function().substring(0, timeoutEvent.function().indexOf("."));
-            metaNodeField.getEventManager().invokeEvent(metaNodeField.getInstanceManager().get(iocObjectName), timeoutEvent.function(),context.getParams(),eventContext);
+            metaClass.getEventManager().invokeEvent(metaClass.getInstanceManager().get(iocObjectName), timeoutEvent.function(),context.getParams(),eventContext);
         }
     }
 }

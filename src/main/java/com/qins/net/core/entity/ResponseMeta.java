@@ -8,7 +8,7 @@ import java.util.Map;
 @Getter
 @Setter
 public class ResponseMeta {
-    private String protocol = "Meta-Response-1.0";
+    private String protocol = "Sync-Response-1.0";
     private String result;
     private String exception;
     private String instance;

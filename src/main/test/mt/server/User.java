@@ -1,9 +1,9 @@
 package mt.server;
 
 import com.qins.net.core.boot.MetaApplication;
+import com.qins.net.core.exception.LoadClassException;
+import com.qins.net.core.exception.NewInstanceException;
 import com.qins.net.meta.annotation.Meta;
-import com.qins.net.meta.annotation.Sync;
-import com.qins.net.node.annotation.PostMapping;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -11,18 +11,17 @@ import java.util.ArrayList;
 
 @Getter
 @Setter
+@Meta
 public class User{
-    @Sync
+    @Meta
     private String username;
-    @Sync
+    @Meta
     private String password;
-    @Sync
+    @Meta
     private Integer apiToken;
-    @Sync
-    @Meta(value = "package",elementClass = Package.class)
+    @Meta
     private ArrayList<Package> packages;
-
-    @PostMapping("login")
+    @Meta
     public boolean login(){
         if("m839336369".equals(username) && "password".equals(password)){
             this.apiToken = 1234;
@@ -30,15 +29,20 @@ public class User{
         }
         else return false;
     }
-
-    @PostMapping("getPack")
+    @Meta
     public boolean getPack(){
-        Package aPackage = MetaApplication.create(this,"/package");
-        aPackage.setName("A背包");
-        Package bPackage = MetaApplication.create(this,"/package");
-        bPackage.setName("B背包");
-        packages.add(aPackage);
-        packages.add(bPackage);
-        return true;
+        try {
+            Package aPackage = null;
+            aPackage = MetaApplication.create(this, Package.class);
+            aPackage.setName("A背包");
+            Package bPackage = MetaApplication.create(this,Package.class);
+            bPackage.setName("B背包");
+            packages.add(aPackage);
+            packages.add(bPackage);
+            return true;
+        } catch (LoadClassException | NewInstanceException e) {
+            e.printStackTrace();
+            return false;
+        }
     }
 }

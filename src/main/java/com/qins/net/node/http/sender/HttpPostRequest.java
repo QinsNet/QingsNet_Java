@@ -37,7 +37,7 @@ public class HttpPostRequest extends Node {
             @Override
             public void onFailure(@NotNull Call call, @NotNull IOException e) {
                 context.setResponseMeta(new ResponseMeta("Http客户端:" + e.getMessage()));
-                metaNodeField.getRequest().receive(context);
+                metaClass.getRequest().receive(context);
             }
 
             @Override
@@ -52,7 +52,7 @@ public class HttpPostRequest extends Node {
                 }
                 responseMeta.setResult(Objects.requireNonNull(response.body()).string());
                 context.setResponseMeta(responseMeta);
-                metaNodeField.getRequest().receive(context);
+                metaClass.getRequest().receive(context);
             }
         });
     }
@@ -71,7 +71,7 @@ public class HttpPostRequest extends Node {
                                 .scheme("http")
                                 .host(context.getRemote().getHost())
                                 .port(Integer.parseInt(context.getRemote().getPort()))
-                                .addPathSegments(requestMeta.getMapping().substring(1))
+                                .addPathSegments(requestMeta.getMapping())
                                 .build())
                         .post(requestBody)
                         .addHeader(HttpHeaderNames.CONTENT_TYPE.toString(), HttpHeaderValues.APPLICATION_JSON.toString())
@@ -82,7 +82,7 @@ public class HttpPostRequest extends Node {
                         send(request.build());
                         return true;
             } catch (UnsupportedEncodingException e) {
-                metaNodeField.onException(e);
+                metaClass.onException(e);
                 return false;
             }
         }

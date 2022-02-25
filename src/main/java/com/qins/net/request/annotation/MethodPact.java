@@ -7,7 +7,6 @@ import lombok.Setter;
 @Getter
 @Setter
 public class MethodPact {
-        String mapping;
         int timeout;
         Class<? extends Node> nodeClass;
 }

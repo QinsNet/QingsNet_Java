@@ -70,7 +70,6 @@ public class AnnotationUtil {
         if(method.getAnnotation(PostMapping.class) != null){
             MethodPact methodPact = new MethodPact();
             PostMapping annotation = method.getAnnotation(PostMapping.class);
-            methodPact.setMapping(annotation.value());
             methodPact.setTimeout(annotation.timeout());
             methodPact.setNodeClass(annotation.node());
             return methodPact;
@@ -78,7 +77,6 @@ public class AnnotationUtil {
         else if(method.getAnnotation(GetMapping.class) != null){
             MethodPact methodPact = new MethodPact();
             GetMapping annotation = method.getAnnotation(GetMapping.class);
-            methodPact.setMapping(annotation.value());
             methodPact.setTimeout(annotation.timeout());
             methodPact.setNodeClass(annotation.node());
             return methodPact;
@@ -86,11 +84,16 @@ public class AnnotationUtil {
         else if(method.getAnnotation(MethodMapping.class) != null){
             MethodPact methodPact = new MethodPact();
             MethodMapping annotation = method.getAnnotation(MethodMapping.class);
-            methodPact.setMapping(annotation.value());
             methodPact.setTimeout(annotation.timeout());
             methodPact.setNodeClass(annotation.node());
             return methodPact;
         }
-        return null;
+        else {
+            MethodPact methodPact = new MethodPact();
+            MethodMapping annotation = MethodMapping.class.getAnnotation(MethodMapping.class);
+            methodPact.setTimeout(annotation.timeout());
+            methodPact.setNodeClass(annotation.node());
+            return methodPact;
+        }
     }
 }

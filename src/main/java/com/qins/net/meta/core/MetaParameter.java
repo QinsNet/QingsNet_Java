@@ -1,7 +1,7 @@
 package com.qins.net.meta.core;
 
+import com.qins.net.core.exception.LoadClassException;
 import com.qins.net.meta.annotation.Meta;
-import com.qins.net.meta.annotation.Sync;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -9,13 +9,15 @@ import java.lang.reflect.Parameter;
 
 @Getter
 @Setter
-public abstract class MetaParameter extends MetaClass{
+public abstract class MetaParameter{
+    protected BaseClass baseClass;
     protected Parameter parameter;
     protected String name;
-    public MetaParameter(Parameter parameter) {
-        super(parameter.getType());
+    public MetaParameter(Parameter parameter) throws LoadClassException {
         this.parameter = parameter;
-        Sync sync = parameter.getAnnotation(Sync.class);
-        name = sync.value() != null? sync.value() : parameter.getName();
+        Meta meta = parameter.getType().getAnnotation(Meta.class);
+        name = meta == null || "".equals(meta.value()) ? parameter.getName() : meta.value();
+        MetaClassLoader classLoader = (MetaClassLoader) Thread.currentThread().getContextClassLoader();
+        this.baseClass = classLoader.loadClass(parameter.getType());
     }
 }

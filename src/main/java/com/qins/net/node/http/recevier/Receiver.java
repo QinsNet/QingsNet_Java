@@ -1,9 +1,10 @@
 package com.qins.net.node.http.recevier;
 
 import com.qins.net.core.boot.ApplicationConfig;
+import com.qins.net.core.console.Console;
 import com.qins.net.core.entity.TrackLog;
-import com.qins.net.meta.core.MetaNodeField;
 import com.qins.net.core.entity.NodeAddress;
+import com.qins.net.meta.core.MetaClassLoader;
 import com.qins.net.node.core.Server;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
@@ -21,16 +22,16 @@ import java.util.concurrent.Executors;
 
 public class Receiver extends Server {
     protected ExecutorService es;
-    protected MetaNodeField root;
+    protected MetaClassLoader classLoader;
     protected ApplicationConfig config;
     EventLoopGroup boss = new NioEventLoopGroup();
     EventLoopGroup work = new NioEventLoopGroup();
     @Getter
     protected Channel channel;
-    public Receiver(ApplicationConfig config,NodeAddress local, MetaNodeField root) {
+    public Receiver(ApplicationConfig config,NodeAddress local, MetaClassLoader classLoader) {
         this.config = config;
         this.local = local;
-        this.root = root;
+        this.classLoader = classLoader;
     }
     @Override
     public boolean start(){
@@ -47,15 +48,15 @@ public class Receiver extends Server {
                             ch.pipeline().addLast(new HttpObjectAggregator(config.getMaxBufferSize()));
                             ch.pipeline().addLast(new ChunkedWriteHandler());
                             //Service
-                            ch.pipeline().addLast(new ServiceHandler(es, root,local));
+                            ch.pipeline().addLast(new ServiceHandler(es, classLoader,local));
                         }
                     });
             channel = bootstrap.bind(local.getHost(),Integer.parseInt(local.getPort())).addListener((ChannelFutureListener) future -> {
                 if (future.isSuccess()){
-                    root.onLog(TrackLog.LogCode.Runtime, String.format("%s-%s 服务器部署成功", local.getHost(),local.getPort()));
+                    Console.log(String.format("%s-%s 服务器部署成功", local.getHost(),local.getPort()));
                 }
                 else {
-                    root.onLog(TrackLog.LogCode.Runtime, String.format("%s-%s 服务器部署失败", local.getHost(),local.getPort()));
+                    Console.log(String.format("%s-%s 服务器部署失败", local.getHost(),local.getPort()));
                 }
             }).channel();
             if(config.isServerSync()){

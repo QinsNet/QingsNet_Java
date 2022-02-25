@@ -8,8 +8,8 @@ import java.lang.annotation.*;
 @Documented
 @Target({ElementType.TYPE,ElementType.FIELD})
 @Retention(RetentionPolicy.RUNTIME)
+@MethodMapping
 public @interface MethodMapping {
-    String value();
     int timeout() default -1;
     Class<? extends Node> node() default HttpPostRequest.class;
 }

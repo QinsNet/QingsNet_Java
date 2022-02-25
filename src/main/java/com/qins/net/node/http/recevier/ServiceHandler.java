@@ -2,8 +2,9 @@ package com.qins.net.node.http.recevier;
 import com.qins.net.core.console.Console;
 import com.qins.net.core.entity.RequestMeta;
 import com.qins.net.core.entity.ResponseMeta;
-import com.qins.net.meta.core.MetaNodeField;
+import com.qins.net.meta.core.MetaClass;
 import com.qins.net.core.entity.NodeAddress;
+import com.qins.net.meta.core.MetaClassLoader;
 import com.qins.net.service.core.ServiceContext;
 import com.qins.net.util.Http2Util;
 import com.qins.net.util.SerializeUtil;
@@ -11,6 +12,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.*;
+import jdk.internal.dynalink.support.ClassMap;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
@@ -23,11 +25,11 @@ import java.util.concurrent.ExecutorService;
 public class ServiceHandler extends SimpleChannelInboundHandler<FullHttpRequest>  {
     private final ExecutorService es;
     private ChannelHandlerContext ctx;
-    private final MetaNodeField root;
+    private final MetaClassLoader classLoader;
     private final NodeAddress local;
-    public ServiceHandler(ExecutorService executorService, MetaNodeField root, NodeAddress local) {
+    public ServiceHandler(ExecutorService executorService, MetaClassLoader classLoader, NodeAddress local) {
         this.es = executorService;
-        this.root = root;
+        this.classLoader = classLoader;
         this.local = local;
     }
 
@@ -73,17 +75,25 @@ public class ServiceHandler extends SimpleChannelInboundHandler<FullHttpRequest>
         }
         else {
             send(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,HttpResponseStatus.OK, Unpooled.copiedBuffer((String.format("%s请求不支持", req.method())),StandardCharsets.UTF_8)));
+            return;
         }
         if(requestMeta.getParams() == null)requestMeta.setParams(new HashMap<>());
+        context.setMappings(new LinkedList<>(Arrays.asList(requestMeta.getMapping().split("/"))));
+        MetaClass metaClass = classLoader.getMetaClass(context.getMappings().pop());
+        if(metaClass == null){
+            send(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,HttpResponseStatus.OK, Unpooled.copiedBuffer((String.format("%s请求类未找到", requestMeta.getMapping())),StandardCharsets.UTF_8)));
+            return;
+        }
         es.submit(() -> {
-            send(root.getService().receive(context));
+            send(metaClass.getService().receive(context));
         });
     }
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        root.onException(new Exception(cause));
         super.exceptionCaught(ctx, cause);
+        send(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,HttpResponseStatus.EXPECTATION_FAILED,Unpooled.copiedBuffer(Arrays.toString(cause.getStackTrace()).getBytes(StandardCharsets.UTF_8))));
+        ctx.close();
     }
 
     public boolean send(Object data) {
@@ -104,8 +114,7 @@ public class ServiceHandler extends SimpleChannelInboundHandler<FullHttpRequest>
                 }
 
             } catch (UnsupportedEncodingException e) {
-                root.onException(e);
-                e.printStackTrace();
+                Console.error(e.getMessage());
             }
             send(response);
             ctx.close();
