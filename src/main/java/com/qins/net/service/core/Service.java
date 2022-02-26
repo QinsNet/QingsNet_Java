@@ -25,15 +25,15 @@ import java.util.HashMap;
 
 public abstract class Service implements IService {
     @Getter
-    private ServiceConfig serviceConfig;
+    protected ServiceConfig serviceConfig;
     @Getter
-    private final HashMap<String,MetaMethod> methods = new HashMap<>();
+    protected final HashMap<String,MetaMethod> methods = new HashMap<>();
     @Getter
-    private MetaClass metaClass;
+    protected final MetaClass metaClass;
     @Getter
     protected final InterceptorEvent interceptorEvent = new InterceptorEvent();
 
-    public Service(MetaClass metaClass) throws NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException, LoadClassException {
+    public Service(MetaClass metaClass) throws NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException, LoadClassException, TrackException {
         this.metaClass = metaClass;
         Class<?> checkClass = metaClass.getInstanceClass();
         while (checkClass != null){
@@ -54,6 +54,33 @@ public abstract class Service implements IService {
         }
         return true;
     }
+
+    protected void afterEvent(Method method,ServiceContext context,Object localResult) throws TrackException, InvocationTargetException, IllegalAccessException {
+        AfterEvent afterEvent = method.getAnnotation(AfterEvent.class);
+        if(afterEvent != null){
+            EventContext eventContext = new AfterEventContext(context.getParams(),method,localResult);
+            String iocObjectName = afterEvent.function().substring(0,afterEvent.function().indexOf("."));
+            metaClass.getEventManager().invokeEvent(metaClass.getInstanceManager().get(iocObjectName), afterEvent.function(), context.getParams(),eventContext);
+        }
+    }
+    protected void beforeEvent(Method method,ServiceContext context) throws TrackException, InvocationTargetException, IllegalAccessException {
+        BeforeEvent beforeEvent = method.getAnnotation(BeforeEvent.class);
+        if(beforeEvent != null){
+            EventContext eventContext = new BeforeEventContext(context.getParams(),method);
+            String iocObjectName = beforeEvent.function().substring(0, beforeEvent.function().indexOf("."));
+            metaClass.getEventManager().invokeEvent(metaClass.getInstanceManager().get(iocObjectName), beforeEvent.function(), context.getParams(),eventContext);
+        }
+    }
+    protected void exceptionEvent(Method method, ServiceContext context, Exception e) throws Exception {
+        ExceptionEvent exceptionEvent = method.getAnnotation(ExceptionEvent.class);
+        if(exceptionEvent != null){
+            ExceptionEventContext eventContext = new ExceptionEventContext(context.getParams(),method,e);
+            String iocObjectName = exceptionEvent.function().substring(0, exceptionEvent.function().indexOf("."));
+            metaClass.getEventManager().invokeEvent(metaClass.getInstanceManager().get(iocObjectName), exceptionEvent.function(),context.getParams(),eventContext);
+            if(exceptionEvent.isThrow())throw e;
+        }
+        else throw e;
+    }
     public Object receive(ServiceContext context) {
         RequestMeta requestMeta = context.getRequestMeta();
         try {
@@ -61,15 +88,12 @@ public abstract class Service implements IService {
             if(metaMethod == null){
                 throw new ResponseException(ResponseException.ExceptionCode.NotFoundMethod, String.format("Mapping:%s 未找到",requestMeta.getMapping()));
             }
-            context.setInstance(metaClass.newInstance(context.getRequestMeta().getInstance(),context.getLocal(),context.getRemote()));
+            context.setInstance(metaClass.newInstance(context.getRequestMeta().getInstance()));
             if(onInterceptor(requestMeta)){
                 context.setParams(new HashMap<>());
-                for (MetaParameter metaParameter : metaMethod.getMetaParameters().values()){
+                for (MetaParameter metaParameter : metaMethod.getParameters().values()){
                     String rawParam = context.getRequestMeta().getParams().get(metaParameter.getName());
                     Object param = metaParameter.getBaseClass().deserialize(rawParam);
-                    if(MetaClass.class.isAssignableFrom(metaParameter.getBaseClass().getClass())){
-                        ((MetaClass) metaParameter.getBaseClass()).updateNode(param,context.getLocal(),context.getRemote());
-                    }
                     context.getParams().put(metaParameter.getName(),param);
                 }
                 //Before
@@ -77,9 +101,9 @@ public abstract class Service implements IService {
                 //Invoke
                 Object localResult = null;
                 try{
-                    Object[] args = new Object[metaMethod.getMetaParameters().size()];
+                    Object[] args = new Object[metaMethod.getParameters().size()];
                     int i=0;
-                    for (String name : metaMethod.getMetaParameters().keySet()){
+                    for (String name : metaMethod.getParameters().keySet()){
                         args[i++] = context.getParams().get(name);
                     }
                     localResult = metaMethod.getMethod().invoke(context.getInstance(),args);
@@ -90,7 +114,7 @@ public abstract class Service implements IService {
                 //After
                 afterEvent(metaMethod.getMethod(),context,localResult);
                 HashMap<String,String> syncParams = new HashMap<>();
-                for(MetaParameter metaParameter : metaMethod.getMetaSyncParameters().values()){
+                for(MetaParameter metaParameter : metaMethod.getMetaParameters().values()){
                     Object param = context.getParams().get(metaParameter.getName());
                     syncParams.put(metaParameter.getName(),metaParameter.getBaseClass().serialize(param));
                 }
@@ -106,31 +130,5 @@ public abstract class Service implements IService {
         catch (Exception e){
             return new ResponseMeta(e.getMessage() + "\n" + Arrays.toString(e.getStackTrace()));
         }
-    }
-    private void afterEvent(Method method,ServiceContext context,Object localResult) throws TrackException, InvocationTargetException, IllegalAccessException {
-        AfterEvent afterEvent = method.getAnnotation(AfterEvent.class);
-        if(afterEvent != null){
-            EventContext eventContext = new AfterEventContext(context.getParams(),method,localResult);
-            String iocObjectName = afterEvent.function().substring(0,afterEvent.function().indexOf("."));
-            metaClass.getEventManager().invokeEvent(metaClass.getInstanceManager().get(iocObjectName), afterEvent.function(), context.getParams(),eventContext);
-        }
-    }
-    private void beforeEvent(Method method,ServiceContext context) throws TrackException, InvocationTargetException, IllegalAccessException {
-        BeforeEvent beforeEvent = method.getAnnotation(BeforeEvent.class);
-        if(beforeEvent != null){
-            EventContext eventContext = new BeforeEventContext(context.getParams(),method);
-            String iocObjectName = beforeEvent.function().substring(0, beforeEvent.function().indexOf("."));
-            metaClass.getEventManager().invokeEvent(metaClass.getInstanceManager().get(iocObjectName), beforeEvent.function(), context.getParams(),eventContext);
-        }
-    }
-    private void exceptionEvent(Method method, ServiceContext context, Exception e) throws Exception {
-        ExceptionEvent exceptionEvent = method.getAnnotation(ExceptionEvent.class);
-        if(exceptionEvent != null){
-            ExceptionEventContext eventContext = new ExceptionEventContext(context.getParams(),method,e);
-            String iocObjectName = exceptionEvent.function().substring(0, exceptionEvent.function().indexOf("."));
-            metaClass.getEventManager().invokeEvent(metaClass.getInstanceManager().get(iocObjectName), exceptionEvent.function(),context.getParams(),eventContext);
-            if(exceptionEvent.isThrow())throw e;
-        }
-        else throw e;
     }
 }

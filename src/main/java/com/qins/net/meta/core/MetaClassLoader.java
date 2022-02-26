@@ -1,15 +1,19 @@
 package com.qins.net.meta.core;
 
-import com.qins.net.component.Components;
+import com.qins.net.meta.annotation.Components;
 import com.qins.net.core.exception.LoadClassException;
 import com.qins.net.meta.annotation.Meta;
+import lombok.Getter;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
+import java.util.Map;
 
 public class MetaClassLoader extends ClassLoader{
-    HashMap<String,MetaClass> metas = new HashMap<>();
-    HashMap<Class<?>,BaseClass> bases = new HashMap<>();
+    @Getter
+    private final HashMap<String,String> nodes = new HashMap<>();
+    private final HashMap<String,MetaClass> metas = new HashMap<>();
+    private final HashMap<Class<?>,BaseClass> bases = new HashMap<>();
     public BaseClass loadClass(Class<?> instanceClass) throws LoadClassException {
         try {
             Meta meta = instanceClass.getAnnotation(Meta.class);
@@ -31,12 +35,15 @@ public class MetaClassLoader extends ClassLoader{
 
     public MetaClass loadMetaClass(Meta meta, Class<?> instanceClass) throws LoadClassException {
         try {
-            String name = "".equals(meta.value()) ? instanceClass.getSimpleName() : meta.value();
+            String name = "".equals(meta.name()) ? instanceClass.getSimpleName() : meta.name();
             if(metas.containsKey(name))return metas.get(name);
             else {
                 Components components = instanceClass.getAnnotation(Components.class) != null ? instanceClass.getAnnotation(Components.class) : Components.class.getAnnotation(Components.class);
                 MetaClass metaClass = components.metaClass().getConstructor(Class.class).newInstance(instanceClass);
                 metas.put(name,metaClass);
+                for (Map.Entry<String,String> node : nodes.entrySet()){
+                    metaClass.getNodes().putIfAbsent(node.getKey(),node.getValue());
+                }
                 return metaClass;
             }
         }

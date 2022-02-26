@@ -6,7 +6,7 @@ import lombok.Setter;
 @Getter
 @Setter
 public class TrackException extends Exception {
-    public enum ExceptionCode { Initialize, Runtime, NotFoundMeta,NotFoundRequest, NotFoundMetaParameter,NotFoundParameter,NotFoundType,NewInstanceError,ResponseException}
+    public enum ExceptionCode { Initialize, Runtime, NotFoundMeta,NotMetaClass,NotFoundRequest, NotFoundMetaParameter,NotFoundParameter,NotFoundType,NewInstanceError,ResponseException}
     private ExceptionCode exceptionCode;
     public TrackException(ExceptionCode exceptionCode, String message)
     {

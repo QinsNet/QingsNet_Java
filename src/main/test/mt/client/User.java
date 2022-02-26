@@ -1,5 +1,6 @@
 package mt.client;
 
+import com.google.gson.reflect.TypeToken;
 import com.qins.net.meta.annotation.Meta;
 import lombok.Getter;
 import lombok.Setter;
@@ -18,8 +19,10 @@ public abstract class User{
     private Integer apiToken;
     @Meta(element = Package.class)
     private ArrayList<Package> packages;
-    @Meta
+    @Meta("Server_1")
     public abstract boolean login();
-    @Meta
-    public abstract boolean getPack();
+    @Meta("Server_2")
+    public abstract boolean newPack();
+    @Meta(nodes = {"Server_2","Server1"})
+    public abstract boolean addPack(Package aPackage);
 }

@@ -10,7 +10,6 @@ import org.yaml.snakeyaml.Yaml;
 public class SerializeUtil {
     public static Gson gson = new Gson()
             .newBuilder()
-            .setFieldNamingPolicy(FieldNamingPolicy.UPPER_CAMEL_CASE)
             .setExclusionStrategies(new ExclusionStrategy() {
                 @Override
                 public boolean shouldSkipField(FieldAttributes fieldAttributes) {

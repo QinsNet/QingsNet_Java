@@ -1,13 +1,15 @@
 package com.qins.net.core.boot;
 
 import com.qins.net.core.console.Console;
+import com.qins.net.core.entity.TrackException;
 import com.qins.net.core.exception.LoadClassException;
 import com.qins.net.core.exception.NewInstanceException;
 import com.qins.net.meta.annotation.Meta;
 import com.qins.net.meta.core.MetaClassLoader;
 import com.qins.net.core.entity.NodeAddress;
 import com.qins.net.node.http.recevier.Receiver;
-import com.qins.net.request.core.RequestInterceptor;
+import com.qins.net.node.util.NodeUtil;
+import com.qins.net.request.cglib.RequestInterceptor;
 import com.qins.net.util.SerializeUtil;
 import lombok.Getter;
 import lombok.NonNull;
@@ -15,23 +17,34 @@ import net.sf.cglib.proxy.Factory;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 
 public class MetaApplication {
     @Getter
     private ApplicationContext context;
 
-    public <T> T create(Class<?> instanceClass,NodeAddress remote) throws LoadClassException, NewInstanceException {
-        Meta meta = instanceClass.getAnnotation(Meta.class);
-        if(meta == null)throw new LoadClassException(String.format("%s 未定义@Meta", instanceClass.getName()));
-        return context.getMetaClassLoader().loadMetaClass(meta,instanceClass).newInstance(context.getServer().getLocal(),remote);
+    public <T> T create(Class<?> instanceClass) throws NewInstanceException {
+        try {
+            Meta meta = instanceClass.getAnnotation(Meta.class);
+            if(meta == null)throw new LoadClassException(String.format("%s 未定义@Meta", instanceClass.getName()));
+            return context.getMetaClassLoader().loadMetaClass(meta,instanceClass).newInstance(new HashMap<>());
+        }
+        catch (LoadClassException e) {
+            throw new NewInstanceException(e);
+        }
     }
 
-    public @NonNull static <T> T create(Object instance, Class<?> instanceClass) throws LoadClassException, NewInstanceException {
-        Meta meta = instanceClass.getAnnotation(Meta.class);
-        if(meta == null)throw new LoadClassException(String.format("%s 未定义@Meta", instanceClass.getName()));
-        RequestInterceptor interceptor = (RequestInterceptor) ((Factory)(instance)).getCallback(1);
-        MetaClassLoader classLoader = (MetaClassLoader) Thread.currentThread().getContextClassLoader();
-        return classLoader.loadMetaClass(meta,instanceClass).newInstance(interceptor.getLocal(),interceptor.getRemote());
+    public @NonNull static <T> T create(Object instance, Class<?> instanceClass) throws NewInstanceException {
+        try {
+            Meta meta = instanceClass.getAnnotation(Meta.class);
+            if(meta == null)throw new LoadClassException(String.format("%s 未定义@Meta", instanceClass.getName()));
+            RequestInterceptor interceptor = (RequestInterceptor) ((Factory)(instance)).getCallback(1);
+            MetaClassLoader classLoader = (MetaClassLoader) Thread.currentThread().getContextClassLoader();
+            return classLoader.loadMetaClass(meta,instanceClass).newInstance(new HashMap<>());
+        }
+        catch (LoadClassException e) {
+            throw new NewInstanceException(e);
+        }
     }
 
     public static MetaApplication run(String path){
@@ -50,6 +63,19 @@ public class MetaApplication {
         Meta meta = instanceClass.getAnnotation(Meta.class);
         if(meta == null)throw new LoadClassException(String.format("%s 未定义@Meta", instanceClass.getName()));
         context.getMetaClassLoader().loadMetaClass(meta,instanceClass);
+        return this;
+    }
+
+    public MetaApplication defineNode(Object instance, String name, String address) throws TrackException {
+        if(!NodeUtil.defineNode(instance, name, address)){
+            throw new TrackException(TrackException.ExceptionCode.Runtime, String.format("[%s] 定义节点 %s:%s 失败", instance.getClass().getName(), name, address));
+        }
+        return this;
+    }
+    public MetaApplication defineNode(String name, String address) {
+        HashMap<String,String> nodes = ((MetaClassLoader)Thread.currentThread().getContextClassLoader()).getNodes();
+        nodes.remove(name);
+        nodes.put(name,address);
         return this;
     }
 

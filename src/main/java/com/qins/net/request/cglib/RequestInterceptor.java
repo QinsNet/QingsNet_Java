@@ -1,6 +1,7 @@
-package com.qins.net.request.core;
+package com.qins.net.request.cglib;
 
 import com.qins.net.core.entity.NodeAddress;
+import com.qins.net.request.core.Request;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
@@ -8,20 +9,21 @@ import net.sf.cglib.proxy.MethodInterceptor;
 import net.sf.cglib.proxy.MethodProxy;
 
 import java.lang.reflect.Method;
+import java.util.HashMap;
 
 @AllArgsConstructor
 public class RequestInterceptor implements MethodInterceptor {
     @Getter
     @Setter
-    private Request request;
+    private CGLibRequest request;
     @Getter
     @Setter
-    private NodeAddress local;
-    @Getter
-    @Setter
-    private NodeAddress remote;
+    private HashMap<String,String> nodes;
     @Override
     public Object intercept(Object o, Method method, Object[] args, MethodProxy methodProxy) throws Exception {
-        return request.intercept(o,method,args,methodProxy, local,remote);
+        return request.intercept(o,method,args,methodProxy,nodes);
+    }
+    public RequestInterceptor(CGLibRequest request){
+        this.request = request;
     }
 }

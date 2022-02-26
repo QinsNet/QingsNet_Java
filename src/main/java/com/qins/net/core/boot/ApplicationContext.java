@@ -7,6 +7,8 @@ import com.qins.net.node.core.Server;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.HashMap;
+
 @Getter
 @Setter
 public class ApplicationContext {

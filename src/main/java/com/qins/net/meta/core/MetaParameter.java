@@ -15,8 +15,8 @@ public abstract class MetaParameter{
     protected String name;
     public MetaParameter(Parameter parameter) throws LoadClassException {
         this.parameter = parameter;
-        Meta meta = parameter.getType().getAnnotation(Meta.class);
-        name = meta == null || "".equals(meta.value()) ? parameter.getName() : meta.value();
+        Meta meta = parameter.getAnnotation(Meta.class);
+        name = meta == null || "".equals(meta.name()) ? parameter.getName() : meta.name();
         MetaClassLoader classLoader = (MetaClassLoader) Thread.currentThread().getContextClassLoader();
         this.baseClass = classLoader.loadClass(parameter.getType());
     }

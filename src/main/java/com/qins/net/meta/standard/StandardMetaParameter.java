@@ -1,4 +1,4 @@
-package com.qins.net.component;
+package com.qins.net.meta.standard;
 
 import com.qins.net.core.exception.LoadClassException;
 import com.qins.net.meta.core.MetaParameter;

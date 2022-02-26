@@ -50,43 +50,47 @@ public class ServiceHandler extends SimpleChannelInboundHandler<FullHttpRequest>
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, FullHttpRequest req) throws Exception {
-        URI uri = new URI(req.uri());
-        //处理请求头,生成请求元数据
-        RequestMeta requestMeta = new RequestMeta();
-        requestMeta.setMapping(uri.getPath());
-        requestMeta.setProtocol(req.headers().get("protocol"));
-        requestMeta.setInstance(URLDecoder.decode(req.headers().get("instance"),"UTF-8"));
-        requestMeta.setHost(req.headers().get("host"));
-        requestMeta.setPort(req.headers().get("port"));
-        ServiceContext context = new ServiceContext();
-        context.setLocal(local);
-        context.setRemote(new NodeAddress(requestMeta.getHost(),Integer.parseInt(requestMeta.getPort())));
-        context.setMappings(new LinkedList<>(Arrays.asList(requestMeta.getMapping().split("/"))));
-        if(!context.getMappings().isEmpty()) context.getMappings().removeFirst();
-        context.setRequestMeta(requestMeta);
+        try {
+            URI uri = new URI(req.uri());
+            //处理请求头,生成请求元数据
+            RequestMeta requestMeta = new RequestMeta();
+            requestMeta.setMapping(uri.getPath());
+            requestMeta.setProtocol(req.headers().get("protocol"));
+            if (req.headers().contains("instance")){
+                requestMeta.setInstance(URLDecoder.decode(req.headers().get("instance"),"UTF-8"));
+            }
+            ServiceContext context = new ServiceContext();
+            context.setMappings(new LinkedList<>(Arrays.asList(requestMeta.getMapping().split("/"))));
+            if(!context.getMappings().isEmpty()) context.getMappings().removeFirst();
+            context.setRequestMeta(requestMeta);
 
-        //获取参数
-        requestMeta.setParams(Http2Util.getURLParamsFromChannel(req));
-        if (req.method() == HttpMethod.GET) {
+            //获取参数
+            requestMeta.setParams(Http2Util.getURLParamsFromChannel(req));
+            if (req.method() == HttpMethod.GET) {
 
+            }
+            else if (req.method() == HttpMethod.POST) {
+                Map<String ,String > params = Http2Util.getBodyParamsChannel(req);
+                if(params != null)requestMeta.getParams().putAll(params);
+            }
+            else {
+                send(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,HttpResponseStatus.OK, Unpooled.copiedBuffer((String.format("%s请求不支持", req.method())),StandardCharsets.UTF_8)));
+                return;
+            }
+            if(requestMeta.getParams() == null)requestMeta.setParams(new HashMap<>());
+            MetaClass metaClass = classLoader.getMetaClass(context.getMappings().pop());
+            if(metaClass == null){
+                send(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,HttpResponseStatus.OK, Unpooled.copiedBuffer((String.format("%s请求类未找到", requestMeta.getMapping())),StandardCharsets.UTF_8)));
+                return;
+            }
+            es.submit(() -> {
+                send(metaClass.getService().receive(context));
+            });
         }
-        else if (req.method() == HttpMethod.POST) {
-            Map<String ,String > params = Http2Util.getBodyParamsChannel(req);
-            if(params != null)requestMeta.getParams().putAll(params);
+        catch (Exception e){
+            send(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,HttpResponseStatus.EXPECTATION_FAILED,Unpooled.copiedBuffer(Arrays.toString(e.getStackTrace()).getBytes(StandardCharsets.UTF_8))));
+            ctx.close();
         }
-        else {
-            send(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,HttpResponseStatus.OK, Unpooled.copiedBuffer((String.format("%s请求不支持", req.method())),StandardCharsets.UTF_8)));
-            return;
-        }
-        if(requestMeta.getParams() == null)requestMeta.setParams(new HashMap<>());
-        MetaClass metaClass = classLoader.getMetaClass(context.getMappings().pop());
-        if(metaClass == null){
-            send(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,HttpResponseStatus.OK, Unpooled.copiedBuffer((String.format("%s请求类未找到", requestMeta.getMapping())),StandardCharsets.UTF_8)));
-            return;
-        }
-        es.submit(() -> {
-            send(metaClass.getService().receive(context));
-        });
     }
 
     @Override
@@ -112,7 +116,6 @@ public class ServiceHandler extends SimpleChannelInboundHandler<FullHttpRequest>
                     response.headers().set("instance", URLEncoder.encode(responseMeta.getInstance(),"UTF-8"));
                     response.headers().set("params", URLEncoder.encode(SerializeUtil.gson.toJson(responseMeta.getParams()),"UTF-8"));
                 }
-
             } catch (UnsupportedEncodingException e) {
                 Console.error(e.getMessage());
             }

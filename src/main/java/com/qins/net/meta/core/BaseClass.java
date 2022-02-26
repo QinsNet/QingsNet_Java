@@ -1,6 +1,6 @@
 package com.qins.net.meta.core;
 
-import com.qins.net.component.Components;
+import com.qins.net.meta.annotation.Components;
 import com.qins.net.core.entity.TrackException;
 import com.qins.net.core.entity.TrackLog;
 import com.qins.net.meta.annotation.Meta;
@@ -18,18 +18,19 @@ public abstract class BaseClass {
     protected Class<?> instanceClass;
     protected HashMap<String, MetaField> fields = new HashMap<>();
     protected Components components;
+
     public BaseClass(Class<?> instanceClass) throws InvocationTargetException, NoSuchMethodException, InstantiationException, IllegalAccessException {
         this.instanceClass = instanceClass;
         components = instanceClass.getAnnotation(Components.class);
         if(components == null)components = Components.class.getAnnotation(Components.class);
-        onLink();
+        linkFields();
     }
 
-    public abstract String serialize(Object instance);
-    public abstract Object deserialize(String instance);
-    public abstract void sync(Object oldInstance,Object newInstance);
+    public abstract String serialize(Object instance) throws IllegalAccessException;
+    public abstract Object deserialize(String rawInstance) throws InstantiationException, IllegalAccessException;
+    public abstract void sync(Object oldInstance,Object newInstance) throws IllegalAccessException;
 
-    protected void onLink() throws NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException {
+    protected void linkFields() throws NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException {
         for (Field field : AnnotationUtil.getFields(instanceClass, Meta.class)){
             field.setAccessible(true);
             MetaField metaField = components.metaField().getConstructor(Field.class).newInstance(field);

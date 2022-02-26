@@ -10,6 +10,12 @@ import lombok.Setter;
 public abstract class Package {
     @Meta
     String name;
-    @Meta
-    public abstract void pack();
+    @Meta("User")
+    public boolean pack(){
+        if(name != null){
+            System.out.println(name + " Pack!!!");
+            return true;
+        }
+        return false;
+    }
 }

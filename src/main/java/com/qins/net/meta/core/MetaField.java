@@ -14,12 +14,15 @@ public abstract class MetaField {
     protected BaseClass baseClass;
     protected Field field;
     protected String name;
+    protected BaseClass elementClass;
     public MetaField(Field field) throws LoadClassException {
         MetaClassLoader metaClassLoader = (MetaClassLoader) Thread.currentThread().getContextClassLoader();
         this.field = field;
         this.baseClass = metaClassLoader.loadClass(field.getType());
         Meta meta = field.getAnnotation(Meta.class);
-        name = "".equals(meta.value()) ? field.getName() : meta.value();
-        if(meta.element() != Meta.class)metaClassLoader.loadClass(meta.element());
+        name = "".equals(meta.name()) ? field.getName() : meta.name();
+        if(meta.element() != Meta.class){
+            elementClass = metaClassLoader.loadClass(meta.element());
+        }
     }
 }

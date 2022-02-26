@@ -24,7 +24,6 @@ import com.qins.net.request.aop.context.ErrorEventContext;
 import com.qins.net.request.aop.context.SuccessEventContext;
 import com.qins.net.request.aop.context.TimeoutEventContext;
 import lombok.Getter;
-import net.sf.cglib.proxy.MethodProxy;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -45,36 +44,6 @@ public abstract class Request implements IRequest {
     @Getter
     protected MetaClass metaClass;
 
-    public void receive(RequestContext context) {
-        try {
-            Object oldInstance = context.getInstance();
-            Object newInstance = metaClass.newInstance(context.getRequestMeta().getInstance(),context.getLocal(),context.getRemote());
-            metaClass.sync(oldInstance,newInstance);
-            synchronized (context){
-                context.notify();
-            }
-            if(context.getResponseMeta().getParams() != null){
-                for (Map.Entry<String,String> keyValue:context.getResponseMeta().getParams().entrySet()){
-                    String name = keyValue.getKey();
-                    String rawParam = keyValue.getValue();
-                    MetaParameter metaParameter = context.getMetaMethod().getMetaParameters().get(name);
-                    if(metaParameter == null){
-                        throw new TrackException(TrackException.ExceptionCode.NotFoundMetaParameter,String.format("%s从远程提供方同步时，%s方法的%s参数未找到", metaClass.getName(),context.getMetaMethod().getName(),name));
-                    }
-                    Object oldParam = context.getParams().get(name);
-                    if(oldParam == null){
-                        throw new TrackException(TrackException.ExceptionCode.NotFoundParameter,String.format("%s从远程提供方同步时，%s方法的%s参数未找到", metaClass.getName(),context.getMetaMethod().getName(),name));
-                    }
-                    Object newParam = metaParameter.getBaseClass().deserialize(rawParam);
-                    metaParameter.getBaseClass().sync(oldParam,newParam);
-                }
-            }
-        }
-        catch (Exception e){
-            metaClass.onException(e);
-        }
-    }
-
     public Request(MetaClass metaClass){
         try {
             this.metaClass = metaClass;
@@ -93,30 +62,23 @@ public abstract class Request implements IRequest {
             metaClass.onException(e);
         }
     }
-    public RequestMeta prepareRequestMeta(MetaMethod metaMethod, NodeAddress local, Object instance){
-        RequestMeta requestMeta = new RequestMeta();
-        requestMeta.setMapping(metaClass.getName() + "/" + metaMethod.getName());
-        requestMeta.setHost(local.getHost());
-        requestMeta.setPort(String.valueOf(local.getPort()));
-        requestMeta.setParams(new HashMap<>());
-        requestMeta.setInstance(metaClass.serialize(instance));
-        return requestMeta;
-    }
-    public Object intercept(Object instance, Method method, Object[] args, MethodProxy methodProxy, NodeAddress local,NodeAddress remote) throws Exception {
+
+    @Override
+    public Object intercept(Object instance, Method method, Object[] args, HashMap<String, String> nodes) throws Exception {
         RequestContext context = new RequestContext();
         try {
             Meta meta = method.getAnnotation(Meta.class);
-            MetaMethod metaMethod = methods.get("".equals(meta.value()) ? method.getName() : meta.value());
+            MetaMethod metaMethod = methods.get("".equals(meta.name()) ? method.getName() : meta.name());
             Object result = null;
             context.setInstance(instance);
             context.setMetaMethod(metaMethod);
             context.setParams(new HashMap<>());
-            context.setRemote(remote);
-            context.setLocal(local);
-            context.setRequestMeta(prepareRequestMeta(metaMethod,local,instance));
+            context.setRemote(new NodeAddress(nodes.get(metaMethod.getNodes().get(0))));
+            context.setRequestMeta(prepareRequestMeta(metaMethod,instance));
+
 
             int i = 0;
-            for (Map.Entry<String,MetaParameter> keyValue : metaMethod.getMetaParameters().entrySet()){
+            for (Map.Entry<String,MetaParameter> keyValue : metaMethod.getParameters().entrySet()){
                 String name = keyValue.getKey();
                 MetaParameter parameter = keyValue.getValue();
                 context.getParams().put(name,args[i]);
@@ -141,9 +103,6 @@ public abstract class Request implements IRequest {
                     }
                     if(return_type != void.class && return_type != Void.class){
                         result = metaMethod.getMetaReturn().deserialize(responseMeta.getResult());
-                        if(MetaClass.class.isAssignableFrom(metaMethod.getMetaReturn().getClass())){
-                            ((MetaClass) metaMethod.getMetaReturn()).updateNode(result,local,remote);
-                        }
                     }
                     successEvent(method,context, responseMeta);
                 }
@@ -158,7 +117,46 @@ public abstract class Request implements IRequest {
         }
         return null;
     }
-    private void afterEvent(Method method, RequestContext context, Object result) throws TrackException, InvocationTargetException, IllegalAccessException {
+
+    public void receive(RequestContext context) {
+        try {
+            Object oldInstance = context.getInstance();
+            Object newInstance = metaClass.newInstance(context.getResponseMeta().getInstance());
+            metaClass.sync(oldInstance,newInstance);
+
+            if(context.getResponseMeta().getParams() != null){
+                for (Map.Entry<String,String> keyValue:context.getResponseMeta().getParams().entrySet()){
+                    String name = keyValue.getKey();
+                    String rawParam = keyValue.getValue();
+                    MetaParameter metaParameter = context.getMetaMethod().getParameters().get(name);
+                    if(metaParameter == null){
+                        throw new TrackException(TrackException.ExceptionCode.NotFoundMetaParameter,String.format("%s从远程提供方同步时，%s方法的%s参数未找到", metaClass.getName(),context.getMetaMethod().getName(),name));
+                    }
+                    Object oldParam = context.getParams().get(name);
+                    if(oldParam == null){
+                        throw new TrackException(TrackException.ExceptionCode.NotFoundParameter,String.format("%s从远程提供方同步时，%s方法的%s参数未找到", metaClass.getName(),context.getMetaMethod().getName(),name));
+                    }
+                    Object newParam = metaParameter.getBaseClass().deserialize(rawParam);
+                    metaParameter.getBaseClass().sync(oldParam,newParam);
+                }
+            }
+            synchronized (context){
+                context.notify();
+            }
+        }
+        catch (Exception e){
+            metaClass.onException(e);
+        }
+    }
+    public RequestMeta prepareRequestMeta(MetaMethod metaMethod,Object instance) throws IllegalAccessException {
+        RequestMeta requestMeta = new RequestMeta();
+        requestMeta.setMapping(metaClass.getName() + "/" + metaMethod.getName());
+        requestMeta.setParams(new HashMap<>());
+        requestMeta.setInstance(metaClass.serialize(instance));
+        return requestMeta;
+    }
+
+    protected void afterEvent(Method method, RequestContext context, Object result) throws TrackException, InvocationTargetException, IllegalAccessException {
         AfterEvent afterEvent = method.getAnnotation(AfterEvent.class);
         if(afterEvent != null){
             EventContext eventContext = new AfterEventContext(context.getParams(),method, result);
@@ -166,7 +164,7 @@ public abstract class Request implements IRequest {
             metaClass.getEventManager().invokeEvent(metaClass.getInstanceManager().get(iocObjectName), afterEvent.function(), context.getParams(),eventContext);
         }
     }
-    private void beforeEvent(Method method,RequestContext context) throws TrackException, InvocationTargetException, IllegalAccessException {
+    protected void beforeEvent(Method method,RequestContext context) throws TrackException, InvocationTargetException, IllegalAccessException {
         BeforeEvent beforeEvent = method.getAnnotation(BeforeEvent.class);
         if(beforeEvent != null){
             EventContext eventContext = new BeforeEventContext(context.getParams(),method);
@@ -174,7 +172,7 @@ public abstract class Request implements IRequest {
             metaClass.getEventManager().invokeEvent(metaClass.getInstanceManager().get(iocObjectName), beforeEvent.function(), context.getParams(),eventContext);
         }
     }
-    private void exceptionEvent(Method method, RequestContext context, Exception e) throws Exception {
+    protected void exceptionEvent(Method method, RequestContext context, Exception e) throws Exception {
         ExceptionEvent exceptionEvent = method.getAnnotation(ExceptionEvent.class);
         if(exceptionEvent != null){
             ExceptionEventContext eventContext = new ExceptionEventContext(context.getParams(),method,e);
@@ -184,7 +182,7 @@ public abstract class Request implements IRequest {
         }
         else throw e;
     }
-    private void errorEvent(Method method, RequestContext context, String exception) throws Exception {
+    protected void errorEvent(Method method, RequestContext context, String exception) throws Exception {
         com.qins.net.request.aop.annotation.ExceptionEvent exceptionEvent = method.getAnnotation(com.qins.net.request.aop.annotation.ExceptionEvent.class);
         if(exceptionEvent != null){
             ErrorEventContext eventContext = new ErrorEventContext(context.getParams(),method, exception);
@@ -196,7 +194,7 @@ public abstract class Request implements IRequest {
         }
         else throw new TrackException(TrackException.ExceptionCode.ResponseException,exception);
     }
-    private void successEvent(Method method, RequestContext context,ResponseMeta responseMeta) throws Exception {
+    protected void successEvent(Method method, RequestContext context,ResponseMeta responseMeta) throws Exception {
         SuccessEvent successEvent = method.getAnnotation(SuccessEvent.class);
         if(successEvent != null){
             SuccessEventContext eventContext = new SuccessEventContext(context.getParams(),method,responseMeta.getResult());
@@ -204,7 +202,7 @@ public abstract class Request implements IRequest {
             metaClass.getEventManager().invokeEvent(metaClass.getInstanceManager().get(iocObjectName), successEvent.function(),context.getParams(),eventContext);
         }
     }
-    private void timeoutEvent(Method method, RequestContext context) throws Exception {
+    protected void timeoutEvent(Method method, RequestContext context) throws Exception {
         TimeoutEvent timeoutEvent =  method.getAnnotation(TimeoutEvent.class);
         if(timeoutEvent != null){
             TimeoutEventContext eventContext = new TimeoutEventContext(context.getParams(),method);
@@ -212,7 +210,7 @@ public abstract class Request implements IRequest {
             metaClass.getEventManager().invokeEvent(metaClass.getInstanceManager().get(iocObjectName), timeoutEvent.function(),context.getParams(),eventContext);
         }
     }
-    private void failEvent(Method method, RequestContext context) throws Exception {
+    protected void failEvent(Method method, RequestContext context) throws Exception {
         FailEvent timeoutEvent =  method.getAnnotation(FailEvent.class);
         if(timeoutEvent != null){
             FailEventContext eventContext = new FailEventContext(context.getParams(),method);

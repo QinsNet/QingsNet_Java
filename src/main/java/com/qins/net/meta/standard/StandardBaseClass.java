@@ -1,8 +1,5 @@
-package com.qins.net.component;
+package com.qins.net.meta.standard;
 
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonPrimitive;
 import com.qins.net.core.console.Console;
 import com.qins.net.core.entity.TrackLog;
 import com.qins.net.meta.core.MetaField;
@@ -30,27 +27,23 @@ public class StandardBaseClass extends BaseClass {
 
     @Override
     public String serialize(Object instance) {
-        return SerializeUtil.gson.toJson(instance,instanceClass);
+        if(instance == null)return null;
+        if(instance instanceof String)return (String) instance;
+        return SerializeUtil.gson.toJson(instance);
     }
 
     @Override
-    public Object deserialize(String instance) {
-        return SerializeUtil.gson.fromJson(instance,instanceClass);
+    public Object deserialize(String rawInstance) {
+        if(rawInstance == null)return null;
+        return SerializeUtil.gson.fromJson(rawInstance,instanceClass);
     }
 
     @Override
-    public void sync(Object oldInstance, Object newInstance) {
-        if(newInstance == null)return;
-        for (MetaField metaField: fields.values()){
-            try {
-                Field field = metaField.getField();
-                Object value = field.get(newInstance);
-                if(value != null){
-                    field.set(oldInstance,value);
-                }
-            } catch (IllegalAccessException e) {
-                onException(e);
-            }
+    public void sync(Object oldInstance, Object newInstance) throws IllegalAccessException {
+        for (MetaField metaField : fields.values()){
+            Field field = metaField.getField();
+            Object newValue = field.get(newInstance);
+            field.set(oldInstance,newValue);
         }
     }
 }

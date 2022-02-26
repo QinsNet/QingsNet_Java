@@ -43,6 +43,11 @@ public class HttpPostRequest extends Node {
 
             @Override
             public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
+                if(response.code() != HttpResponseStatus.OK.code()){
+                    context.setResponseMeta(new ResponseMeta("Http客户端:" + response.body().string()));
+                    metaClass.getRequest().receive(context);
+                    return;
+                }
                 ResponseMeta responseMeta = new ResponseMeta();
                 responseMeta.setProtocol(response.headers().get("protocol"));
                 String exception = response.headers().get("exception");
@@ -72,7 +77,6 @@ public class HttpPostRequest extends Node {
         if(data instanceof RequestMeta){
             Console.debug(data.toString());
             RequestMeta requestMeta = (RequestMeta) data;
-            RequestBody requestBody = RequestBody.create(SerializeUtil.gson.toJson(requestMeta.getParams()).getBytes(StandardCharsets.UTF_8));
             try {
                 Request.Builder request =
                         new Request.Builder()
@@ -82,14 +86,17 @@ public class HttpPostRequest extends Node {
                                 .port(context.getRemote().getPort())
                                 .addPathSegments(requestMeta.getMapping())
                                 .build())
-                        .post(requestBody)
                         .addHeader(HttpHeaderNames.CONTENT_TYPE.toString(), HttpHeaderValues.APPLICATION_JSON.toString())
-                        .addHeader("protocol", requestMeta.getProtocol())
-                        .addHeader("instance", URLEncoder.encode(requestMeta.getInstance(),"UTF-8"))
-                        .addHeader("host", requestMeta.getHost())
-                        .addHeader("port", String.valueOf(requestMeta.getPort()));
-                        send(request.build());
-                        return true;
+                        .addHeader("protocol", requestMeta.getProtocol());
+                if(requestMeta.getParams() != null){
+                    RequestBody requestBody = RequestBody.create(SerializeUtil.gson.toJson(requestMeta.getParams()).getBytes(StandardCharsets.UTF_8));
+                    request.post(requestBody);
+                }
+                if(requestMeta.getInstance() != null){
+                    request.addHeader("instance", URLEncoder.encode(requestMeta.getInstance(),"UTF-8"));
+                }
+                send(request.build());
+                return true;
             } catch (UnsupportedEncodingException e) {
                 metaClass.onException(e);
                 return false;

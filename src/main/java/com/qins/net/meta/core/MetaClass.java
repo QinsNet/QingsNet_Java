@@ -1,23 +1,22 @@
 package com.qins.net.meta.core;
 
 import com.qins.net.core.aop.EventManager;
-import com.qins.net.core.entity.NodeAddress;
 import com.qins.net.core.exception.NewInstanceException;
 import com.qins.net.core.instance.InstanceManager;
 import com.qins.net.meta.annotation.Meta;
+import com.qins.net.node.annotation.NodeMapping;
+import com.qins.net.node.annotation.NodeMappings;
 import com.qins.net.request.core.Request;
-import com.qins.net.request.core.RequestInterceptor;
 import com.qins.net.service.core.Service;
 import lombok.Getter;
-import net.sf.cglib.proxy.Enhancer;
-import net.sf.cglib.proxy.Factory;
-import net.sf.cglib.proxy.NoOp;
+import lombok.Setter;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Type;
 import java.util.*;
 
 @Getter
+@Setter
 public abstract class MetaClass extends BaseClass {
     protected Request request;
     protected Service service;
@@ -26,51 +25,31 @@ public abstract class MetaClass extends BaseClass {
     protected InstanceManager instanceManager = new InstanceManager();
     protected String name;
     protected Class<?> proxyClass;
-
-    @Override
-    protected void onLink() throws NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException {
-        super.onLink();
+    protected HashMap<String,String> nodes = new HashMap<>();
+    protected void linkMetas() {
         for (MetaField metaField : fields.values()){
-            Meta meta = metaField.getField().getType().getAnnotation(Meta.class);
-            if(meta != null){
-                metas.put(metaField.name,metaField);
-            }
-        }
-    }
-
-    public void updateNode(Object instance, NodeAddress local, NodeAddress remote)  {
-        if(instance == null)return;
-        try {
-            if(Iterable.class.isAssignableFrom(instance.getClass())){
-                for (Object item:(Iterable<Factory>) instance){
-                    updateNode(item,local,remote);
-                }
-            }
-            else if(Map.class.isAssignableFrom(instance.getClass())){
-                for(Map.Entry<Object,Object> item:((Map<Object,Object>)instance).entrySet()){
-                    if(item.getKey().getClass().isAssignableFrom(Factory.class)){
-                        updateNode(item.getKey(), local,remote);
-                    }
-                    else if(item.getValue().getClass().isAssignableFrom(Factory.class)){
-                        updateNode(item.getValue(), local,remote);
-                    }
+            BaseClass metaClass = null;
+            if(metaField.getElementClass() != null){
+                if(metaField.getElementClass() instanceof MetaClass){
+                    metas.put(metaField.name,metaField);
+                    metaClass = metaField.getElementClass();
                 }
             }
             else {
-                Factory factory = (Factory) instance;
-                factory.setCallback(0, NoOp.INSTANCE);
-                factory.setCallback(1,new RequestInterceptor(request,local,remote));
-            }
-            //子层
-            for(MetaField metaField : metas.values()){
-                Object value = metaField.getField().get(instance);
-                if(value != null) {
-                    ((MetaClass)(metaField.baseClass)).updateNode(value,local,remote);
+                if(metaField.getField().getType().getAnnotation(Meta.class) != null){
+                    metas.put(metaField.name,metaField);
+                    metaClass = metaField.getBaseClass();
                 }
             }
-        }
-        catch (Exception e){
-            onException(e);
+            if(metaClass != null){
+                for (Annotation annotations : metaClass.getInstanceClass().getAnnotations()){
+                    if(annotations instanceof NodeMappings){
+                        for (NodeMapping nodeMapping : ((NodeMappings) annotations).value()){
+                            nodes.put(nodeMapping.name(),nodeMapping.host());
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -78,38 +57,12 @@ public abstract class MetaClass extends BaseClass {
         super(instanceClass);
         Meta meta = instanceClass.getAnnotation(Meta.class);
         if(meta != null){
-            name = "".equals(meta.value()) ? instanceClass.getSimpleName() : meta.value();
-            //Life Cycle
+            name = "".equals(meta.name()) ? instanceClass.getSimpleName() : meta.name();
             service = components.service().getConstructor(MetaClass.class).newInstance(this);
             request = components.request().getConstructor(MetaClass.class).newInstance(this);
-
-            //Proxy Instance
-            Enhancer enhancer = new Enhancer();
-            enhancer.setSuperclass(instanceClass);
-            enhancer.setCallbackTypes(new Class[]{NoOp.class,RequestInterceptor.class});
-            enhancer.setCallbackFilter(method ->
-            {
-                if(method.getAnnotation(Meta.class) == null)return 0;
-                return 1;
-            });
-            proxyClass = enhancer.createClass();
-            //Life Cycle
-            onLink();
+            linkMetas();
         }
     }
-    public <T> T newInstance(NodeAddress local, NodeAddress remote) throws NewInstanceException {
-        try {
-            Object instance = proxyClass.newInstance();
-            updateNode(instance,local,remote);
-            return (T) instance;
-        } catch (InstantiationException | IllegalAccessException e) {
-            throw new NewInstanceException(e.getCause());
-        }
-    }
-    public <T> T newInstance(String rawInstance,NodeAddress local, NodeAddress remote) {
-        Factory instance = (Factory) deserialize(rawInstance);
-        if(instance == null)return null;
-        updateNode(instance,local,remote);
-        return (T)instance;
-    }
+    public abstract <T> T newInstance(HashMap<String,String> nodes) throws NewInstanceException;
+    public abstract <T> T newInstance(String rawInstance) throws NewInstanceException;
 }

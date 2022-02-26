@@ -74,8 +74,6 @@ public class HttpGetRequest extends Node {
             RequestMeta requestMeta = (RequestMeta) data;
             HttpUrl.Builder url = new HttpUrl.Builder()
                     .scheme("http")
-                    .host(context.getRemote().getHost())
-                    .port(context.getRemote().getPort())
                     .addPathSegments(requestMeta.getMapping());
             for (Map.Entry<String ,String > params : requestMeta.getParams().entrySet()){
                 url.addQueryParameter(params.getKey(),params.getValue());
