@@ -15,15 +15,15 @@ import java.util.HashMap;
 public class RequestInterceptor implements MethodInterceptor {
     @Getter
     @Setter
-    private CGLibRequest request;
+    private Request request;
     @Getter
     @Setter
     private HashMap<String,String> nodes;
     @Override
     public Object intercept(Object o, Method method, Object[] args, MethodProxy methodProxy) throws Exception {
-        return request.intercept(o,method,args,methodProxy,nodes);
+        return request.intercept(o,method,args,nodes);
     }
-    public RequestInterceptor(CGLibRequest request){
+    public RequestInterceptor(Request request){
         this.request = request;
     }
 }

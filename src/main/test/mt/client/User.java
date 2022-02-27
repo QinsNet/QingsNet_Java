@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 
 @Getter
 @Setter
@@ -24,5 +25,7 @@ public abstract class User{
     @Meta("Server_2")
     public abstract boolean newPack();
     @Meta(nodes = {"Server_2","Server1"})
-    public abstract boolean addPack(Package aPackage);
+    public abstract boolean addPack(@Meta Package aPackage, ArrayList<String> hash);
+    @Meta("Server_2")
+    public abstract void hello();
 }

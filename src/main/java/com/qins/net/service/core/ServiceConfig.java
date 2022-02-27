@@ -2,6 +2,7 @@ package com.qins.net.service.core;
 
 import lombok.Getter;
 import lombok.Setter;
+import lombok.experimental.Accessors;
 
 /**
  * @ProjectName: YiXian_Client
@@ -17,6 +18,7 @@ import lombok.Setter;
  */
 @Getter
 @Setter
+@Accessors(chain = true)
 public class ServiceConfig {
     public ServiceConfig(){
 

@@ -1,6 +1,6 @@
 package com.qins.net.meta.core;
 
-import com.qins.net.core.entity.TrackException;
+import com.qins.net.core.exception.TrackException;
 import com.qins.net.core.exception.LoadClassException;
 import com.qins.net.meta.annotation.Meta;
 import com.qins.net.request.annotation.MethodPact;
@@ -49,11 +49,10 @@ public class MetaMethod {
             MetaParameter metaParameter = metaClassLoader.loadClass(parameter.getType()).getComponents().metaParameter()
                     .getConstructor(Parameter.class)
                     .newInstance(parameter);
-            parameters.put(name,metaParameter);
-            Meta paramMeta = method.getAnnotation(Meta.class);
+            parameters.put(metaParameter.getName(),metaParameter);
+            Meta paramMeta = parameter.getAnnotation(Meta.class);
             if(paramMeta != null){
-                String paramName = "".equals(paramMeta.name()) ? method.getName() : paramMeta.name();
-                metaParameters.put(paramName,metaParameter);
+                metaParameters.put(metaParameter.getName(),metaParameter);
             }
         }
     }

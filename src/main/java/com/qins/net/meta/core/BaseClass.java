@@ -1,7 +1,7 @@
 package com.qins.net.meta.core;
 
 import com.qins.net.meta.annotation.Components;
-import com.qins.net.core.entity.TrackException;
+import com.qins.net.core.exception.TrackException;
 import com.qins.net.core.entity.TrackLog;
 import com.qins.net.meta.annotation.Meta;
 import com.qins.net.util.AnnotationUtil;
@@ -26,7 +26,9 @@ public abstract class BaseClass {
         linkFields();
     }
 
+    public abstract Object serializeAsObject(Object instance) throws IllegalAccessException;
     public abstract String serialize(Object instance) throws IllegalAccessException;
+    public abstract Object deserializeAsObject(Object rawInstance) throws InstantiationException, IllegalAccessException;
     public abstract Object deserialize(String rawInstance) throws InstantiationException, IllegalAccessException;
     public abstract void sync(Object oldInstance,Object newInstance) throws IllegalAccessException;
 

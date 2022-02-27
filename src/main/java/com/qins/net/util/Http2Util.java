@@ -8,6 +8,7 @@ import io.netty.handler.codec.http.multipart.InterfaceHttpData;
 import io.netty.handler.codec.http.multipart.MemoryAttribute;
 
 import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -79,5 +80,9 @@ public class Http2Util {
         Map<String ,String > params = SerializeUtil.gson.fromJson(strContent,HashMap.class);
         if(params == null)params = new HashMap<>();
         return params;
+    }
+    public static String urlDecode(String url,String charset) throws UnsupportedEncodingException {
+        if(url == null)return null;
+        return URLDecoder.decode(url,charset);
     }
 }

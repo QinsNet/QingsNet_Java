@@ -8,7 +8,6 @@ import lombok.Setter;
 @Getter
 @Setter
 @Meta
-@NodeMapping(name = "User", host = "localhost:28003")
 public abstract class Package {
     @Meta
     String name;

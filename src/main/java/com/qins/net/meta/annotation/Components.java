@@ -3,13 +3,12 @@ package com.qins.net.meta.annotation;
 import com.qins.net.meta.cglib.CGLibClass;
 import com.qins.net.meta.core.*;
 import com.qins.net.meta.standard.StandardBaseClass;
-import com.qins.net.meta.standard.StandardMetaClass;
 import com.qins.net.meta.standard.StandardMetaField;
 import com.qins.net.meta.standard.StandardMetaParameter;
-import com.qins.net.request.cglib.CGLibRequest;
 import com.qins.net.request.core.Request;
-import com.qins.net.service.cglib.CGLibService;
+import com.qins.net.request.standard.StandardRequest;
 import com.qins.net.service.core.Service;
+import com.qins.net.service.standard.StandardService;
 
 import java.lang.annotation.*;
 
@@ -22,6 +21,6 @@ public @interface Components {
     Class<? extends MetaField> metaField() default StandardMetaField.class;
     Class<? extends MetaParameter> metaParameter() default StandardMetaParameter.class;
     Class<? extends MetaClass> metaClass() default CGLibClass.class;
-    Class<? extends Request> request() default CGLibRequest.class;
-    Class<? extends Service> service() default CGLibService.class;
+    Class<? extends Request> request() default StandardRequest.class;
+    Class<? extends Service> service() default StandardService.class;
 }

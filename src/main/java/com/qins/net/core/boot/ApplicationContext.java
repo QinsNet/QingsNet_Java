@@ -8,6 +8,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.util.HashMap;
+import java.util.Map;
 
 @Getter
 @Setter
@@ -15,4 +16,6 @@ public class ApplicationContext {
     private ApplicationConfig config;
     private MetaClassLoader metaClassLoader;
     private Server server;
+    private HashMap<String,String> nodes;
+    private Thread thread;
 }

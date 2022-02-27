@@ -10,7 +10,8 @@ import com.qins.net.core.aop.context.ExceptionEventContext;
 import com.qins.net.core.entity.NodeAddress;
 import com.qins.net.core.entity.RequestMeta;
 import com.qins.net.core.entity.ResponseMeta;
-import com.qins.net.core.entity.TrackException;
+import com.qins.net.core.exception.TrackException;
+import com.qins.net.core.exception.NotFoundNodeException;
 import com.qins.net.meta.annotation.Meta;
 import com.qins.net.meta.core.MetaClass;
 import com.qins.net.meta.core.MetaMethod;
@@ -70,11 +71,13 @@ public abstract class Request implements IRequest {
             Meta meta = method.getAnnotation(Meta.class);
             MetaMethod metaMethod = methods.get("".equals(meta.name()) ? method.getName() : meta.name());
             Object result = null;
-            context.setInstance(instance);
-            context.setMetaMethod(metaMethod);
-            context.setParams(new HashMap<>());
-            context.setRemote(new NodeAddress(nodes.get(metaMethod.getNodes().get(0))));
-            context.setRequestMeta(prepareRequestMeta(metaMethod,instance));
+            context.setInstance(instance)
+                    .setMetaMethod(metaMethod)
+                    .setParams(new HashMap<>());
+            String address = nodes.get(metaMethod.getNodes().get(0));
+            if(address == null)throw new NotFoundNodeException(metaClass.getName(),metaMethod.getName());
+            context.setRemote(new NodeAddress(address))
+                    .setRequestMeta(prepareRequestMeta(metaMethod,instance));
 
 
             int i = 0;
@@ -112,8 +115,11 @@ public abstract class Request implements IRequest {
             afterEvent(method,context,result);
             return result;
         }
+        catch (Exception e){
+            exceptionEvent(method,context,e);
+        }
         catch (Throwable e){
-            exceptionEvent(method,context,new Exception(e));
+            exceptionEvent(method,context,new Exception("Request执行异常",e));
         }
         return null;
     }

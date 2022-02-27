@@ -1,6 +1,7 @@
 package com.qins.net.meta.core;
 
 
+import com.qins.net.core.boot.MetaApplication;
 import com.qins.net.core.exception.LoadClassException;
 import com.qins.net.meta.annotation.Meta;
 import lombok.Getter;
@@ -16,13 +17,12 @@ public abstract class MetaField {
     protected String name;
     protected BaseClass elementClass;
     public MetaField(Field field) throws LoadClassException {
-        MetaClassLoader metaClassLoader = (MetaClassLoader) Thread.currentThread().getContextClassLoader();
         this.field = field;
-        this.baseClass = metaClassLoader.loadClass(field.getType());
+        this.baseClass = MetaApplication.getContext().getMetaClassLoader().loadClass(field.getType());
         Meta meta = field.getAnnotation(Meta.class);
         name = "".equals(meta.name()) ? field.getName() : meta.name();
         if(meta.element() != Meta.class){
-            elementClass = metaClassLoader.loadClass(meta.element());
+            elementClass = MetaApplication.getContext().getMetaClassLoader().loadClass(meta.element());
         }
     }
 }

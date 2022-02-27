@@ -1,18 +1,15 @@
 package com.qins.net.meta.cglib;
 
-import com.google.gson.JsonObject;
-import com.qins.net.core.entity.NodeAddress;
+import com.google.gson.*;
+import com.google.gson.reflect.TypeToken;
 import com.qins.net.core.entity.QinsMeta;
 import com.qins.net.core.exception.NewInstanceException;
+import com.qins.net.core.exception.NotMetaClassException;
 import com.qins.net.meta.annotation.Meta;
 import com.qins.net.meta.core.MetaClass;
-import com.qins.net.meta.core.MetaField;
 import com.qins.net.meta.standard.StandardMetaClass;
-import com.qins.net.request.cglib.CGLibRequest;
 import com.qins.net.request.cglib.RequestInterceptor;
-import com.qins.net.request.core.Request;
 import com.qins.net.util.SerializeUtil;
-import com.sun.org.apache.bcel.internal.generic.FADD;
 import net.sf.cglib.proxy.Callback;
 import net.sf.cglib.proxy.Enhancer;
 import net.sf.cglib.proxy.Factory;
@@ -20,11 +17,30 @@ import net.sf.cglib.proxy.NoOp;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
-import java.security.KeyStore;
+import java.lang.reflect.Type;
 import java.util.HashMap;
 import java.util.Map;
 
 public class CGLibClass extends StandardMetaClass {
+    static {
+        SerializeUtil.gson = SerializeUtil.gson.newBuilder().registerTypeAdapter(QinsMeta.class, new JsonDeserializer<QinsMeta>() {
+            final Type mapStringType = new TypeToken<HashMap<String,String>>(){}.getType();
+            @Override
+            public QinsMeta deserialize(JsonElement jsonElement, Type type, JsonDeserializationContext jsonDeserializationContext) throws JsonParseException {
+                JsonObject jsonObject = jsonElement.getAsJsonObject();
+                QinsMeta qinsMeta = new QinsMeta();
+                JsonElement instance = jsonObject.get("instance");
+                JsonElement nodes = jsonObject.get("nodes");
+                if(instance != null){
+                    qinsMeta.setInstance(instance.toString());
+                }
+                if(nodes != null){
+                    qinsMeta.setNodes(SerializeUtil.gson.fromJson(nodes, mapStringType));
+                }
+                return qinsMeta;
+            }
+        }).create();
+    }
     public CGLibClass(Class<?> instanceClass) throws InvocationTargetException, NoSuchMethodException, InstantiationException, IllegalAccessException {
         super(instanceClass);
         //Proxy Instance
@@ -49,7 +65,7 @@ public class CGLibClass extends StandardMetaClass {
                 }
             }
             Object instance = proxyClass.newInstance();
-            ((Factory)instance).setCallbacks(new Callback[]{NoOp.INSTANCE,new RequestInterceptor((CGLibRequest) request,nodes)});
+            ((Factory)instance).setCallbacks(new Callback[]{NoOp.INSTANCE,new RequestInterceptor(request,nodes)});
             return (T) instance;
         }
         catch (InstantiationException | IllegalAccessException e) {
@@ -67,26 +83,44 @@ public class CGLibClass extends StandardMetaClass {
         }
     }
 
+    public static MetaClass getMetaClass(Object instance) throws NotMetaClassException {
+        if(instance instanceof Factory){
+            RequestInterceptor interceptor = (RequestInterceptor) ((Factory) instance).getCallback(1);
+            return interceptor.getRequest().getMetaClass();
+        }
+        else throw new NotMetaClassException(instance);
+    }
+
     @Override
     public String serialize(Object instance) throws IllegalAccessException {
-        if(instance == null)return null;
-        String rawInstance = super.serialize(instance);
-        RequestInterceptor interceptor = (RequestInterceptor) ((Factory)instance).getCallback(1);
-        QinsMeta qinsMeta = new QinsMeta(rawInstance,interceptor.getNodes());
-        JsonObject jsonObject = new JsonObject();
-        JsonObject instanceObject = SerializeUtil.gson.fromJson(rawInstance,JsonObject.class);
-        jsonObject.add("instance",instanceObject);
-        JsonObject nodesObject = SerializeUtil.gson.fromJson(nodes,JsonObject.class);
-        jsonObject.add("nodes",instance);
-        return SerializeUtil.gson.toJson(qinsMeta,QinsMeta.class);
+        return SerializeUtil.gson.toJson(serializeAsObject(instance));
     }
 
     @Override
     public Object deserialize(String rawInstance) throws InstantiationException, IllegalAccessException {
-        if(rawInstance == null)return null;
-        QinsMeta qinsMeta = SerializeUtil.gson.fromJson(rawInstance,QinsMeta.class);
-        Factory factory = (Factory) super.deserialize(qinsMeta.getInstance());
-        factory.setCallbacks(new Callback[]{NoOp.INSTANCE,new RequestInterceptor((CGLibRequest) request,qinsMeta.getNodes())});
+        return deserializeAsObject(SerializeUtil.gson.fromJson(rawInstance,JsonElement.class));
+    }
+
+    @Override
+    public Object serializeAsObject(Object instance) throws IllegalAccessException {
+        if(instance == null)return null;
+        Object rawInstance = super.serializeAsObject(instance);
+        RequestInterceptor interceptor = (RequestInterceptor) ((Factory)instance).getCallback(1);
+        QinsMeta qinsMeta = new QinsMeta(rawInstance,interceptor.getNodes());
+        return SerializeUtil.gson.toJsonTree(qinsMeta,QinsMeta.class);
+    }
+
+    @Override
+    public Object deserializeAsObject(Object rawJsonElement) throws InstantiationException, IllegalAccessException {
+        if(rawJsonElement == null)return null;
+        JsonElement jsonElement = (JsonElement) rawJsonElement;
+        QinsMeta qinsMeta = SerializeUtil.gson.fromJson(jsonElement,QinsMeta.class);
+        Factory factory = null;
+        if(qinsMeta.getInstance() != null){
+             factory = (Factory) super.deserializeAsObject(SerializeUtil.gson.fromJson((String) qinsMeta.getInstance(),JsonElement.class));
+        }
+        else factory = (Factory) proxyClass.newInstance();
+        factory.setCallbacks(new Callback[]{NoOp.INSTANCE,new RequestInterceptor(request,qinsMeta.getNodes())});
         return factory;
     }
 

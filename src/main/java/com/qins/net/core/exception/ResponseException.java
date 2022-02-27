@@ -1,13 +1,15 @@
-package com.qins.net.core.entity;
+package com.qins.net.core.exception;
 
 import com.google.gson.annotations.Expose;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
+import lombok.experimental.Accessors;
 
 @ToString
 @Getter
 @Setter
+@Accessors(chain = true)
 public class ResponseException extends Exception{
     public enum ExceptionCode { Intercepted,NotFoundMeta,NotFoundMethod,NotFoundNet,BufferFlow,Common,MaxConnects,NotFoundAbstractType,NotFoundParam, RemoteException,HttpException}
     @Expose

@@ -4,6 +4,7 @@ import com.qins.net.core.console.Console;
 import com.qins.net.core.entity.RequestMeta;
 import com.qins.net.core.entity.ResponseMeta;
 import com.qins.net.node.core.Node;
+import com.qins.net.util.Http2Util;
 import com.qins.net.util.SerializeUtil;
 import io.netty.handler.codec.http.*;
 import okhttp3.*;
@@ -11,11 +12,9 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
-import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -37,7 +36,7 @@ public class HttpPostRequest extends Node {
         client.newCall(request).enqueue(new Callback() {
             @Override
             public void onFailure(@NotNull Call call, @NotNull IOException e) {
-                context.setResponseMeta(new ResponseMeta("Http客户端:" + e.getMessage()));
+                context.setResponseMeta(new ResponseMeta(e));
                 metaClass.getRequest().receive(context);
             }
 
@@ -48,23 +47,13 @@ public class HttpPostRequest extends Node {
                     metaClass.getRequest().receive(context);
                     return;
                 }
-                ResponseMeta responseMeta = new ResponseMeta();
-                responseMeta.setProtocol(response.headers().get("protocol"));
-                String exception = response.headers().get("exception");
-                String instance = response.headers().get("instance");
-                String params = response.headers().get("params");
-                if(exception != null){
-                    responseMeta.setException(URLDecoder.decode(exception,"UTF-8"));
-                }
-                else if(instance != null){
-                    responseMeta.setInstance(URLDecoder.decode(instance,"UTF-8"));
-                }
-                else if(params != null){
-                    responseMeta.setParams(SerializeUtil.gson.fromJson(URLDecoder.decode(params,"UTF-8"), HashMap.class));
-                }
-                if(response.body() != null){
-                    responseMeta.setResult(response.body().string());
-                }
+                ResponseMeta responseMeta = new ResponseMeta()
+                        .setProtocol(Http2Util.urlDecode(response.headers().get("protocol"),"UTF-8"))
+                        .setException(Http2Util.urlDecode(response.headers().get("exception"),"UTF-8"))
+                        .setInstance(Http2Util.urlDecode(response.headers().get("instance"),"UTF-8"))
+                        .setParams(SerializeUtil.gson.fromJson(Http2Util.urlDecode(response.headers().get("params"),"UTF-8"),HashMap.class))
+                        .setResult(response.body().string());
+                if(context.getParams() == null)context.setParams(new HashMap<>());
                 context.setResponseMeta(responseMeta);
                 metaClass.getRequest().receive(context);
             }

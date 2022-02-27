@@ -4,12 +4,14 @@ import com.qins.net.meta.annotation.Meta;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
+import lombok.experimental.Accessors;
 
 import java.util.Map;
 
 @ToString
 @Getter
 @Setter
+@Accessors(chain = true)
 public class RequestMeta {
     private String protocol = "Sync-Request-1.0";
     private String mapping;

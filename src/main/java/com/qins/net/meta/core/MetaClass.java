@@ -1,7 +1,9 @@
 package com.qins.net.meta.core;
 
 import com.qins.net.core.aop.EventManager;
+import com.qins.net.core.boot.MetaApplication;
 import com.qins.net.core.exception.NewInstanceException;
+import com.qins.net.core.exception.NotMetaClassException;
 import com.qins.net.core.instance.InstanceManager;
 import com.qins.net.meta.annotation.Meta;
 import com.qins.net.node.annotation.NodeMapping;
@@ -28,26 +30,14 @@ public abstract class MetaClass extends BaseClass {
     protected HashMap<String,String> nodes = new HashMap<>();
     protected void linkMetas() {
         for (MetaField metaField : fields.values()){
-            BaseClass metaClass = null;
             if(metaField.getElementClass() != null){
                 if(metaField.getElementClass() instanceof MetaClass){
                     metas.put(metaField.name,metaField);
-                    metaClass = metaField.getElementClass();
                 }
             }
             else {
                 if(metaField.getField().getType().getAnnotation(Meta.class) != null){
                     metas.put(metaField.name,metaField);
-                    metaClass = metaField.getBaseClass();
-                }
-            }
-            if(metaClass != null){
-                for (Annotation annotations : metaClass.getInstanceClass().getAnnotations()){
-                    if(annotations instanceof NodeMappings){
-                        for (NodeMapping nodeMapping : ((NodeMappings) annotations).value()){
-                            nodes.put(nodeMapping.name(),nodeMapping.host());
-                        }
-                    }
                 }
             }
         }
@@ -60,6 +50,16 @@ public abstract class MetaClass extends BaseClass {
             name = "".equals(meta.name()) ? instanceClass.getSimpleName() : meta.name();
             service = components.service().getConstructor(MetaClass.class).newInstance(this);
             request = components.request().getConstructor(MetaClass.class).newInstance(this);
+            for (Annotation annotations : instanceClass.getAnnotations()){
+                if(annotations instanceof NodeMappings){
+                    for (NodeMapping nodeMapping : ((NodeMappings) annotations).value()){
+                        nodes.put(nodeMapping.name(),nodeMapping.host());
+                    }
+                }
+            }
+            for (Map.Entry<String,String> item : MetaApplication.getContext().getNodes().entrySet()){
+                nodes.putIfAbsent(item.getKey(),item.getValue());
+            }
             linkMetas();
         }
     }

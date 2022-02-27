@@ -1,5 +1,7 @@
 package com.qins.net.meta.core;
 
+import com.qins.net.core.boot.ApplicationContext;
+import com.qins.net.core.boot.MetaApplication;
 import com.qins.net.meta.annotation.Components;
 import com.qins.net.core.exception.LoadClassException;
 import com.qins.net.meta.annotation.Meta;
@@ -11,9 +13,12 @@ import java.util.Map;
 
 public class MetaClassLoader extends ClassLoader{
     @Getter
-    private final HashMap<String,String> nodes = new HashMap<>();
+    private final ApplicationContext context;
     private final HashMap<String,MetaClass> metas = new HashMap<>();
     private final HashMap<Class<?>,BaseClass> bases = new HashMap<>();
+    public MetaClassLoader(ApplicationContext context){
+        this.context = context;
+    }
     public BaseClass loadClass(Class<?> instanceClass) throws LoadClassException {
         try {
             Meta meta = instanceClass.getAnnotation(Meta.class);
@@ -41,9 +46,6 @@ public class MetaClassLoader extends ClassLoader{
                 Components components = instanceClass.getAnnotation(Components.class) != null ? instanceClass.getAnnotation(Components.class) : Components.class.getAnnotation(Components.class);
                 MetaClass metaClass = components.metaClass().getConstructor(Class.class).newInstance(instanceClass);
                 metas.put(name,metaClass);
-                for (Map.Entry<String,String> node : nodes.entrySet()){
-                    metaClass.getNodes().putIfAbsent(node.getKey(),node.getValue());
-                }
                 return metaClass;
             }
         }

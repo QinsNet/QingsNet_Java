@@ -9,17 +9,17 @@ import com.qins.net.core.aop.context.EventContext;
 import com.qins.net.core.aop.context.ExceptionEventContext;
 import com.qins.net.core.entity.*;
 import com.qins.net.core.exception.LoadClassException;
+import com.qins.net.core.exception.TrackException;
 import com.qins.net.meta.annotation.Meta;
 import com.qins.net.meta.core.*;
 import com.qins.net.service.event.InterceptorEvent;
 import com.qins.net.service.event.delegate.InterceptorDelegate;
-import com.qins.net.core.entity.ResponseException;
+import com.qins.net.core.exception.ResponseException;
 import lombok.Getter;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.util.Arrays;
 import java.util.HashMap;
 
 
@@ -128,7 +128,7 @@ public abstract class Service implements IService {
             else throw new ResponseException(ResponseException.ExceptionCode.Intercepted,"请求已被拦截",null);
         }
         catch (Exception e){
-            return new ResponseMeta(e.getMessage() + "\n" + Arrays.toString(e.getStackTrace()));
+            return new ResponseMeta(e);
         }
     }
 }

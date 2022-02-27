@@ -1,12 +1,15 @@
 package com.qins.net.core.entity;
 
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.experimental.Accessors;
 
 @AllArgsConstructor
 @Getter
 @Setter
+@Accessors(chain = true)
 public class NodeAddress {
     String host;
     int port;

@@ -3,10 +3,12 @@ package com.qins.net.core.entity;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
+import lombok.experimental.Accessors;
 
 @ToString
 @Getter
 @Setter
+@Accessors(chain = true)
 public class TrackLog {
 
     public enum LogCode { Core, Runtime }

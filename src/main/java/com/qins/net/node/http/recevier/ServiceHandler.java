@@ -53,9 +53,9 @@ public class ServiceHandler extends SimpleChannelInboundHandler<FullHttpRequest>
         try {
             URI uri = new URI(req.uri());
             //处理请求头,生成请求元数据
-            RequestMeta requestMeta = new RequestMeta();
-            requestMeta.setMapping(uri.getPath());
-            requestMeta.setProtocol(req.headers().get("protocol"));
+            RequestMeta requestMeta = new RequestMeta()
+                    .setMapping(uri.getPath())
+                    .setProtocol(req.headers().get("protocol"));
             if (req.headers().contains("instance")){
                 requestMeta.setInstance(URLDecoder.decode(req.headers().get("instance"),"UTF-8"));
             }

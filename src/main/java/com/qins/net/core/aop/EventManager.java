@@ -2,7 +2,7 @@ package com.qins.net.core.aop;
 import com.qins.net.core.aop.annotation.Event;
 import com.qins.net.core.aop.annotation.EventContextParam;
 import com.qins.net.core.aop.context.EventContext;
-import com.qins.net.core.entity.TrackException;
+import com.qins.net.core.exception.TrackException;
 import org.javatuples.Pair;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;

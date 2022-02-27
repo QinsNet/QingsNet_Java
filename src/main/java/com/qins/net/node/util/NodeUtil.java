@@ -1,6 +1,6 @@
 package com.qins.net.node.util;
 
-import com.qins.net.core.entity.TrackException;
+import com.qins.net.core.exception.TrackException;
 import com.qins.net.request.cglib.RequestInterceptor;
 import net.sf.cglib.proxy.Factory;
 
@@ -9,6 +9,7 @@ import java.util.Map;
 
 public class NodeUtil {
     public static HashMap<String,String> getNodes(Object instance) throws TrackException {
+        if(instance == null)throw new NullPointerException();
         if(instance instanceof Factory){
             RequestInterceptor interceptor = (RequestInterceptor) ((Factory) instance).getCallback(1);
             return interceptor.getNodes();
@@ -49,7 +50,6 @@ public class NodeUtil {
     public static void copyNodeAll(Object origin,Object target) throws TrackException {
         HashMap<String,String> originNodes = getNodes(origin);
         HashMap<String,String> targetNodes = getNodes(target);
-        targetNodes.clear();
         targetNodes.putAll(originNodes);
     }
 
