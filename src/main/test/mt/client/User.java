@@ -18,7 +18,7 @@ public abstract class User{
     private String password;
     @Meta
     private Integer apiToken;
-    @Meta(element = Package.class)
+    @Meta
     private ArrayList<Package> packages;
     @Meta("Server_1")
     public abstract boolean login();

@@ -9,5 +9,4 @@ public @interface Meta {
     String value() default "";
     String name() default "";
     String[] nodes() default {};
-    Class<?> element() default Meta.class;
 }

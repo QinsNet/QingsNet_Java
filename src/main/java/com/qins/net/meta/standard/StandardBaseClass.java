@@ -30,72 +30,62 @@ public class StandardBaseClass extends BaseClass {
         Console.log(log.getMessage());
     }
 
-
     @Override
     public Object serializeAsObject(Object instance) throws IllegalAccessException {
         if(instance == null)return null;
-        if(instance.getClass().isPrimitive()) return SerializeUtil.gson.toJsonTree(instance,instanceClass);
-        JsonObject jsonObject = new JsonObject();
-        for (MetaField metaField : fields.values()){
-            Object object = metaField.getField().get(instance);
-            if(object == null)continue;
-            if(metaField.getElementClass() != null){
-                if(object instanceof Iterable){
-                    JsonArray jsonArray = new JsonArray();
-                    for (Object item : ((Iterable)object)){
-                        JsonElement msg = (JsonElement) metaField.getElementClass().serializeAsObject(item);
-                        jsonArray.add(msg);
-                    }
-                    jsonObject.add(metaField.getName(),jsonArray);
-                }
-                else if (object instanceof Map){
-                    JsonObject jsonMap = new JsonObject();
-                    for (Map.Entry<Object,Object> item : ((Map<Object,Object>) object).entrySet()){
-                        JsonElement k;
-                        JsonElement v;
-                        if(metaField.getElementClass().getInstanceClass().isAssignableFrom(item.getKey().getClass())){
-                            k = (JsonElement) metaField.getElementClass().serializeAsObject(item.getKey());
-                        }
-                        else k = SerializeUtil.gson.toJsonTree(item.getKey());
-
-                        if(metaField.getElementClass().getInstanceClass().isAssignableFrom(item.getValue().getClass())){
-                            v = (JsonElement) metaField.getElementClass().serializeAsObject(item.getValue());
-                        }
-                        else v = SerializeUtil.gson.toJsonTree(item.getValue());
-                        jsonMap.add(k.getAsString(), v);
-                    }
-                    jsonObject.add(metaField.getName(),jsonMap);
-                }
+        else if(generics != null && instance instanceof Iterable){
+            JsonArray jsonArray = new JsonArray();
+            for (Object item : ((Iterable)instance)){
+                JsonElement msg = (JsonElement) generics[0].serializeAsObject(item);
+                jsonArray.add(msg);
             }
-            else {
+            return jsonArray;
+        }
+        else if(generics != null && instance instanceof Map){
+            JsonObject jsonObject = new JsonObject();
+            for (Map.Entry<Object,Object> item : ((Map<Object,Object>) instance).entrySet()){
+                jsonObject.add(generics[0].serialize(item.getKey()), (JsonElement) generics[1].serializeAsObject(instance));
+            }
+            return jsonObject;
+        }
+        else if(fields.size() != 0){
+            JsonObject jsonObject = new JsonObject();
+            for (MetaField metaField : fields.values()){
+                Object object = metaField.getField().get(instance);
+                if(object == null)continue;
                 jsonObject.add(metaField.getName(), (JsonElement) metaField.getBaseClass().serializeAsObject(object));
             }
+            return jsonObject;
         }
-        if(jsonObject.size() == 0)return null;
-        return jsonObject;
+        else return SerializeUtil.gson.toJsonTree(instance,instanceClass);
     }
 
     @Override
     public Object deserializeAsObject(Object rawJsonElement) throws InstantiationException, IllegalAccessException {
         JsonElement jsonElement = (JsonElement) rawJsonElement;
         if(rawJsonElement == null)return null;
-        if(jsonElement.isJsonObject()){
+        else if(jsonElement.isJsonNull()) return null;
+        else if(generics != null && jsonElement.isJsonArray()){
+            Collection instance = (Collection) instanceClass.newInstance();
+            for (JsonElement element : jsonElement.getAsJsonArray()){
+                instance.add(generics[0].deserializeAsObject(element));
+            }
+            return instance;
+        }
+        else if(generics != null && jsonElement.isJsonObject() && Map.class.isAssignableFrom(instanceClass)){
+            Map map = (Map) instanceClass.newInstance();
+            for (Map.Entry<String,JsonElement> item : jsonElement.getAsJsonObject().entrySet()){
+                map.put(generics[0].deserialize(item.getKey()),generics[1].deserializeAsObject(item.getValue()));
+            }
+            return map;
+        }
+        else if(jsonElement.isJsonObject() && Map.class.isAssignableFrom(instanceClass)){
             Object baseInstance = instanceClass.newInstance();
             JsonObject jsonObject = jsonElement.getAsJsonObject();
             for (MetaField metaField : fields.values()){
                 JsonElement value = jsonObject.get(metaField.getName());
                 if(value == null)continue;
-                if(metaField.getElementClass() != null){
-                    JsonArray jsonArray = value.getAsJsonArray();
-                    Collection fieldArray = (Collection) metaField.getField().getType().newInstance();
-                    for (JsonElement element : jsonArray){
-                        fieldArray.add(metaField.getElementClass().deserializeAsObject(element));
-                    }
-                    metaField.getField().set(baseInstance,fieldArray);
-                }
-                else {
-                    metaField.getField().set(baseInstance,metaField.getBaseClass().deserializeAsObject(value));
-                }
+                metaField.getField().set(baseInstance,metaField.getBaseClass().deserializeAsObject(value));
             }
             return baseInstance;
         }
@@ -110,14 +100,5 @@ public class StandardBaseClass extends BaseClass {
     @Override
     public Object deserialize(String rawInstance) throws InstantiationException, IllegalAccessException {
         return deserializeAsObject(SerializeUtil.gson.fromJson(rawInstance,JsonElement.class));
-    }
-
-    @Override
-    public void sync(Object oldInstance, Object newInstance) throws IllegalAccessException {
-        for (MetaField metaField : fields.values()){
-            Field field = metaField.getField();
-            Object newValue = field.get(newInstance);
-            field.set(oldInstance,newValue);
-        }
     }
 }

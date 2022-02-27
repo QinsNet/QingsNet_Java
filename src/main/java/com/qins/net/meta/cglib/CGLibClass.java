@@ -10,6 +10,8 @@ import com.qins.net.meta.core.MetaClass;
 import com.qins.net.meta.standard.StandardMetaClass;
 import com.qins.net.request.cglib.RequestInterceptor;
 import com.qins.net.util.SerializeUtil;
+import net.sf.cglib.core.ClassGenerator;
+import net.sf.cglib.core.GeneratorStrategy;
 import net.sf.cglib.proxy.Callback;
 import net.sf.cglib.proxy.Enhancer;
 import net.sf.cglib.proxy.Factory;
@@ -17,6 +19,7 @@ import net.sf.cglib.proxy.NoOp;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.HashMap;
 import java.util.Map;
@@ -45,7 +48,7 @@ public class CGLibClass extends StandardMetaClass {
         super(instanceClass);
         //Proxy Instance
         Enhancer enhancer = new Enhancer();
-        enhancer.setSuperclass(getInstanceClass());
+        enhancer.setSuperclass(instanceClass);
         enhancer.setCallbackTypes(new Class[]{NoOp.class, RequestInterceptor.class});
         enhancer.setCallbackFilter(method ->
         {
@@ -74,34 +77,6 @@ public class CGLibClass extends StandardMetaClass {
     }
 
     @Override
-    public <T> T newInstance(String rawInstance) throws NewInstanceException {
-        try {
-            return (T) deserialize(rawInstance);
-        }
-        catch (InstantiationException | IllegalAccessException e) {
-            throw new NewInstanceException(e.getCause());
-        }
-    }
-
-    public static MetaClass getMetaClass(Object instance) throws NotMetaClassException {
-        if(instance instanceof Factory){
-            RequestInterceptor interceptor = (RequestInterceptor) ((Factory) instance).getCallback(1);
-            return interceptor.getRequest().getMetaClass();
-        }
-        else throw new NotMetaClassException(instance);
-    }
-
-    @Override
-    public String serialize(Object instance) throws IllegalAccessException {
-        return SerializeUtil.gson.toJson(serializeAsObject(instance));
-    }
-
-    @Override
-    public Object deserialize(String rawInstance) throws InstantiationException, IllegalAccessException {
-        return deserializeAsObject(SerializeUtil.gson.fromJson(rawInstance,JsonElement.class));
-    }
-
-    @Override
     public Object serializeAsObject(Object instance) throws IllegalAccessException {
         if(instance == null)return null;
         Object rawInstance = super.serializeAsObject(instance);
@@ -115,19 +90,13 @@ public class CGLibClass extends StandardMetaClass {
         if(rawJsonElement == null)return null;
         JsonElement jsonElement = (JsonElement) rawJsonElement;
         QinsMeta qinsMeta = SerializeUtil.gson.fromJson(jsonElement,QinsMeta.class);
-        Factory factory = null;
+        Factory factory;
         if(qinsMeta.getInstance() != null){
-             factory = (Factory) super.deserializeAsObject(SerializeUtil.gson.fromJson((String) qinsMeta.getInstance(),JsonElement.class));
+            factory = (Factory) super.deserializeAsObject(SerializeUtil.gson.fromJson((String) qinsMeta.getInstance(),JsonElement.class));
         }
         else factory = (Factory) proxyClass.newInstance();
         factory.setCallbacks(new Callback[]{NoOp.INSTANCE,new RequestInterceptor(request,qinsMeta.getNodes())});
         return factory;
     }
 
-    @Override
-    public void sync(Object oldInstance, Object newInstance) throws IllegalAccessException {
-        if(newInstance == null)return;
-        super.sync(oldInstance, newInstance);
-        ((Factory)oldInstance).setCallbacks(((Factory)newInstance).getCallbacks());
-    }
 }

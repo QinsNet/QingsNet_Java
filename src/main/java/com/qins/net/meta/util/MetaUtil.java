@@ -9,10 +9,5 @@ import java.util.Arrays;
 import java.util.LinkedList;
 
 public class MetaUtil {
-    public static MetaClass getMetaClass(Object instance) throws NotMetaClassException {
-        if(instance instanceof Factory){
-            return CGLibClass.getMetaClass(instance);
-        }
-        return null;
-    }
+
 }

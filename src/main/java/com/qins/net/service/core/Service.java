@@ -10,6 +10,7 @@ import com.qins.net.core.aop.context.ExceptionEventContext;
 import com.qins.net.core.entity.*;
 import com.qins.net.core.exception.LoadClassException;
 import com.qins.net.core.exception.TrackException;
+import com.qins.net.meta.annotation.Components;
 import com.qins.net.meta.annotation.Meta;
 import com.qins.net.meta.core.*;
 import com.qins.net.service.event.InterceptorEvent;
@@ -40,7 +41,7 @@ public abstract class Service implements IService {
             for (Method method: checkClass.getDeclaredMethods()){
                 if(method.getAnnotation(Meta.class) == null)continue;
                 if((method.getModifiers() & Modifier.ABSTRACT) != 0)continue;
-                MetaMethod metaMethod = new MetaMethod(method);
+                MetaMethod metaMethod = metaClass.getComponents().metaMethod().getConstructor(Method.class, Components.class).newInstance(method,metaClass.getComponents());
                 methods.put(metaMethod.getName(), metaMethod);
             }
             checkClass = checkClass.getSuperclass();

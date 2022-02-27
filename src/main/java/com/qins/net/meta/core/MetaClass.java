@@ -15,6 +15,7 @@ import lombok.Setter;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Type;
 import java.util.*;
 
 @Getter
@@ -28,17 +29,11 @@ public abstract class MetaClass extends BaseClass {
     protected String name;
     protected Class<?> proxyClass;
     protected HashMap<String,String> nodes = new HashMap<>();
+
     protected void linkMetas() {
         for (MetaField metaField : fields.values()){
-            if(metaField.getElementClass() != null){
-                if(metaField.getElementClass() instanceof MetaClass){
-                    metas.put(metaField.name,metaField);
-                }
-            }
-            else {
-                if(metaField.getField().getType().getAnnotation(Meta.class) != null){
-                    metas.put(metaField.name,metaField);
-                }
+            if(metaField.getField().getType().getAnnotation(Meta.class) != null){
+                metas.put(metaField.name,metaField);
             }
         }
     }
@@ -64,5 +59,5 @@ public abstract class MetaClass extends BaseClass {
         }
     }
     public abstract <T> T newInstance(HashMap<String,String> nodes) throws NewInstanceException;
-    public abstract <T> T newInstance(String rawInstance) throws NewInstanceException;
+    public abstract <T> T newInstance(String rawInstance) throws NewInstanceException, InstantiationException, IllegalAccessException;
 }

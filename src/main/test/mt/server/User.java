@@ -20,11 +20,11 @@ public abstract class User{
     private String password;
     @Meta
     private Integer apiToken;
-    @Meta(element = Package.class)
+    @Meta
     private ArrayList<Package> packages;
 
     @Meta("Server_1")
-    public boolean addPack(@Meta Package aPackage, ArrayList<String> hash){
+    public boolean addPack(@Meta Package aPackage, @Meta ArrayList<String> hash){
         hash.add("nihao");
         packages.add(aPackage);
         return true;

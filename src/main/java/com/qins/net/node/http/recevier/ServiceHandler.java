@@ -74,13 +74,14 @@ public class ServiceHandler extends SimpleChannelInboundHandler<FullHttpRequest>
                 if(params != null)requestMeta.getParams().putAll(params);
             }
             else {
-                send(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,HttpResponseStatus.OK, Unpooled.copiedBuffer((String.format("%s请求不支持", req.method())),StandardCharsets.UTF_8)));
+                send(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,HttpResponseStatus.EXPECTATION_FAILED, Unpooled.copiedBuffer((String.format("%s请求不支持", req.method())),StandardCharsets.UTF_8)));
                 return;
             }
             if(requestMeta.getParams() == null)requestMeta.setParams(new HashMap<>());
-            MetaClass metaClass = classLoader.getMetaClass(context.getMappings().pop());
+            MetaClass metaClass = classLoader.getMetas().get(context.getMappings().pop());
             if(metaClass == null){
-                send(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,HttpResponseStatus.OK, Unpooled.copiedBuffer((String.format("%s请求类未找到", requestMeta.getMapping())),StandardCharsets.UTF_8)));
+                send(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,HttpResponseStatus.EXPECTATION_FAILED, Unpooled.copiedBuffer((String.format("%s请求类未找到", requestMeta.getMapping())),StandardCharsets.UTF_8)));
+                ctx.close();
                 return;
             }
             es.submit(() -> {

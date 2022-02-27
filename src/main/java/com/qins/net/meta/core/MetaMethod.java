@@ -1,7 +1,9 @@
 package com.qins.net.meta.core;
 
+import com.qins.net.core.boot.MetaApplication;
 import com.qins.net.core.exception.TrackException;
 import com.qins.net.core.exception.LoadClassException;
+import com.qins.net.meta.annotation.Components;
 import com.qins.net.meta.annotation.Meta;
 import com.qins.net.request.annotation.MethodPact;
 import com.qins.net.util.AnnotationUtil;
@@ -11,6 +13,7 @@ import lombok.Setter;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -18,7 +21,7 @@ import java.util.List;
 
 @Getter
 @Setter
-public class MetaMethod {
+public abstract class MetaMethod {
     private Method method;
     private String name;
     private List<String> nodes;
@@ -26,7 +29,7 @@ public class MetaMethod {
     private HashMap<String, MetaParameter> metaParameters;
     private BaseClass metaReturn;
     private MethodPact methodPact;
-    public MetaMethod(Method method) throws LoadClassException, NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException, TrackException {
+    public MetaMethod(Method method,Components components) throws LoadClassException, NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException, TrackException {
         this.method = method;
         this.methodPact = AnnotationUtil.getMethodPact(method);
         Meta meta = method.getAnnotation(Meta.class);
@@ -39,16 +42,16 @@ public class MetaMethod {
             nodes = new ArrayList<>(Arrays.asList(meta.nodes()));
         }
         else throw new TrackException(TrackException.ExceptionCode.Runtime, String.format("%s方法的@Meta注解未定义node值", method.getName()));
-        MetaClassLoader metaClassLoader = (MetaClassLoader) Thread.currentThread().getContextClassLoader();
         if(method.getReturnType() != void.class && method.getReturnType() != Void.class){
-            metaReturn = metaClassLoader.loadClass(method.getReturnType());
+            Type returnType = method.getGenericReturnType();
+            metaReturn = MetaApplication.getContext().getMetaClassLoader().loadClass(returnType.getTypeName(),method.getReturnType());
         }
         parameters = new HashMap<>();
         metaParameters = new HashMap<>();
         for (Parameter parameter : method.getParameters()){
-            MetaParameter metaParameter = metaClassLoader.loadClass(parameter.getType()).getComponents().metaParameter()
-                    .getConstructor(Parameter.class)
-                    .newInstance(parameter);
+            MetaParameter metaParameter = components.metaParameter()
+                    .getConstructor(Parameter.class,Components.class)
+                    .newInstance(parameter,components);
             parameters.put(metaParameter.getName(),metaParameter);
             Meta paramMeta = parameter.getAnnotation(Meta.class);
             if(paramMeta != null){

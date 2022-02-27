@@ -17,15 +17,12 @@ public class Client {
         User user = MetaApplication.create(User.class);
         user.setUsername("m839336369");
         user.setPassword("password");
-        user.setPackages(new ArrayList<>());
-        user.getPackages().add(MetaApplication.create(Package.class));
-        user.getPackages().get(0).setName("asd");
-        System.out.println(SerializeUtil.gson.toJson(user,User.class));
         if(user.login()){
             user.newPack();
             Package aPackage = MetaApplication.create(Package.class);
             aPackage.name = "C背包";
-            user.addPack(aPackage,new ArrayList<>());
+            ArrayList<String> arrayList = new ArrayList<>();
+            user.addPack(aPackage,arrayList);
             user.hello();
         }
     }
