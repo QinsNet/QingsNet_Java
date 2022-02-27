@@ -6,11 +6,11 @@ import lombok.Setter;
 
 @Getter
 @Setter
-@Meta
+@Meta(nodes = "User")
 public abstract class Package {
     @Meta
     String name;
-    @Meta("User")
+    @Meta
     public boolean pack(){
         if(name != null){
             System.out.println(name + " Pack!!!");

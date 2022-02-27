@@ -14,17 +14,14 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 
 @Getter
 @Setter
 public abstract class MetaMethod {
     private Method method;
     private String name;
-    private List<String> nodes;
+    private Set<String> nodes;
     private HashMap<String, MetaParameter> parameters;
     private HashMap<String, MetaParameter> metaParameters;
     private BaseClass metaReturn;
@@ -33,15 +30,11 @@ public abstract class MetaMethod {
         this.method = method;
         this.methodPact = AnnotationUtil.getMethodPact(method);
         Meta meta = method.getAnnotation(Meta.class);
-        this.name = "".equals(meta.name()) ? method.getName() : meta.name();
-        nodes = new ArrayList<>();
-        if(!"".equals(meta.value())){
-            nodes.add(meta.value());
+        this.name = "".equals(meta.value()) ? method.getName() : meta.value();
+        if(meta.nodes().length != 0){
+            nodes = new HashSet<>(Arrays.asList(meta.nodes()));
         }
-        else if(meta.nodes().length != 0){
-            nodes = new ArrayList<>(Arrays.asList(meta.nodes()));
-        }
-        else throw new TrackException(TrackException.ExceptionCode.Runtime, String.format("%s方法的@Meta注解未定义node值", method.getName()));
+        else nodes = new HashSet<>();
         if(method.getReturnType() != void.class && method.getReturnType() != Void.class){
             Type returnType = method.getGenericReturnType();
             metaReturn = MetaApplication.getContext().getMetaClassLoader().loadClass(returnType.getTypeName(),method.getReturnType());

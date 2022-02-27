@@ -19,7 +19,7 @@ public abstract class MetaParameter{
     protected String name;
     public MetaParameter(Parameter parameter, Components components) throws LoadClassException {
         Meta meta = parameter.getAnnotation(Meta.class);
-        name = meta == null || "".equals(meta.name()) ? parameter.getName() : meta.name();
+        name = meta == null || "".equals(meta.value()) ? parameter.getName() : meta.value();
         this.parameter = parameter;
         this.baseClass = MetaApplication.getContext().getMetaClassLoader().loadClass(parameter.getParameterizedType().getTypeName(),parameter.getType());
         if(parameter.getParameterizedType() instanceof ParameterizedType){

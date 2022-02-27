@@ -6,8 +6,6 @@ import com.qins.net.meta.annotation.Meta;
 import lombok.Getter;
 
 import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
 import java.util.HashMap;
 
 @Getter
@@ -41,7 +39,7 @@ public class MetaClassLoader extends ClassLoader{
         try {
             Meta meta = instanceClass.getAnnotation(Meta.class);
             if(meta != null){
-                String name = "".equals(meta.name()) ? instanceClass.getSimpleName() : meta.name();
+                String name = "".equals(meta.value()) ? instanceClass.getSimpleName() : meta.value();
                 if(metas.containsKey(name))return metas.get(name);
                 Components components = instanceClass.getAnnotation(Components.class) != null ? instanceClass.getAnnotation(Components.class) : Components.class.getAnnotation(Components.class);
                 BaseClass baseClass = components.metaClass().getConstructor(Class.class).newInstance(instanceClass);

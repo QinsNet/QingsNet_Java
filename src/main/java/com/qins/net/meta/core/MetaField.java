@@ -21,7 +21,7 @@ public abstract class MetaField {
 
     public MetaField(Field field,Components components) throws LoadClassException {
         Meta meta = field.getAnnotation(Meta.class);
-        name = "".equals(meta.name()) ? field.getName() : meta.name();
+        name = "".equals(meta.value()) ? field.getName() : meta.value();
         this.field = field;
         this.baseClass = MetaApplication.getContext().getMetaClassLoader().loadClass(field.getGenericType().getTypeName(),field.getType());
         if(field.getGenericType() instanceof ParameterizedType){

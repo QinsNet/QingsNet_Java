@@ -3,7 +3,6 @@ package com.qins.net.meta.core;
 import com.qins.net.core.aop.EventManager;
 import com.qins.net.core.boot.MetaApplication;
 import com.qins.net.core.exception.NewInstanceException;
-import com.qins.net.core.exception.NotMetaClassException;
 import com.qins.net.core.instance.InstanceManager;
 import com.qins.net.meta.annotation.Meta;
 import com.qins.net.node.annotation.NodeMapping;
@@ -15,7 +14,6 @@ import lombok.Setter;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Type;
 import java.util.*;
 
 @Getter
@@ -29,6 +27,7 @@ public abstract class MetaClass extends BaseClass {
     protected String name;
     protected Class<?> proxyClass;
     protected HashMap<String,String> nodes = new HashMap<>();
+    protected HashSet<String> defaultNodes = new HashSet<>();
 
     protected void linkMetas() {
         for (MetaField metaField : fields.values()){
@@ -42,7 +41,13 @@ public abstract class MetaClass extends BaseClass {
         super(instanceClass);
         Meta meta = instanceClass.getAnnotation(Meta.class);
         if(meta != null){
-            name = "".equals(meta.name()) ? instanceClass.getSimpleName() : meta.name();
+            name = "".equals(meta.value()) ? instanceClass.getSimpleName() : meta.value();
+            for (Map.Entry<String,String> item : MetaApplication.getContext().getNodes().entrySet()){
+                nodes.putIfAbsent(item.getKey(),item.getValue());
+            }
+            if(meta.nodes().length != 0){
+                defaultNodes = new HashSet<>(Arrays.asList(meta.nodes()));
+            }
             service = components.service().getConstructor(MetaClass.class).newInstance(this);
             request = components.request().getConstructor(MetaClass.class).newInstance(this);
             for (Annotation annotations : instanceClass.getAnnotations()){
@@ -51,9 +56,6 @@ public abstract class MetaClass extends BaseClass {
                         nodes.put(nodeMapping.name(),nodeMapping.host());
                     }
                 }
-            }
-            for (Map.Entry<String,String> item : MetaApplication.getContext().getNodes().entrySet()){
-                nodes.putIfAbsent(item.getKey(),item.getValue());
             }
             linkMetas();
         }

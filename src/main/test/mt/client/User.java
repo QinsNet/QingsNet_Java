@@ -1,16 +1,14 @@
 package mt.client;
 
-import com.google.gson.reflect.TypeToken;
 import com.qins.net.meta.annotation.Meta;
 import lombok.Getter;
 import lombok.Setter;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 
 @Getter
 @Setter
-@Meta
+@Meta(nodes = "Server_1")
 public abstract class User{
     @Meta
     private String username;
@@ -20,12 +18,12 @@ public abstract class User{
     private Integer apiToken;
     @Meta
     private ArrayList<Package> packages;
-    @Meta("Server_1")
+    @Meta
     public abstract boolean login();
-    @Meta("Server_2")
+    @Meta
     public abstract boolean newPack();
     @Meta(nodes = {"Server_2","Server1"})
     public abstract boolean addPack(@Meta Package aPackage, ArrayList<String> hash);
-    @Meta("Server_2")
+    @Meta(nodes = "Server_2")
     public abstract void hello();
 }

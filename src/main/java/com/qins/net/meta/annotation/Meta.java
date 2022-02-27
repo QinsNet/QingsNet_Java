@@ -7,6 +7,5 @@ import java.lang.annotation.*;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Meta {
     String value() default "";
-    String name() default "";
     String[] nodes() default {};
 }

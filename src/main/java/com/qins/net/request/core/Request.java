@@ -30,10 +30,11 @@ import lombok.Getter;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-
+import java.util.stream.Collectors;
 
 
 public abstract class Request implements IRequest {
@@ -56,6 +57,7 @@ public abstract class Request implements IRequest {
                     if((method.getModifiers() & Modifier.ABSTRACT) == 0)continue;
                     MetaMethod metaMethod = metaClass.getComponents().metaMethod().getConstructor(Method.class, Components.class).newInstance(method,metaClass.getComponents());
                     methods.put(metaMethod.getName(), metaMethod);
+                    metaMethod.getNodes().addAll(metaClass.getDefaultNodes());
                 }
                 checkClass = checkClass.getSuperclass();
             }
@@ -64,20 +66,27 @@ public abstract class Request implements IRequest {
             metaClass.onException(e);
         }
     }
-
+    public NodeAddress searchNode(HashMap<String, String> nodes,MetaMethod metaMethod) throws NotFoundNodeException {
+        //未来在这里配置注册中心系统
+        for (String node : metaMethod.getNodes()){
+            if(nodes.containsKey(node)){
+                return new NodeAddress(nodes.get(node));
+            }
+        }
+        throw new NotFoundNodeException(metaClass.getName(),metaMethod.getName());
+    }
     @Override
     public Object intercept(Object instance, Method method, Object[] args, HashMap<String, String> nodes) throws Exception {
         RequestContext context = new RequestContext();
         try {
             Meta meta = method.getAnnotation(Meta.class);
-            MetaMethod metaMethod = methods.get("".equals(meta.name()) ? method.getName() : meta.name());
+            MetaMethod metaMethod = methods.get("".equals(meta.value()) ? method.getName() : meta.value());
             Object result = null;
             context.setInstance(instance)
                     .setMetaMethod(metaMethod)
                     .setParams(new HashMap<>());
-            String address = nodes.get(metaMethod.getNodes().get(0));
-            if(address == null)throw new NotFoundNodeException(metaClass.getName(),metaMethod.getName());
-            context.setRemote(new NodeAddress(address))
+
+            context.setRemote(searchNode(nodes,metaMethod))
                     .setRequestMeta(prepareRequestMeta(metaMethod,instance));
 
 
