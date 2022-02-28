@@ -2,10 +2,7 @@ package com.qins.net.meta.annotation;
 
 import com.qins.net.meta.cglib.CGLibClass;
 import com.qins.net.meta.core.*;
-import com.qins.net.meta.standard.StandardBaseClass;
-import com.qins.net.meta.standard.StandardMetaField;
-import com.qins.net.meta.standard.StandardMetaMethod;
-import com.qins.net.meta.standard.StandardMetaParameter;
+import com.qins.net.meta.standard.*;
 import com.qins.net.request.core.Request;
 import com.qins.net.request.standard.StandardRequest;
 import com.qins.net.service.core.Service;
@@ -18,7 +15,7 @@ import java.lang.annotation.*;
 @Retention(RetentionPolicy.RUNTIME)
 @Components()
 public @interface Components {
-    Class<? extends BaseClass> baseClass() default StandardBaseClass.class;
+    Class<? extends BaseClass> baseClass() default ReferenceBaseClass.class;
     Class<? extends MetaField> metaField() default StandardMetaField.class;
     Class<? extends MetaMethod> metaMethod() default StandardMetaMethod.class;
     Class<? extends MetaParameter> metaParameter() default StandardMetaParameter.class;

@@ -7,17 +7,18 @@ import lombok.Setter;
 import lombok.experimental.Accessors;
 
 import java.util.HashMap;
+import java.util.Map;
 
 @Getter
 @Setter
 @AllArgsConstructor
 @Accessors(chain = true)
-public class QinsMeta {
+public class NetMeta {
     @Meta
     Object instance;
     @Meta
-    HashMap<String,String> nodes;
-    public QinsMeta(){
+    Map<String,String> nodes;
+    public NetMeta(){
 
     }
 }

@@ -1,5 +1,7 @@
 package com.qins.net.service.core;
 
+import com.qins.net.core.entity.RequestMeta;
+
 public interface IService{
-    Object receive(ServiceContext context);
+    Object receive(RequestMeta requestMeta);
 }

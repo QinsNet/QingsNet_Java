@@ -13,10 +13,14 @@ import java.util.Map;
 @Setter
 @Accessors(chain = true)
 public class RequestMeta {
+    @Meta
     private String protocol = "Sync-Request-1.0";
+    @Meta
     private String mapping;
+    @Meta
     private Map<String,String> params;
+    @Meta
+    private Map<String,String> references;
+    @Meta
     private String instance = "";
-    private String host;
-    private String port;
 }

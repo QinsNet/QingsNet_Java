@@ -24,8 +24,7 @@ public abstract class User{
     private ArrayList<Package> packages;
 
     @Meta
-    public boolean addPack(@Meta Package aPackage, @Meta ArrayList<String> hash){
-        hash.add("nihao");
+    public Boolean addPack(@Meta Package aPackage){
         packages.add(aPackage);
         return true;
     }
@@ -41,8 +40,7 @@ public abstract class User{
     public boolean login() throws NewInstanceException {
         if("m839336369".equals(username) && "password".equals(password)){
             this.apiToken = 1234;
-            Package aPackage = MetaApplication.create(Package.class);
-            aPackage.pack();
+            this.password = "***";
             return true;
         }
         else return false;

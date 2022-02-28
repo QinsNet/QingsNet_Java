@@ -1,8 +1,5 @@
 package com.qins.net.meta.core;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 import com.qins.net.meta.annotation.Components;
 import com.qins.net.core.exception.TrackException;
 import com.qins.net.core.entity.TrackLog;
@@ -13,9 +10,6 @@ import lombok.Setter;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -38,28 +32,12 @@ public abstract class BaseClass {
         }
     }
 
-    public abstract Object serializeAsObject(Object instance) throws IllegalAccessException;
-    public abstract String serialize(Object instance) throws IllegalAccessException;
-    public abstract Object deserializeAsObject(Object rawInstance) throws InstantiationException, IllegalAccessException;
-    public abstract Object deserialize(String rawInstance) throws InstantiationException, IllegalAccessException;
+    public abstract Object serializeAsObject(Object instance, MetaReferences references, Map<String,String> pools) throws IllegalAccessException;
+    public abstract String serialize(Object instance, MetaReferences references, Map<String,String> pools) throws IllegalAccessException;
+    public abstract Object deserializeAsObject(Object jsonElement, MetaReferences references, Map<String,String> pools) throws InstantiationException, IllegalAccessException;
+    public abstract Object deserialize(String reference, MetaReferences references, Map<String,String> pools) throws InstantiationException, IllegalAccessException;
 
-    public void sync(Object oldInstance,Object newInstance) throws IllegalAccessException {
-        if(generics != null && oldInstance instanceof Collection && newInstance instanceof Collection){
-            ((Collection<?>) oldInstance).clear();
-            ((Collection<?>) oldInstance).addAll((Collection) newInstance);
-        }
-        else if(generics != null && oldInstance instanceof Map && newInstance instanceof Map){
-            ((Map<?, ?>) oldInstance).clear();
-            ((Map<?, ?>) oldInstance).putAll((Map) newInstance);
-        }
-        else if(fields.size() != 0){
-            for (MetaField metaField : fields.values()){
-                Field field = metaField.getField();
-                Object newValue = field.get(newInstance);
-                field.set(oldInstance,newValue);
-            }
-        }
-    }
+    public abstract void sync(Object oldInstance,Object newInstance,Object rawInstance,MetaReferences references,Map<String,String> pools) throws IllegalAccessException, InstantiationException;
 
     public void onException(TrackException.ExceptionCode code, String message) {
         onException(new TrackException(code,message));

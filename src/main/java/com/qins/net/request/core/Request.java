@@ -17,6 +17,7 @@ import com.qins.net.meta.annotation.Meta;
 import com.qins.net.meta.core.MetaClass;
 import com.qins.net.meta.core.MetaMethod;
 import com.qins.net.meta.core.MetaParameter;
+import com.qins.net.meta.core.MetaReferences;
 import com.qins.net.node.core.Node;
 import com.qins.net.request.aop.annotation.FailEvent;
 import com.qins.net.request.aop.context.FailEventContext;
@@ -30,11 +31,9 @@ import lombok.Getter;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 
 
 public abstract class Request implements IRequest {
@@ -66,7 +65,7 @@ public abstract class Request implements IRequest {
             metaClass.onException(e);
         }
     }
-    public NodeAddress searchNode(HashMap<String, String> nodes,MetaMethod metaMethod) throws NotFoundNodeException {
+    public NodeAddress searchNode(Map<String, String> nodes,MetaMethod metaMethod) throws NotFoundNodeException {
         //未来在这里配置注册中心系统
         for (String node : metaMethod.getNodes()){
             if(nodes.containsKey(node)){
@@ -75,19 +74,20 @@ public abstract class Request implements IRequest {
         }
         throw new NotFoundNodeException(metaClass.getName(),metaMethod.getName());
     }
-    @Override
-    public Object intercept(Object instance, Method method, Object[] args, HashMap<String, String> nodes) throws Exception {
+
+    public Object intercept(Object instance, Method method, Object[] args, Map<String, String> nodes) throws Exception {
         RequestContext context = new RequestContext();
         try {
             Meta meta = method.getAnnotation(Meta.class);
             MetaMethod metaMethod = methods.get("".equals(meta.value()) ? method.getName() : meta.value());
             Object result = null;
             context.setInstance(instance)
+                    .setReferences(new MetaReferences())
                     .setMetaMethod(metaMethod)
                     .setParams(new HashMap<>());
 
             context.setRemote(searchNode(nodes,metaMethod))
-                    .setRequestMeta(prepareRequestMeta(metaMethod,instance));
+                    .setRequestMeta(prepareRequestMeta(context,metaMethod,instance));
 
 
             int i = 0;
@@ -95,7 +95,7 @@ public abstract class Request implements IRequest {
                 String name = keyValue.getKey();
                 MetaParameter parameter = keyValue.getValue();
                 context.getParams().put(name,args[i]);
-                context.getRequestMeta().getParams().put(name,parameter.getBaseClass().serialize(args[i]));
+                context.getRequestMeta().getParams().put(name,parameter.getBaseClass().serialize(args[i],context.getReferences(),context.getRequestMeta().getReferences()));
                 i++;
             }
             beforeEvent(method,context);
@@ -115,7 +115,7 @@ public abstract class Request implements IRequest {
                         errorEvent(method,context, responseMeta.getException());
                     }
                     if(return_type != void.class && return_type != Void.class){
-                        result = metaMethod.getMetaReturn().deserialize(responseMeta.getResult());
+                        result = metaMethod.getMetaReturn().deserialize(responseMeta.getResult(),context.getReferences(),context.getResponseMeta().getReferences());
                     }
                     successEvent(method,context, responseMeta);
                 }
@@ -136,10 +136,7 @@ public abstract class Request implements IRequest {
 
     public void receive(RequestContext context) {
         try {
-            Object oldInstance = context.getInstance();
-            Object newInstance = metaClass.newInstance(context.getResponseMeta().getInstance());
-            metaClass.sync(oldInstance,newInstance);
-
+            metaClass.deserialize(context.getResponseMeta().getInstance(),context.getReferences(),context.getResponseMeta().getReferences());
             if(context.getResponseMeta().getParams() != null){
                 for (Map.Entry<String,String> keyValue:context.getResponseMeta().getParams().entrySet()){
                     String name = keyValue.getKey();
@@ -152,8 +149,7 @@ public abstract class Request implements IRequest {
                     if(oldParam == null){
                         throw new TrackException(TrackException.ExceptionCode.NotFoundParameter,String.format("%s从远程提供方同步时，%s方法的%s参数未找到", metaClass.getName(),context.getMetaMethod().getName(),name));
                     }
-                    Object newParam = metaParameter.getBaseClass().deserialize(rawParam);
-                    metaParameter.getBaseClass().sync(oldParam,newParam);
+                    metaParameter.getBaseClass().deserialize(rawParam, context.getReferences(), context.getResponseMeta().getReferences());
                 }
             }
             synchronized (context){
@@ -164,11 +160,12 @@ public abstract class Request implements IRequest {
             metaClass.onException(e);
         }
     }
-    public RequestMeta prepareRequestMeta(MetaMethod metaMethod,Object instance) throws IllegalAccessException {
+    public RequestMeta prepareRequestMeta(RequestContext context, MetaMethod metaMethod, Object instance) throws IllegalAccessException {
         RequestMeta requestMeta = new RequestMeta();
         requestMeta.setMapping(metaClass.getName() + "/" + metaMethod.getName());
         requestMeta.setParams(new HashMap<>());
-        requestMeta.setInstance(metaClass.serialize(instance));
+        requestMeta.setReferences(new HashMap<>());
+        requestMeta.setInstance(metaClass.serialize(instance, context.getReferences(), requestMeta.getReferences()));
         return requestMeta;
     }
 

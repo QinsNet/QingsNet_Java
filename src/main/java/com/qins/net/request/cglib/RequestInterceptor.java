@@ -10,6 +10,7 @@ import net.sf.cglib.proxy.MethodProxy;
 
 import java.lang.reflect.Method;
 import java.util.HashMap;
+import java.util.Map;
 
 @AllArgsConstructor
 public class RequestInterceptor implements MethodInterceptor {
@@ -18,7 +19,7 @@ public class RequestInterceptor implements MethodInterceptor {
     private Request request;
     @Getter
     @Setter
-    private HashMap<String,String> nodes;
+    private Map<String,String> nodes;
     @Override
     public Object intercept(Object o, Method method, Object[] args, MethodProxy methodProxy) throws Exception {
         return request.intercept(o,method,args,nodes);

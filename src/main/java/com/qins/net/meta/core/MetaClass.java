@@ -60,6 +60,8 @@ public abstract class MetaClass extends BaseClass {
             linkMetas();
         }
     }
-    public abstract <T> T newInstance(HashMap<String,String> nodes) throws NewInstanceException;
-    public abstract <T> T newInstance(String rawInstance) throws NewInstanceException, InstantiationException, IllegalAccessException;
+    public abstract <T> T newInstance(Map<String,String> nodes) throws NewInstanceException;
+    public <T> T newInstance(String rawInstance,MetaReferences references,Map<String,String> pools) throws NewInstanceException, InstantiationException, IllegalAccessException {
+        return (T) deserialize(rawInstance,references,pools);
+    }
 }

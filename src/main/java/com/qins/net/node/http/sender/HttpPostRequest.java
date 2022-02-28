@@ -3,6 +3,7 @@ package com.qins.net.node.http.sender;
 import com.qins.net.core.console.Console;
 import com.qins.net.core.entity.RequestMeta;
 import com.qins.net.core.entity.ResponseMeta;
+import com.qins.net.core.exception.ResponseException;
 import com.qins.net.node.core.Node;
 import com.qins.net.util.Http2Util;
 import com.qins.net.util.SerializeUtil;
@@ -47,13 +48,8 @@ public class HttpPostRequest extends Node {
                     metaClass.getRequest().receive(context);
                     return;
                 }
-                ResponseMeta responseMeta = new ResponseMeta()
-                        .setProtocol(Http2Util.urlDecode(response.headers().get("protocol"),"UTF-8"))
-                        .setException(Http2Util.urlDecode(response.headers().get("exception"),"UTF-8"))
-                        .setInstance(Http2Util.urlDecode(response.headers().get("instance"),"UTF-8"))
-                        .setParams(SerializeUtil.gson.fromJson(Http2Util.urlDecode(response.headers().get("params"),"UTF-8"),HashMap.class))
-                        .setResult(response.body().string());
-                if(context.getParams() == null)context.setParams(new HashMap<>());
+                ResponseMeta responseMeta = SerializeUtil.gson.fromJson(response.body().string(),ResponseMeta.class);
+                if(responseMeta == null)responseMeta = new ResponseMeta(new ResponseException(ResponseException.ExceptionCode.Common,"接收到空数据"));
                 context.setResponseMeta(responseMeta);
                 metaClass.getRequest().receive(context);
             }
@@ -62,34 +58,26 @@ public class HttpPostRequest extends Node {
 
     @Override
     public boolean send(Object data,int timeout) {
-        client = new OkHttpClient.Builder().callTimeout(timeout, TimeUnit.MILLISECONDS).build();
+        client = new OkHttpClient.Builder().callTimeout(timeout, TimeUnit.MILLISECONDS).readTimeout(timeout,TimeUnit.MILLISECONDS).build();
         if(data instanceof RequestMeta){
             Console.debug(data.toString());
             RequestMeta requestMeta = (RequestMeta) data;
-            try {
-                Request.Builder request =
-                        new Request.Builder()
-                        .url(new HttpUrl.Builder()
-                                .scheme("http")
-                                .host(context.getRemote().getHost())
-                                .port(context.getRemote().getPort())
-                                .addPathSegments(requestMeta.getMapping())
-                                .build())
-                        .addHeader(HttpHeaderNames.CONTENT_TYPE.toString(), HttpHeaderValues.APPLICATION_JSON.toString())
-                        .addHeader("protocol", requestMeta.getProtocol());
-                if(requestMeta.getParams() != null){
-                    RequestBody requestBody = RequestBody.create(SerializeUtil.gson.toJson(requestMeta.getParams()).getBytes(StandardCharsets.UTF_8));
-                    request.post(requestBody);
-                }
-                if(requestMeta.getInstance() != null){
-                    request.addHeader("instance", URLEncoder.encode(requestMeta.getInstance(),"UTF-8"));
-                }
-                send(request.build());
-                return true;
-            } catch (UnsupportedEncodingException e) {
-                metaClass.onException(e);
-                return false;
+            Request.Builder request =
+                    new Request.Builder()
+                            .url(new HttpUrl.Builder()
+                                    .scheme("http")
+                                    .host(context.getRemote().getHost())
+                                    .port(context.getRemote().getPort())
+                                    .addPathSegments(requestMeta.getMapping())
+                                    .build())
+                            .addHeader(HttpHeaderNames.CONTENT_TYPE.toString(), HttpHeaderValues.APPLICATION_JSON.toString())
+                            .addHeader("protocol", requestMeta.getProtocol());
+            if(requestMeta.getParams() != null){
+                RequestBody requestBody = RequestBody.create(SerializeUtil.gson.toJson(requestMeta).getBytes(StandardCharsets.UTF_8));
+                request.post(requestBody);
             }
+            send(request.build());
+            return true;
         }
         return false;
     }

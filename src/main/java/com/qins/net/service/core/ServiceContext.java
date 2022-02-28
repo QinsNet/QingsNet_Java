@@ -2,6 +2,7 @@ package com.qins.net.service.core;
 
 import com.qins.net.core.entity.NodeAddress;
 import com.qins.net.core.entity.RequestMeta;
+import com.qins.net.meta.core.MetaReferences;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
@@ -16,5 +17,6 @@ public class ServiceContext {
     private Object instance;
     private RequestMeta requestMeta;
     private HashMap<String,Object> params;
-    private LinkedList<String> mappings;
+    private String mapping;
+    private MetaReferences references;
 }

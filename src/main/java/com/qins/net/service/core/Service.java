@@ -82,19 +82,19 @@ public abstract class Service implements IService {
         }
         else throw e;
     }
-    public Object receive(ServiceContext context) {
-        RequestMeta requestMeta = context.getRequestMeta();
+    public Object receive(RequestMeta requestMeta) {
+        ServiceContext context = new ServiceContext().setReferences(new MetaReferences()).setRequestMeta(requestMeta).setMapping(requestMeta.getMapping().split("/")[2]);
         try {
-            MetaMethod metaMethod = methods.get(context.getMappings().pop());
+            MetaMethod metaMethod = methods.get(context.getMapping());
             if(metaMethod == null){
                 throw new ResponseException(ResponseException.ExceptionCode.NotFoundMethod, String.format("Mapping:%s 未找到",requestMeta.getMapping()));
             }
-            context.setInstance(metaClass.newInstance(context.getRequestMeta().getInstance()));
+            context.setInstance(metaClass.newInstance(context.getRequestMeta().getInstance(),context.getReferences(),requestMeta.getReferences()));
             if(onInterceptor(requestMeta)){
                 context.setParams(new HashMap<>());
                 for (MetaParameter metaParameter : metaMethod.getParameters().values()){
                     String rawParam = context.getRequestMeta().getParams().get(metaParameter.getName());
-                    Object param = metaParameter.getBaseClass().deserialize(rawParam);
+                    Object param = metaParameter.getBaseClass().deserialize(rawParam,context.getReferences(),requestMeta.getReferences());
                     context.getParams().put(metaParameter.getName(),param);
                 }
                 //Before
@@ -115,16 +115,19 @@ public abstract class Service implements IService {
                 //After
                 afterEvent(metaMethod.getMethod(),context,localResult);
                 HashMap<String,String> syncParams = new HashMap<>();
+                HashMap<String,String> references = new HashMap<>();
                 for(MetaParameter metaParameter : metaMethod.getMetaParameters().values()){
                     Object param = context.getParams().get(metaParameter.getName());
-                    syncParams.put(metaParameter.getName(),metaParameter.getBaseClass().serialize(param));
+                    syncParams.put(metaParameter.getName(),metaParameter.getBaseClass().serialize(param,context.getReferences(),references));
                 }
                 //Return
                 BaseClass metaReturn = metaMethod.getMetaReturn();
+
                 if(metaReturn != null){
-                    return new ResponseMeta(metaClass.serialize(context.getInstance()),syncParams,metaReturn.serialize(localResult));
+                    String returnResult = metaReturn.serialize(localResult,context.getReferences(),references);
+                    return new ResponseMeta(metaClass.serialize(context.getInstance(),context.getReferences(),references),syncParams,returnResult,references);
                 }
-                else return new ResponseMeta(metaClass.serialize(context.getInstance()),syncParams,null);
+                else return new ResponseMeta(metaClass.serialize(context.getInstance(),context.getReferences(),references),syncParams,null,references);
             }
             else throw new ResponseException(ResponseException.ExceptionCode.Intercepted,"请求已被拦截",null);
         }

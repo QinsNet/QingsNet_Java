@@ -52,40 +52,27 @@ public class ServiceHandler extends SimpleChannelInboundHandler<FullHttpRequest>
     protected void channelRead0(ChannelHandlerContext ctx, FullHttpRequest req) throws Exception {
         try {
             URI uri = new URI(req.uri());
-            //处理请求头,生成请求元数据
-            RequestMeta requestMeta = new RequestMeta()
-                    .setMapping(uri.getPath())
-                    .setProtocol(req.headers().get("protocol"));
-            if (req.headers().contains("instance")){
-                requestMeta.setInstance(URLDecoder.decode(req.headers().get("instance"),"UTF-8"));
-            }
-            ServiceContext context = new ServiceContext();
-            context.setMappings(new LinkedList<>(Arrays.asList(requestMeta.getMapping().split("/"))));
-            if(!context.getMappings().isEmpty()) context.getMappings().removeFirst();
-            context.setRequestMeta(requestMeta);
-
-            //获取参数
-            requestMeta.setParams(Http2Util.getURLParamsFromChannel(req));
+            RequestMeta requestMeta;
             if (req.method() == HttpMethod.GET) {
-
+                send(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,HttpResponseStatus.METHOD_NOT_ALLOWED, Unpooled.copiedBuffer("不支持 Get方法",StandardCharsets.UTF_8)));
+                return;
             }
             else if (req.method() == HttpMethod.POST) {
-                Map<String ,String > params = Http2Util.getBodyParamsChannel(req);
-                if(params != null)requestMeta.getParams().putAll(params);
+                requestMeta = SerializeUtil.gson.fromJson(req.content().toString(StandardCharsets.UTF_8),RequestMeta.class);
             }
             else {
                 send(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,HttpResponseStatus.EXPECTATION_FAILED, Unpooled.copiedBuffer((String.format("%s请求不支持", req.method())),StandardCharsets.UTF_8)));
                 return;
             }
+            requestMeta.setMapping(uri.getPath()).setProtocol(req.headers().get("protocol"));
             if(requestMeta.getParams() == null)requestMeta.setParams(new HashMap<>());
-            MetaClass metaClass = classLoader.getMetas().get(context.getMappings().pop());
+            MetaClass metaClass = classLoader.getMetas().get(requestMeta.getMapping().split("/")[1]);
             if(metaClass == null){
                 send(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,HttpResponseStatus.EXPECTATION_FAILED, Unpooled.copiedBuffer((String.format("%s请求类未找到", requestMeta.getMapping())),StandardCharsets.UTF_8)));
-                ctx.close();
                 return;
             }
             es.submit(() -> {
-                send(metaClass.getService().receive(context));
+                send(metaClass.getService().receive(requestMeta));
             });
         }
         catch (Exception e){
@@ -107,21 +94,8 @@ public class ServiceHandler extends SimpleChannelInboundHandler<FullHttpRequest>
         }
         else if(data instanceof ResponseMeta){
             ResponseMeta responseMeta = (ResponseMeta) data;
-            DefaultFullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,HttpResponseStatus.OK,Unpooled.copiedBuffer(SerializeUtil.gson.toJson(responseMeta.getResult()).getBytes(StandardCharsets.UTF_8)));
-            response.headers().set("protocol",responseMeta.getProtocol());
-            try {
-                if(responseMeta.getException() != null){
-                    response.headers().set("exception",URLEncoder.encode(responseMeta.getException(),"UTF-8"));
-                }
-                else {
-                    response.headers().set("instance", URLEncoder.encode(responseMeta.getInstance(),"UTF-8"));
-                    response.headers().set("params", URLEncoder.encode(SerializeUtil.gson.toJson(responseMeta.getParams()),"UTF-8"));
-                }
-            } catch (UnsupportedEncodingException e) {
-                Console.error(e.getMessage());
-            }
+            DefaultFullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,HttpResponseStatus.OK,Unpooled.copiedBuffer(SerializeUtil.gson.toJson(responseMeta).getBytes(StandardCharsets.UTF_8)));
             send(response);
-            ctx.close();
             Console.debug(data.toString());
         }
         else if(data instanceof byte[]){
@@ -138,5 +112,6 @@ public class ServiceHandler extends SimpleChannelInboundHandler<FullHttpRequest>
 
     private void send(DefaultFullHttpResponse res) {
         ctx.writeAndFlush(res);
+        ctx.close();
     }
 }

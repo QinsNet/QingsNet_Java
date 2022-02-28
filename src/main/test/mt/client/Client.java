@@ -21,8 +21,8 @@ public class Client {
             user.newPack();
             Package aPackage = MetaApplication.create(Package.class);
             aPackage.name = "C背包";
-            ArrayList<String> arrayList = new ArrayList<>();
-            user.addPack(aPackage,arrayList);
+            user.addPack(aPackage);
+            user.addPack(aPackage);
             user.hello();
         }
     }

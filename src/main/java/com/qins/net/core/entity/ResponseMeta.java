@@ -1,5 +1,6 @@
 package com.qins.net.core.entity;
 
+import com.qins.net.meta.annotation.Meta;
 import lombok.*;
 import lombok.experimental.Accessors;
 
@@ -14,11 +15,18 @@ import java.util.Map;
 @Setter
 @Accessors(chain = true)
 public class ResponseMeta {
+    @Meta
     private String protocol = "Sync-Response-1.0";
+    @Meta
     private String result;
+    @Meta
     private String exception;
+    @Meta
     private String instance;
+    @Meta
     private Map<String,String> params;
+    @Meta
+    private Map<String,String> references;
 
     public ResponseMeta(){
 
@@ -40,9 +48,10 @@ public class ResponseMeta {
         }
     }
 
-    public ResponseMeta(String instance,Map<String,String> params, String result) {
+    public ResponseMeta(String instance,Map<String,String> params, String result,Map<String,String> references) {
         this.result = result;
         this.instance = instance;
         this.params = params;
+        this.references = references;
     }
 }
