@@ -2,141 +2,25 @@
 description: 带您快速了解QinsNet
 ---
 
-# QinsNet
+# 快速入门
+
+## 引论
+
+### QinsNet
 
 > **状态同步式网络服务框架**
-## 入门
 
-### 一纸契约
 
-```java
-@NodeMapping(name="Beijing",host="localhost:28015")//节点一
-@NodeMapping(name="Shanghai",host="localhost:28016")//节点二
-@Meta(nodes = "Shanghai")//默认上海节点
-public abstract class User{
-    @Meta//共享资源
-    private String username;
-    @Meta
-    private String password;
-    @Meta
-    private Integer apiToken;
-    @Meta
-    private ArrayList<Package> packages;
-    @Meta//默认选择上海节点
-    public abstract boolean login();
-    @Meta
-    public abstract boolean newPack();
-    @Meta(nodes = {"Beijing","Shanghai"})//允许通过北京、上海两个节点进行网络请求
-    public abstract boolean addPack(@Meta Package aPackage);
-    @Meta(nodes = "User")//用户自身节点
-    public abstract void hello();
-}
-```
 
-客户端和服务端均可以通过此契约来配置网络服务，其中@Meta表明该资源为网络资源，具备网络共享（同步）的能力。
+  单机版的开发优势以及安全等问题的劣势，作为单机版，安全、网络数据交互等问题是不可解决的，但是我们虽然无法解决单机版的劣势，但是我们可以解决网络版的劣势。
 
-契约支持**多节点**同时网络资源的发布与服务是共享的，倘若符合锥形NAT，用户本地方也是服务可达状态，即用户方拥有自己的节点以及自己的网络函数，服务方可以主动向用户方发起网络请求，与P2P概念一致。
+  网络版的劣势在于传递数据、数据同步这个步骤是人为操控，不可避免的生出了网络化逻辑。
 
-### Client
+  QinsNet正是解决了网络化导致的业务逻辑增生分化问题，网络单机化。
 
-```java
-@NodeMapping("Beijing","localhost:28015")//节点一
-@NodeMapping("Shanghai","localhost:28016")//节点二
-@Meta(nodes = "Shanghai")
-public abstract class User{
-    @Meta
-    private String username;
-    @Meta
-    private String password;
-    @Meta
-    private Integer apiToken;
-    @Meta
-    private ArrayList<Package> packages;
-    @Meta/
-    public abstract boolean login();
-    @Meta
-    public abstract boolean newPack();
-    @Meta(nodes = {"Beijing","Shanghai"})
-    public abstract boolean addPack(@Meta Package aPackage);
-    @Meta(nodes = "Beijing")
-    public void hello(){//不同节点只需负责好自己节点应该实现的方法就可以了
-       System.out.println(name + " Hello!!!");
-    }
-}
-```
+  更好的定义是：**状态同步式网络框架**，
 
-### Server
-
-```java
-@NodeMapping("Beijing","localhost:28015")//节点一
-@NodeMapping("Shanghai","localhost:28016")//节点二
-@Meta(nodes = "Shanghai")
-public abstract class User{
-    @Meta
-    private String username;
-    @Meta
-    private String password;
-    @Meta
-    private Integer apiToken;
-    @Meta
-    private ArrayList<Package> packages;
-
-    @Meta
-    public boolean login() throws NewInstanceException {
-        if("m839336369".equals(username) && "password".equals(password)){
-            this.apiToken = 1234;
-            this.password = "***";
-            return true;
-        }
-        else return false;
-    }
-    
-    @Meta(nodes = {"Server_2","Server1"})
-    public boolean newPack(){
-        try {
-            Package aPackage = MetaApplication.create(Package.class);
-            NodeUtil.copyNodeAll(this,aPackage);
-            aPackage.setName("A背包");
-            Package bPackage = MetaApplication.create(Package.class);
-            NodeUtil.copyNodeAll(this,bPackage);
-            bPackage.setName("B背包");
-            packages = new ArrayList<>();
-            packages.add(aPackage);
-            packages.add(bPackage);
-            return true;
-        } catch (NewInstanceException | TrackException e) {
-            e.printStackTrace();
-            return false;
-        }
-    }
-    
-    
-    @Meta
-    public Boolean addPack(@Meta Package aPackage){
-        packages.add(aPackage);
-        return true;
-    }
-
-    @Meta(nodes = "User")
-    public abstract void hello();
-}
-```
-
-### 部署
-
-​       *网络化的请求逻辑与单机逻辑保持一致。*
-
-```java
-MetaApplication.run("client.yaml");//加载配置文件
-MetaApplication.defineNode("User", "localhost:28017");//定义全局节点
-User user = MetaApplication.create(User.class);
-if(user.login()){
-	System.out.println(name + " Hello!!!");
-}
-else{
-	System.out.println(name + " 登录失败.");
-}
-```
+  更好的理解是：**共享实体**
 
 ### 网络化
 
@@ -338,18 +222,6 @@ user.getPackage();//报错，因为服务端的实体状态是无法同步到客
 
   但作为网络服务一方，显然无法具备让客户端User状态改变、引用同步这样的逻辑，这也是为什么造成了单机版编程与网络版编程差异的主要原因。
 
-### QinsNet
-
-  正题来了，前文说了许多单机版的开发优势以及安全等问题的劣势，作为单机版，安全、网络数据交互等问题是不可解决的，但是我们虽然无法解决单机版的劣势，但是我们可以解决网络版的劣势。
-
-  网络版的劣势在于传递数据、数据同步这个步骤是人为操控，不可避免的生出了网络化逻辑。
-
-  QinsNet正是解决了网络化导致的业务逻辑增生分化问题，网络单机化。
-
-  更好的定义是：**状态同步式网络框架**，
-
-  更好的理解是：**共享实体
-
 ## 入门
 
 ### 一纸契约
@@ -489,7 +361,6 @@ else{
 
 - RequestMeta(请求元)
 
-  ![image-20220301112843570](C:\Users\83933\AppData\Roaming\Typora\typora-user-images\image-20220301112843570.png)
 
 ```json
 {
@@ -555,8 +426,6 @@ else{
 ```
 
 - ResponseMeta(返回元)
-
-![image-20220301112755297](C:\Users\83933\IdeaProjects\QinsNet_Java\guan-fang-wen-dang\pictures\ResponseMeta.png)
 
 ```json
 {
