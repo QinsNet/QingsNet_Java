@@ -32,12 +32,10 @@ public abstract class BaseClass {
         }
     }
 
-    public abstract Object serializeAsObject(Object instance, MetaReferences references, Map<String,String> pools) throws IllegalAccessException;
-    public abstract String serialize(Object instance, MetaReferences references, Map<String,String> pools) throws IllegalAccessException;
-    public abstract Object deserializeAsObject(Object jsonElement, MetaReferences references, Map<String,String> pools) throws InstantiationException, IllegalAccessException;
-    public abstract Object deserialize(String reference, MetaReferences references, Map<String,String> pools) throws InstantiationException, IllegalAccessException;
+    public abstract Object serialize(Object instance, MetaReferences references, Map<String,Object> pools) throws IllegalAccessException;
+    public abstract Object deserialize(Object jsonElement, MetaReferences references, Map<String,Object> pools) throws InstantiationException, IllegalAccessException;
 
-    public abstract void sync(Object oldInstance,Object newInstance,Object rawInstance,MetaReferences references,Map<String,String> pools) throws IllegalAccessException, InstantiationException;
+    public abstract void sync(Object oldInstance,Object newInstance,Object rawInstance,MetaReferences references,Map<String,Object> pools) throws IllegalAccessException, InstantiationException;
 
     public void onException(TrackException.ExceptionCode code, String message) {
         onException(new TrackException(code,message));

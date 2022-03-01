@@ -113,12 +113,7 @@ public abstract class Request implements IRequest {
                 }
                 ResponseMeta responseMeta = context.getResponseMeta();
                 if(responseMeta != null){
-                    if(responseMeta.getException()!=null){
-                        errorEvent(method,context, responseMeta.getException());
-                    }
-                    if(return_type != void.class && return_type != Void.class){
-                        result = metaMethod.getMetaReturn().deserialize(responseMeta.getResult(),context.getReferences(),context.getResponseMeta().getReferences());
-                    }
+                    result = context.getResult();
                     successEvent(method,context, responseMeta);
                 }
                 timeoutEvent(method,context);
@@ -138,11 +133,14 @@ public abstract class Request implements IRequest {
 
     public void receive(RequestContext context) {
         try {
+            if(context.getResponseMeta().getException() != null){
+                errorEvent(context.getMetaMethod().getMethod(),context, context.getResponseMeta().getException());
+            }
             metaClass.deserialize(context.getResponseMeta().getInstance(),context.getReferences(),context.getResponseMeta().getReferences());
             if(context.getResponseMeta().getParams() != null){
-                for (Map.Entry<String,String> keyValue:context.getResponseMeta().getParams().entrySet()){
+                for (Map.Entry<String,Object> keyValue:context.getResponseMeta().getParams().entrySet()){
                     String name = keyValue.getKey();
-                    String rawParam = keyValue.getValue();
+                    Object rawParam = keyValue.getValue();
                     MetaParameter metaParameter = context.getMetaMethod().getParameters().get(name);
                     if(metaParameter == null){
                         throw new TrackException(TrackException.ExceptionCode.NotFoundMetaParameter,String.format("%s从远程提供方同步时，%s方法的%s参数未找到", metaClass.getName(),context.getMetaMethod().getName(),name));
@@ -152,6 +150,16 @@ public abstract class Request implements IRequest {
                         throw new TrackException(TrackException.ExceptionCode.NotFoundParameter,String.format("%s从远程提供方同步时，%s方法的%s参数未找到", metaClass.getName(),context.getMetaMethod().getName(),name));
                     }
                     metaParameter.getBaseClass().deserialize(rawParam, context.getReferences(), context.getResponseMeta().getReferences());
+                }
+            }
+            if(context.getResponseMeta().getResult() != null){
+                Object result = context.getMetaMethod().getMetaReturn().deserialize(context.getResponseMeta().getResult(),context.getReferences(),context.getResponseMeta().getReferences());
+                context.setResult(result);
+            }
+            //补足由于丢网络引用造成的未同步
+            for (Map.Entry<String,Object> item : context.getResponseMeta().getReferences().entrySet()){
+                if(!context.getReferences().getDeserializeObjects().containsKey(item.getKey())){
+                    context.getReferences().getBasesClass().get(item.getKey()).deserialize(item.getValue(),context.getReferences(),context.getResponseMeta().getReferences());
                 }
             }
             synchronized (context){

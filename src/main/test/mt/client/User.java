@@ -9,7 +9,7 @@ import java.util.ArrayList;
 @Getter
 @Setter
 @Meta(nodes = "Server_1")
-public abstract class User{
+public abstract class User {
     @Meta
     private String username;
     @Meta
@@ -18,12 +18,19 @@ public abstract class User{
     private Integer apiToken;
     @Meta
     private ArrayList<Package> packages;
+
     @Meta
     public abstract boolean login();
+
     @Meta
     public abstract boolean newPack();
-    @Meta(nodes = {"Server_2","Server1"})
+
+    @Meta(nodes = {"Server_2", "Server1"})
     public abstract boolean addPack(@Meta Package aPackage);
+
     @Meta(nodes = "Server_2")
     public abstract void hello();
+
+    @Meta
+    public abstract boolean removePackage(Package aPackage);
 }

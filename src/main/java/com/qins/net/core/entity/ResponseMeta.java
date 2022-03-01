@@ -18,25 +18,27 @@ public class ResponseMeta {
     @Meta
     private String protocol = "Sync-Response-1.0";
     @Meta
-    private String result;
+    private Object result;
     @Meta
     private String exception;
     @Meta
-    private String instance;
+    private Object instance;
     @Meta
-    private Map<String,String> params;
+    private Map<String,Object> params;
     @Meta
-    private Map<String,String> references;
+    private Map<String,Object> references;
 
     public ResponseMeta(){
 
     }
     public ResponseMeta(String exception){
         this.exception = exception;
+        System.out.println(exception);
     }
 
     public ResponseMeta(Exception e) {
         try {
+            e.printStackTrace();
             StringWriter sw = new StringWriter();
             PrintWriter pw = new PrintWriter(sw);
             e.printStackTrace(pw);
@@ -44,11 +46,11 @@ public class ResponseMeta {
             System.out.println(exception);
         }
         catch (Exception e2) {
-            exception = "ErrorInfoFromException";
+            exception = "WriteExceptionError";
         }
     }
 
-    public ResponseMeta(String instance,Map<String,String> params, String result,Map<String,String> references) {
+    public ResponseMeta(Object instance,Map<String,Object> params, Object result,Map<String,Object> references) {
         this.result = result;
         this.instance = instance;
         this.params = params;

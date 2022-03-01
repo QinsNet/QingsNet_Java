@@ -4,6 +4,7 @@ import com.qins.net.core.console.Console;
 import com.qins.net.core.entity.RequestMeta;
 import com.qins.net.core.entity.ResponseMeta;
 import com.qins.net.core.exception.ResponseException;
+import com.qins.net.meta.core.MetaReferences;
 import com.qins.net.node.core.Node;
 import com.qins.net.util.Http2Util;
 import com.qins.net.util.SerializeUtil;
@@ -48,7 +49,8 @@ public class HttpPostRequest extends Node {
                     metaClass.getRequest().receive(context);
                     return;
                 }
-                ResponseMeta responseMeta = SerializeUtil.gson.fromJson(response.body().string(),ResponseMeta.class);
+                String a = response.body().string();
+                ResponseMeta responseMeta = SerializeUtil.gson.fromJson(a,ResponseMeta.class);
                 if(responseMeta == null)responseMeta = new ResponseMeta(new ResponseException(ResponseException.ExceptionCode.Common,"接收到空数据"));
                 context.setResponseMeta(responseMeta);
                 metaClass.getRequest().receive(context);
@@ -72,10 +74,9 @@ public class HttpPostRequest extends Node {
                                     .build())
                             .addHeader(HttpHeaderNames.CONTENT_TYPE.toString(), HttpHeaderValues.APPLICATION_JSON.toString())
                             .addHeader("protocol", requestMeta.getProtocol());
-            if(requestMeta.getParams() != null){
-                RequestBody requestBody = RequestBody.create(SerializeUtil.gson.toJson(requestMeta).getBytes(StandardCharsets.UTF_8));
-                request.post(requestBody);
-            }
+            String a = SerializeUtil.gson.toJson(requestMeta);
+            RequestBody requestBody = RequestBody.create(a.getBytes(StandardCharsets.UTF_8));
+            request.post(requestBody);
             send(request.build());
             return true;
         }

@@ -3,6 +3,7 @@ package com.qins.net.meta.standard;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
 import com.qins.net.core.console.Console;
 import com.qins.net.core.entity.TrackLog;
 import com.qins.net.meta.core.MetaClass;
@@ -30,13 +31,12 @@ public abstract class StandardMetaClass extends MetaClass {
         Console.log(log.getMessage());
     }
 
-    @Override
-    public Object serializeAsObject(Object instance, MetaReferences references, Map<String, String> pools) throws IllegalAccessException {
+    public Object serialize(Object instance, MetaReferences references, Map<String, Object> pools) throws IllegalAccessException {
         if(instance == null)return null;
         else if(generics != null && instance instanceof Iterable){
             JsonArray jsonArray = new JsonArray();
             for (Object item : ((Iterable)instance)){
-                JsonElement msg = (JsonElement) generics[0].serializeAsObject(item, references,pools);
+                JsonElement msg = (JsonElement) generics[0].serialize(item, references,pools);
                 jsonArray.add(msg);
             }
             return jsonArray;
@@ -44,7 +44,7 @@ public abstract class StandardMetaClass extends MetaClass {
         else if(generics != null && instance instanceof Map){
             JsonObject jsonObject = new JsonObject();
             for (Map.Entry<Object,Object> item : ((Map<Object,Object>) instance).entrySet()){
-                jsonObject.add(generics[0].serialize(item.getKey(),references,pools), (JsonElement) generics[1].serializeAsObject(instance, references,pools));
+                jsonObject.add(((JsonPrimitive)generics[0].serialize(item.getKey(),references,pools)).getAsString(), (JsonElement) generics[1].serialize(instance, references,pools));
             }
             return jsonObject;
         }
@@ -53,7 +53,7 @@ public abstract class StandardMetaClass extends MetaClass {
             for (MetaField metaField : fields.values()){
                 Object object = metaField.getField().get(instance);
                 if(object == null)continue;
-                Object a = metaField.getBaseClass().serializeAsObject(object,references,pools);
+                Object a = metaField.getBaseClass().serialize(object,references,pools);
                 jsonObject.add(metaField.getName(), (JsonElement) a);
             }
             return jsonObject;
@@ -61,21 +61,21 @@ public abstract class StandardMetaClass extends MetaClass {
         else return SerializeUtil.gson.toJsonTree(instance);
     }
     @Override
-    public Object deserializeAsObject(Object rawJsonElement, MetaReferences references, Map<String, String> pools) throws InstantiationException, IllegalAccessException {
+    public Object deserialize(Object rawJsonElement, MetaReferences references, Map<String, Object> pools) throws InstantiationException, IllegalAccessException {
         JsonElement jsonElement = (JsonElement) rawJsonElement;
         if(rawJsonElement == null)return null;
         else if(jsonElement.isJsonNull()) return null;
         else if(generics != null && jsonElement.isJsonArray()){
             Collection instance = (Collection) proxyClass.newInstance();
             for (JsonElement element : jsonElement.getAsJsonArray()){
-                instance.add(generics[0].deserializeAsObject(element, references, pools));
+                instance.add(generics[0].deserialize(element, references, pools));
             }
             return instance;
         }
         else if(generics != null && jsonElement.isJsonObject() && Map.class.isAssignableFrom(proxyClass)){
             Map map = (Map) proxyClass.newInstance();
             for (Map.Entry<String,JsonElement> item : jsonElement.getAsJsonObject().entrySet()){
-                map.put(generics[0].deserialize(item.getKey(),references,pools),generics[1].deserializeAsObject(item.getValue(), references, pools));
+                map.put(generics[0].deserialize(new JsonPrimitive(item.getKey()),references,pools),generics[1].deserialize(item.getValue(), references, pools));
             }
             return map;
         }
@@ -83,22 +83,12 @@ public abstract class StandardMetaClass extends MetaClass {
             Object baseInstance = proxyClass.newInstance();
             JsonObject jsonObject = jsonElement.getAsJsonObject();
             for (MetaField metaField : fields.values()){
-                Object value = metaField.getBaseClass().deserializeAsObject(jsonObject.get(metaField.getName()),references,pools);
+                Object value = metaField.getBaseClass().deserialize(jsonObject.get(metaField.getName()),references,pools);
                 if(value == null)continue;
                 metaField.getField().set(baseInstance,value);
             }
             return baseInstance;
         }
         else return SerializeUtil.gson.fromJson(jsonElement,proxyClass);
-    }
-
-    @Override
-    public String serialize(Object instance, MetaReferences references, Map<String, String> pools) throws IllegalAccessException {
-        return SerializeUtil.gson.toJson(serializeAsObject(instance,references,pools));
-    }
-
-    @Override
-    public Object deserialize(String reference, MetaReferences references, Map<String, String> pools) throws InstantiationException, IllegalAccessException {
-        return deserializeAsObject(SerializeUtil.gson.fromJson(reference,JsonElement.class), references, pools);
     }
 }

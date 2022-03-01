@@ -23,5 +23,6 @@ public class RequestContext {
     private HashMap<String,Object> params;
     private MetaReferences references;
     private NodeAddress remote;
+    private Object result;
     private boolean isVoid = false;
 }

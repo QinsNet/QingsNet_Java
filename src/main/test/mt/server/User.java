@@ -46,6 +46,13 @@ public abstract class User{
         else return false;
     }
 
+    @Meta
+    public boolean removePackage(Package aPackage) {
+        aPackage.name = "已删除";
+        packages.remove(aPackage);
+        return true;
+    }
+
     @Meta(nodes = {"Server_2","Server1"})
     public boolean newPack(){
         try {

@@ -7,8 +7,9 @@ import java.util.Map;
 
 @Getter
 public class MetaReferences {
-    Map<Object,String> oldNames = new HashMap<>();
-    Map<Object,String> newNames = new HashMap<>();
-    Map<String,Object> oldObjects = new HashMap<>();
-    Map<String,Object> newObjects = new HashMap<>();
+    Map<Object,String> serializeNames = new HashMap<>();
+    Map<Object,String> deserializeNames = new HashMap<>();
+    Map<String,Object> serializeObjects = new HashMap<>();
+    Map<String,Object> deserializeObjects = new HashMap<>();
+    Map<String,BaseClass> basesClass = new HashMap<>();
 }

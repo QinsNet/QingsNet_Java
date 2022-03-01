@@ -31,7 +31,7 @@ public class CGLibClass extends ReferenceMetaClass {
                 JsonElement instance = jsonObject.get("instance");
                 JsonElement nodes = jsonObject.get("nodes");
                 if(instance != null){
-                    netMeta.setInstance(instance.toString());
+                    netMeta.setInstance(instance);
                 }
                 if(nodes != null){
                     netMeta.setNodes(SerializeUtil.gson.fromJson(nodes, mapStringType));
@@ -72,21 +72,21 @@ public class CGLibClass extends ReferenceMetaClass {
         }
     }
     @Override
-    public Object serializeAsObject(Object instance, MetaReferences references, Map<String, String> pools) throws IllegalAccessException {
+    public Object serialize(Object instance, MetaReferences references, Map<String, Object> pools) throws IllegalAccessException {
         if(instance == null)return null;
-        Object rawInstance = super.serializeAsObject(instance,references,pools);
+        Object rawInstance = super.serialize(instance,references,pools);
         RequestInterceptor interceptor = (RequestInterceptor) ((Factory)instance).getCallback(1);
         NetMeta netMeta = new NetMeta(rawInstance,interceptor.getNodes());
         return SerializeUtil.gson.toJsonTree(netMeta,NetMeta.class);
     }
     @Override
-    public Object deserializeAsObject(Object rawJsonElement, MetaReferences references, Map<String, String> pools) throws InstantiationException, IllegalAccessException {
+    public Object deserialize(Object rawJsonElement, MetaReferences references, Map<String, Object> pools) throws InstantiationException, IllegalAccessException {
         if(rawJsonElement == null)return null;
         JsonElement jsonElement = (JsonElement) rawJsonElement;
         NetMeta netMeta = SerializeUtil.gson.fromJson(jsonElement,NetMeta.class);
         Factory factory;
         if(netMeta.getInstance() != null){
-            factory = (Factory) super.deserializeAsObject(SerializeUtil.gson.fromJson((String) netMeta.getInstance(),JsonElement.class), references,pools);
+            factory = (Factory) super.deserialize(netMeta.getInstance(), references,pools);
         }
         else factory = (Factory) proxyClass.newInstance();
         factory.setCallbacks(new Callback[]{NoOp.INSTANCE,new RequestInterceptor(request, netMeta.getNodes())});

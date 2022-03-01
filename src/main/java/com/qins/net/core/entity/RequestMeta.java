@@ -18,9 +18,9 @@ public class RequestMeta {
     @Meta
     private String mapping;
     @Meta
-    private Map<String,String> params;
+    private Map<String,Object> params;
     @Meta
-    private Map<String,String> references;
+    private Map<String,Object> references;
     @Meta
-    private String instance = "";
+    private Object instance = "";
 }

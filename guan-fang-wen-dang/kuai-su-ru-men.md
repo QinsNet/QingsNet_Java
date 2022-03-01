@@ -10,7 +10,7 @@ description: 带您快速了解Ethereal
 
 > **状态同步式网络服务框架**
 
-### 单机版的网络化
+### 网络化
 
 > “网络的透明化是单机”
 
@@ -198,14 +198,14 @@ else Console.print("登录失败");
 
   更好的理解是：**共享实体
 
-#### 责任说明
+### 责任说明
 
 1. QinsNet采用LGPL开源协议，我们希望QinsNet在社区帮助下持续健康的成长，更好的为社区做贡献。
 2. QinsNet长期支持，我们欢迎开发者对QinsNet进行尝鲜。
 
 ## 入门
 
-#### 一纸契约：
+### 一纸契约：
 
 ```java
 @NodeMapping("Beijing","localhost:28015")//节点一
@@ -214,7 +214,7 @@ else Console.print("登录失败");
 public abstract class User{
     @Meta//共享资源
     private String username;
-    //非共享资源
+    @Meta
     private String password;
     @Meta
     private Integer apiToken;
@@ -226,315 +226,282 @@ public abstract class User{
     public abstract boolean newPack();
     @Meta(nodes = {"Beijing","Shanghai"})//允许通过北京、上海两个节点进行网络请求
     public abstract boolean addPack(@Meta Package aPackage);
-    @Meta(nodes = "Beijing")//额外增添北京节点
+    @Meta(nodes = "User")//用户自身节点
     public abstract void hello();
 }
 ```
 
-#### Client\[Java\]
+  客户端和服务端均可以通过此契约来配置网络服务，其中@Meta表明该资源为网络资源，具备网络共享（同步）的能力。
+
+  契约支持**多节点**同时网络资源的发布与服务是共享的，倘若符合锥形NAT，用户本地方也是服务可达状态，即用户方拥有自己的节点以及自己的网络函数，服务方可以主动向用户方发起网络请求，与P2P概念一致。
+
+### Client
 
 ```java
-public interface ServerService
-{
-    @Request
-    public Integer Add(Integer a,Integer b);
-}
-//注册数据类型
-AbstractTypes types = new AbstractTypes();
-types.add(Integer.class,"Int");
-types.add(Long,"Long");
-types.add(String,"String");
-types.add(Boolean,"Bool");
-types.add(User.class,"User");
-Net node = NetCore.register("name", Net.NetType.WebSocket); //注册网关
-Client client = ClientCore.Register(node,"127.0.0.1:28015/NetDemo/");//注册客户端
-Request requestMeta = RequestCore.register(ServerRequest.class,node, "server", types);//注册请求
-node.publish();//启动
-```
-
-### 架构
-
-#### Core
-
-> 维护特有类，作为全局静态类，唯一对外公开接口，确保了对应实体注册/销毁/访问时安全性。
-
-Core一般含有Register、UnRegister、Get三大公开方法，Ethereal拥有四个Core，分别为：
-
-* **NetCore**：Net网络节点的管理
-* **ClientCore/ServerCore**：Client客户端或Server服务端的管理
-* **ServiceCore**：Service请求体的管理
-* **RequestCore**：Request请求体的管理
-
-  Core并非实质保存着对该实体的实例，实际上，Request、Service、Client/Server都归于Net，Net作为一个网络节点，与其他网络节点交互（管理中心、注册中心）。
-
-  Core的目标是屏蔽注册细节，也是为了保证访问安全，Core是用户交互操作的唯一入口。
-
-#### Config
-
-Config含有各式各样的配置项，以此满足用户的个性化配置。
-
-* **NetConfig**：Net网络节点配置项
-* **ClientConfig/ServerConfig**：Client/Server配置项
-* **ServiceConfig**：Service配置项
-* **RequestConfig**：Request配置项
-
-  同时Config可作为蓝本，在多个实体间共享。
-
-#### Object
-
-Core根据Config配置产生具体的Object（实体），实体完成具体的工作。
-
-* **Net**：对内作为管理中心，管理实体，对外负责作为注册中心向外暴露服务。
-* **Client/server**：通讯框架，Java使用Netty框架，Python使用Twisted。
-* **Service**：服务实现类，负责请求的具体实现。
-* **Request**：服务请求类，负责向远程具体的服务实现发起请求。
-
-## 技术文档
-
-### 中心配置
-
-Ethereal中心配置涵盖了注册中心、管理中心的功能。
-
-中心配置十分轻效，在Net的Config中开启集群配置，并提供集群地址和对应集群配置项即可。
-
-**server\[C\#\]**
-
-```text
-Net node = NetCore.Register("name", Net.NetType.WebSocket); //注册网关
-//开启集群模式
-node.Config.NetNodeMode = true;
-List<Tuple<string, ClientConfig>> ips = new();
-//添加集群地址
-ips.Add(new Tuple<string,ClientConfig>($"{ip}:{28015}/NetDemo/", new ClientConfig()));
-ips.Add(new Tuple<string,ClientConfig>($"{ip}:{28016}/NetDemo/", new ClientConfig()));
-ips.Add(new Tuple<string,ClientConfig>($"{ip}:{28017}/NetDemo/", new ClientConfig()));
-ips.Add(new Tuple<string,ClientConfig>($"{ip}:{28018}/NetDemo/", new ClientConfig()));
-node.Config.NetNodeIps = ips;
-```
-
-**Client\[Java\]**
-
-```java
-Net node = NetCore.register("name", Net.NetType.WebSocket); //注册网关
-//开启集群模式
-node.getConfig().setNetNodeMode(true);
-ArrayList<Pair<String, ClientConfig>> ips = new ArrayList<>();
-//添加集群地址
-ips.add("127.0.0.1:28015/NetDemo/",new ClientConfig());
-ips.add("127.0.0.1:28016/NetDemo/",new ClientConfig());
-ips.add("127.0.0.1:28017/NetDemo/",new ClientConfig());
-ips.add("127.0.0.1:28018/NetDemo/",new ClientConfig());
-node.getConfig().setNetNodeIps(ips);
-```
-
-> Ethereal的中心服务部署在Net，与正常Service属于同一层级，这也意味着不需要额外的端口，一个Net节点，就是一个中心，不需要关心集群部署时的端口配置问题，您在**部署服务的同时，也是在部署集群！**
-
-### Token理念
-
-还是简单分析一下场景需求：
-
-一个用户发起登录请求，服务器执行登录逻辑之后，有时会需要将用户信息暂存内存，需要时再查询该用户信息。
-
-比如用户登录，服务器生成一个User类的实体，内部包涵了该用户的临时信息，比如登录时间、用户等级、用户凭证.....当用户断开连接时，再将这个实体销毁。
-
-并且服务时，往往是多个客户端对标一个服务端，如果遇到聊天系统的功能需求，客户端之间也往往会通过服务端进行通讯，这样服务端也需要区别不同的客户端。
-
-基于上述需求，Ethereal开放了Token类别，Token相当于一个客户端连接体，用户控制BaseToken即控制客户端连接体。
-
-BaseToken内含有唯一Key值属性，Ethereal通过用户给予的Key值属性，对Token进行生命周期处理。
-
-```text
-[Service]
-public bool login(BaseToken node, string username,string password)
-{
-    node.Key = username;//为该token设置键值属性
-    BaseToken.Register();//将token注册，受Ethereal管理其生命周期
-}
-```
-
-通过上面的函数，我们似乎发现了一个特殊之处，token放在了服务类的**首参**，其实刚刚的加法函数也可以改写为：
-
-```text
-public class ServerService
-{
-    [Service]
-    public int Add(BaseToken node,int a,int b)
-    {
-        return a + b;
+@NodeMapping("Beijing","localhost:28015")//节点一
+@NodeMapping("Shanghai","localhost:28016")//节点二
+@Meta(nodes = "Shanghai")
+public abstract class User{
+    @Meta
+    private String username;
+    @Meta
+    private String password;
+    @Meta
+    private Integer apiToken;
+    @Meta
+    private ArrayList<Package> packages;
+    @Meta/
+    public abstract boolean login();
+    @Meta
+    public abstract boolean newPack();
+    @Meta(nodes = {"Beijing","Shanghai"})
+    public abstract boolean addPack(@Meta Package aPackage);
+    @Meta(nodes = "Beijing")
+    public void hello(){//不同节点只需负责好自己节点应该实现的方法就可以了
+       System.out.println(name + " Hello!!!");
     }
 }
 ```
 
-Ethereal会根据用户的首参情况，来决定是否为首参注入token实体。
+### Server
 
-在Request中，不必提供token参数的定义，对于Request，仍保持基本接口规范即可。
+```java
+@NodeMapping("Beijing","localhost:28015")//节点一
+@NodeMapping("Shanghai","localhost:28016")//节点二
+@Meta(nodes = "Shanghai")
+public abstract class User{
+    @Meta
+    private String username;
+    @Meta
+    private String password;
+    @Meta
+    private Integer apiToken;
+    @Meta
+    private ArrayList<Package> packages;
 
-`public Integer Add(Integer a,Integer b);`
-
-```text
-[Service]
-public bool login(User user, string username,string password)
-{
-    user.Key = username;//为该token设置键值属性
-    user.Register();//将token注册，受Ethereal管理其生命周期
-}
-```
-
-BaseToken是可继承的，那就代表了用户可以通过自定义一个User类，并继承BaseToken，这进一步的转换了设计理念，从面向连接体，变为了面向用户。
-
-### 双工通讯
-
-Ethereal致力于服务尽可能多的需求业务，虽然现今单工请求占据了大量业务需求，但绝不是所有，作者本人也是经常需要用到双工通讯的，尤其是在游戏业务这一块。
-
-所以就拿游戏业务这一块进行阐明，假设一个游戏角色拥有移动、攻击、聊天等行为，服务端可以通过执行一套请求逻辑，从而达到控制目标角色的需求，可以极大简化服务端的编程逻辑。
-
-```text
-public interface ServerService
-{
-    //Player继承BaseToken
-    @Request
-    public void Move(Player user);
-    @Request
-    public void Attack(Player user);
-    @Request
-    public void Chat(Player user);
-}
-```
-
-这里的请求，是服务端发起，客户端接收，请求的注册方式与客户端的注册方式相一致，也是通过RequestCore进行注册。
-
-> 与客户端的请求不同点在于：
->
-> 1. 服务端的首参必为BaseToken，前文说道BaseToken实际就是连接体，所以传递BaseToken实际代表了将请求发送到目标客户端。
-> 2. 服务端的请求函数必定没有返回值，我们不认为服务端等待客户端的结果返回是一个明智的选择。\[当然，这是基于目前的需求来看，需求也在不断地变动，后续也许Ethereal会开放返回值\]
-
-我们这里有一套完整向某用户发送消息Demo：
-
-```text
-public class ServerService
-{
-    /// <summary>
-    /// 向服务端注册用户
-    /// </summary>
-    /// <param name="user">客户端用户</param>
-    /// <param name="username">用户名</param>
-    /// <param name="id">用户ID</param>
-    [Service]
-    public bool Register(User user, string username, long id)
-    {
-        user.Username = username;
-        user.Key = id;
-        return user.Register();//BaseToken方法，向Ethereal注册Token。
-    } 
-    /// <summary>
-    /// 接受客户端发送来的发送消息给某个用户的命令请求
-    /// </summary>
-    /// <param name="sender">客户端用户</param>
-    /// <param name="recevier_key">目标接收用户的唯一Key值</param>
-    /// <param name="message">消息内容</param>
-    [Service]
-    public bool SendSay(User user, long recevier_key, string message)
-    {
-        //从Ethereal的Net节点中查找目的用户（经过Register注册的）
-        User reciver = user.GetToken(recevier_key);
-        if (reciver != null)
-        {
-            //向listener用户发送Hello请求
-            requestMeta.Say(reciver,user.Name + "说:" + message);
+    @Meta
+    public boolean login() throws NewInstanceException {
+        if("m839336369".equals(username) && "password".equals(password)){
+            this.apiToken = 1234;
+            this.password = "***";
             return true;
         }
         else return false;
     }
-}
-```
-
-### **日志系统**
-
-Ethereal的日志系统（TrackLog）力图最大化的信息输出，TrackLog实体中，包含了从该点向上一层不断抛出时的抛出实体信息。
-
-TrackLog中含有Net、Request\Service、Client\Server实体，输出日志时，Log会根据事件发生点进行注入抛出，比如一个Service日志，将包含Service、Client、Net三个实体，同时应注意，事件输出之后，应保证这些核心实体不应该被外部保存，避免造成内存泄漏。
-
-每一个核心实体，都包含了日志事件，您可以通过注册事件，实现日志输出事件的捕获，并且可以根据选择，捕获不同层级的事件。
-
-通常捕获Net事件，代表了该Net节点的所有日志输出。
-
-```text
-node.ExceptionEvent += ExceptionEventFunction;
-private static void ExceptionEventFunction(TrackException exception)
-{
-    Console.print(exception.Message);
-}
-```
-
-### **异常系统**
-
-Ethereal的日志系统（TrackException）力图最大化的信息输出，TrackException实体中，包含了从该点向上一层不断抛出时的抛出实体信息。
-
-TrackException中含有Net、Request\Service、Client\Server实体，抛出异常时，TrackException会根据事件发生点进行注入抛出，比如一个Service异常，将包含Service、Client、Net三个实体，同时应注意，事件输出之后，应保证这些核心实体不应该被外部保存，避免造成内存泄漏。
-
-每一个核心实体，都包含了异常事件，您可以通过注册事件，实现日志输出事件的捕获，并且可以根据选择，捕获不同层级的事件。
-
-通常捕获Net事件，代表了该Net节点的所有异常输出。
-
-**与Log不同的是，TrackException内部包含了一个Exception字段，该字段是真正的异常事件，有时为TrackException本身，但也有时是一些其他异常，Ethereal捕获所有异常并封装在其内部。**
-
-> ```text
-> node.ExceptionEvent += ExceptionEventFunction;
-> private static void ExceptionEventFunction(TrackException exception)
-> {
->     Console.print(exception.Message);
-> }
-> ```
-
-### **服务拦截**
-
-Ethereal的服务拦截分为Net层拦截，以及Service层拦截，且两层拦截均含有Net、Service、Method、Token信息，用户可以充分的获取有用信息来进行判断。
-
-在拦截委托中，如果您返回`True`将进行下一个拦截事件检测，而返回`False`，则消息立即拦截，后续的拦截策略不会执行。
-
-```text
-serviceNet.InterceptorEvent += Interceptor;
-private static bool Interceptor(Net node, Service serviceNet, MethodInfo method, Token node)
-{
-    if (node.Key == "123")
-    {
-        return false;
+    
+    @Meta(nodes = {"Server_2","Server1"})
+    public boolean newPack(){
+        try {
+            Package aPackage = MetaApplication.create(Package.class);
+            NodeUtil.copyNodeAll(this,aPackage);
+            aPackage.setName("A背包");
+            Package bPackage = MetaApplication.create(Package.class);
+            NodeUtil.copyNodeAll(this,bPackage);
+            bPackage.setName("B背包");
+            packages = new ArrayList<>();
+            packages.add(aPackage);
+            packages.add(bPackage);
+            return true;
+        } catch (NewInstanceException | TrackException e) {
+            e.printStackTrace();
+            return false;
+        }
     }
-}
-```
-
-**同时，基于拦截器，Ethereal开发了权限拦截的功能拓展。**
-
-```text
-[Service(authority = 3)]
-public bool SendSay(User user, long recevier_key, string message)
-{
-    //从Ethereal的Net节点中查找目的用户（经过Register注册的）
-    User reciver = user.GetToken(recevier_key);
-    if (reciver != null)
-    {
-        //向listener用户发送Hello请求
-        requestMeta.Say(reciver,user.Name + "说:" + message);
+    
+    
+    @Meta
+    public Boolean addPack(@Meta Package aPackage){
+        packages.add(aPackage);
         return true;
     }
-    else return false;
-}
-public class User:BaseToken,IAuthorityCheck
-{
-    public bool Check(IAuthoritable authoritable){
-        if(this.Authority >= authoritable.Authority)return true;
-        else return false;
-    }
+
+    @Meta(nodes = "User")
+    public abstract void hello();
 }
 ```
 
-1. `BaseToken`类实现`IAuthorityCheck`接口，实现权限检查函数
-2. 在方法注解中设置添加authority参数：`[Service(authority = 3)]`，这里3就是提供的权限信息
-3. 在拦截器中添加Ethereal权限检查函数
+### 部署
 
-   `serviceNet.InterceptorEvent += Extension.Authority.AuthorityCheck.ServiceCheck;`
+​       *网络化的请求逻辑与单机逻辑保持一致。*
 
-   等待收到请求到达该方法，Ethereal会主动调用`BaseToken`类实现`IAuthorityCheck`接口中的Check函数，具体权限判断逻辑，用户可以根据自己的情况自行设计，最简单的就是大于该等级，即可通过。
+```java
+        MetaApplication.run("client.yaml");//加载配置文件
+        MetaApplication.defineNode("User", "localhost:28017");//定义全局节点
+        User user = MetaApplication.create(User.class);
+		if(user.login()){
+			System.out.println(name + " Hello!!!");
+        }
+		else{
+			System.out.println(name + " 登录失败.");
+        }
+```
+
+## 技术文档
+
+### 数据传输
+
+- RequestMeta(请求元)
+
+  ![image-20220301112843570](C:\Users\83933\AppData\Roaming\Typora\typora-user-images\image-20220301112843570.png)
+
+```json
+{
+	"protocol": "Sync-Request-1.0",
+	"mapping": "User/addPack",
+	"params": {
+		"aPackage": {
+			"instance": "mt.client.Package$$EnhancerByCGLIB$$7713a45b@35cabb2a",
+			"nodes": {
+				"User": "localhost:28017",
+				"Server_1": "localhost:28003",
+				"Server_2": "localhost:28003"
+			}
+		}
+	},
+	"references": {
+		"1234": 1234,
+		"mt.client.Package$$EnhancerByCGLIB$$7713a45b@69a2f3cc": {
+			"name": "A背包"
+		},
+		"mt.client.User$$EnhancerByCGLIB$$713f5d40@534df152": {
+			"password": "***",
+			"apiToken": "1234",
+			"packages": "[mt.client.Package$$EnhancerByCGLIB$$7713a45b@69a2f3cc, mt.client.Package$$EnhancerByCGLIB$$7713a45b@67651088]",
+			"username": "m839336369"
+		},
+		"mt.client.Package$$EnhancerByCGLIB$$7713a45b@35cabb2a": {
+			"name": "C背包"
+		},
+		"***": "***",
+		"A背包": "A背包",
+		"m839336369": "m839336369",
+		"B背包": "B背包",
+		"[mt.client.Package$$EnhancerByCGLIB$$7713a45b@69a2f3cc, mt.client.Package$$EnhancerByCGLIB$$7713a45b@67651088]": [{
+			"instance": "mt.client.Package$$EnhancerByCGLIB$$7713a45b@69a2f3cc",
+			"nodes": {
+				"User": "localhost:28017",
+				"Server_1": "localhost:28003",
+				"Server_2": "localhost:28003"
+			}
+		}, {
+			"instance": "mt.client.Package$$EnhancerByCGLIB$$7713a45b@67651088",
+			"nodes": {
+				"User": "localhost:28017",
+				"Server_1": "localhost:28003",
+				"Server_2": "localhost:28003"
+			}
+		}],
+		"C背包": "C背包",
+		"mt.client.Package$$EnhancerByCGLIB$$7713a45b@67651088": {
+			"name": "B背包"
+		}
+	},
+	"instance": {
+		"instance": "mt.client.User$$EnhancerByCGLIB$$713f5d40@534df152",
+		"nodes": {
+			"User": "localhost:28017",
+			"Server_1": "localhost:28003",
+			"Server_2": "localhost:28003"
+		}
+	}
+}
+```
+
+- ResponseMeta(返回元)
+
+![image-20220301112755297](C:\Users\83933\IdeaProjects\QinsNet_Java\guan-fang-wen-dang\pictures\ResponseMeta.png)
+
+```json
+{
+	"protocol": "Sync-Response-1.0",
+	"result": "true",
+	"instance": {
+		"instance": "mt.client.User$$EnhancerByCGLIB$$db49c047@8e0379d",
+		"nodes": {
+			"User": "localhost:28017",
+			"Server_1": "localhost:28003",
+			"Server_2": "localhost:28003"
+		}
+	},
+	"params": {},
+	"references": {
+		"mt.client.User$$EnhancerByCGLIB$$db49c047@8e0379d": {
+			"password": "***",
+			"apiToken": "1234",
+			"packages": "[mt.server.Package$$EnhancerByCGLIB$$20a58593@4018c77f, mt.server.Package$$EnhancerByCGLIB$$20a58593@44275ba4]",
+			"username": "m839336369"
+		},
+		"1234": 1234,
+		"mt.server.Package$$EnhancerByCGLIB$$20a58593@44275ba4": {
+			"name": "B背包"
+		},
+		"true": true,
+		"[mt.server.Package$$EnhancerByCGLIB$$20a58593@4018c77f, mt.server.Package$$EnhancerByCGLIB$$20a58593@44275ba4]": [{
+			"instance": "mt.server.Package$$EnhancerByCGLIB$$20a58593@4018c77f",
+			"nodes": {
+				"User": "localhost:28017",
+				"Server_1": "localhost:28003",
+				"Server_2": "localhost:28003"
+			}
+		}, {
+			"instance": "mt.server.Package$$EnhancerByCGLIB$$20a58593@44275ba4",
+			"nodes": {
+				"User": "localhost:28017",
+				"Server_1": "localhost:28003",
+				"Server_2": "localhost:28003"
+			}
+		}],
+		"***": "***",
+		"A背包": "A背包",
+		"m839336369": "m839336369",
+		"mt.server.Package$$EnhancerByCGLIB$$20a58593@4018c77f": {
+			"name": "A背包"
+		},
+		"B背包": "B背包"
+	}
+}
+```
+
+- 采用了引用池的概念，避免了深拷贝问题。
+- 网络传输分有两种类型实例，一种是节点实例，一种是普通实例，节点实例会附带Nodes节点信息
+- 值得一提的是，在方法传参后，节点实例依旧保持着节点特性。
+
+### 网络引用
+
+  与本地引用一致，当所有共享网络资源都无法引用到该类时，该类将不会共享同步，如下述代码
+
+```java
+    @Meta(nodes = {"Server_2","Server1"})
+    public void removePackage(List<Package> packages){
+        Package aPackages = packages.get(0);
+        packages.remove(0);
+        aPackages.setName("已删除");//值设置无效，因为该引用未引用到新的共享资源实例中，不会回传同步。
+    }
+```
+
+当然，这虽然符合引用的概念，但不排除需要同步的情况，这里提出两种解决方式
+
+```java
+    @Meta(nodes = {"Server_2","Server1"})
+    public Package removePackage(List<Package> packages){
+        Package aPackage = packages.get(0);
+        packages.remove(0);
+        aPackage.setName("已删除");
+        return aPackage//作为返回值，返回值依旧处于网络引用状态，所以依旧可以保持同步
+    }
+```
+
+```java
+    @Meta(nodes = {"Server_2","Server1"})
+    public Package removePackage(List<Package> packages,Package remove){
+        Package aPackage = packages.get(0);
+        packages.remove(0);
+        aPackage.setName("已删除");
+        remove = aPackage;//作为参数回传同步
+    }
+```
+
+
 
 ## 关于我们
 

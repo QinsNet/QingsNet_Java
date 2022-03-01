@@ -25,6 +25,7 @@ public class ResponseException extends Exception{
         this.message = message;
         this.data = data;
     }
+
     public ResponseException(ExceptionCode code, String message) {
         super(message);
         this.code = code;

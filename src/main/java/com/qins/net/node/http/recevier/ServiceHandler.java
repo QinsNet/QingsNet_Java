@@ -1,4 +1,5 @@
 package com.qins.net.node.http.recevier;
+import com.google.gson.Gson;
 import com.qins.net.core.console.Console;
 import com.qins.net.core.entity.RequestMeta;
 import com.qins.net.core.entity.ResponseMeta;
@@ -54,21 +55,22 @@ public class ServiceHandler extends SimpleChannelInboundHandler<FullHttpRequest>
             URI uri = new URI(req.uri());
             RequestMeta requestMeta;
             if (req.method() == HttpMethod.GET) {
-                send(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,HttpResponseStatus.METHOD_NOT_ALLOWED, Unpooled.copiedBuffer("不支持 Get方法",StandardCharsets.UTF_8)));
+                send(new ResponseMeta("不支持Get方法"));
                 return;
             }
             else if (req.method() == HttpMethod.POST) {
-                requestMeta = SerializeUtil.gson.fromJson(req.content().toString(StandardCharsets.UTF_8),RequestMeta.class);
+                String a = req.content().toString(StandardCharsets.UTF_8);
+                requestMeta = SerializeUtil.gson.fromJson(a,RequestMeta.class);
             }
             else {
-                send(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,HttpResponseStatus.EXPECTATION_FAILED, Unpooled.copiedBuffer((String.format("%s请求不支持", req.method())),StandardCharsets.UTF_8)));
+                send(new ResponseMeta((String.format("%s请求不支持", req.method()))));
                 return;
             }
             requestMeta.setMapping(uri.getPath()).setProtocol(req.headers().get("protocol"));
             if(requestMeta.getParams() == null)requestMeta.setParams(new HashMap<>());
             MetaClass metaClass = classLoader.getMetas().get(requestMeta.getMapping().split("/")[1]);
             if(metaClass == null){
-                send(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,HttpResponseStatus.EXPECTATION_FAILED, Unpooled.copiedBuffer((String.format("%s请求类未找到", requestMeta.getMapping())),StandardCharsets.UTF_8)));
+                send(new ResponseMeta((String.format("%s请求类未找到", requestMeta.getMapping()))));
                 return;
             }
             es.submit(() -> {
@@ -76,16 +78,14 @@ public class ServiceHandler extends SimpleChannelInboundHandler<FullHttpRequest>
             });
         }
         catch (Exception e){
-            send(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,HttpResponseStatus.EXPECTATION_FAILED,Unpooled.copiedBuffer(Arrays.toString(e.getStackTrace()).getBytes(StandardCharsets.UTF_8))));
-            ctx.close();
+            send(new ResponseMeta(e));
         }
     }
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        send(new ResponseMeta(new Exception(cause)));
         super.exceptionCaught(ctx, cause);
-        send(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,HttpResponseStatus.EXPECTATION_FAILED,Unpooled.copiedBuffer(Arrays.toString(cause.getStackTrace()).getBytes(StandardCharsets.UTF_8))));
-        ctx.close();
     }
 
     public boolean send(Object data) {
@@ -94,6 +94,7 @@ public class ServiceHandler extends SimpleChannelInboundHandler<FullHttpRequest>
         }
         else if(data instanceof ResponseMeta){
             ResponseMeta responseMeta = (ResponseMeta) data;
+            String a = SerializeUtil.gson.toJson(responseMeta);
             DefaultFullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,HttpResponseStatus.OK,Unpooled.copiedBuffer(SerializeUtil.gson.toJson(responseMeta).getBytes(StandardCharsets.UTF_8)));
             send(response);
             Console.debug(data.toString());

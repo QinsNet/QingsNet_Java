@@ -1,10 +1,10 @@
 package com.qins.net.meta.standard;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonPrimitive;
+import com.google.gson.*;
+import com.google.gson.reflect.TypeToken;
 import com.qins.net.core.console.Console;
+import com.qins.net.core.entity.RequestMeta;
+import com.qins.net.core.entity.ResponseMeta;
 import com.qins.net.core.entity.TrackLog;
 import com.qins.net.meta.core.MetaField;
 import com.qins.net.meta.core.BaseClass;
@@ -12,11 +12,45 @@ import com.qins.net.meta.core.MetaReferences;
 import com.qins.net.util.SerializeUtil;
 
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Type;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Map;
 
 public abstract class StandardBaseClass extends BaseClass {
-
+    static {
+        final Type mapType = new TypeToken<HashMap<String,JsonElement>>(){}.getType();
+        SerializeUtil.gson = SerializeUtil.gson.newBuilder().registerTypeAdapter(RequestMeta.class, new JsonDeserializer<RequestMeta>() {
+            @Override
+            public RequestMeta deserialize(JsonElement jsonElement, Type type, JsonDeserializationContext jsonDeserializationContext) throws JsonParseException {
+                JsonObject jsonObject = jsonElement.getAsJsonObject();
+                RequestMeta requestMeta = new RequestMeta();
+                requestMeta
+                        .setProtocol(jsonObject.get("protocol").getAsString())
+                        .setMapping(jsonObject.get("mapping").getAsString())
+                        .setInstance(jsonObject.get("instance"))
+                        .setParams(SerializeUtil.gson.fromJson(jsonObject.get("params"), mapType))
+                        .setReferences(SerializeUtil.gson.fromJson(jsonObject.get("references"), mapType));
+                return requestMeta;
+            }
+        }).registerTypeAdapter(ResponseMeta.class, new JsonDeserializer<ResponseMeta>() {
+            @Override
+            public ResponseMeta deserialize(JsonElement jsonElement, Type type, JsonDeserializationContext jsonDeserializationContext) throws JsonParseException {
+                JsonObject jsonObject = jsonElement.getAsJsonObject();
+                ResponseMeta responseMeta = new ResponseMeta();
+                responseMeta
+                        .setProtocol(jsonObject.get("protocol").getAsString())
+                        .setInstance(jsonObject.get("instance"))
+                        .setResult(jsonObject.get("result"))
+                        .setParams(SerializeUtil.gson.fromJson(jsonObject.get("params"), mapType))
+                        .setReferences(SerializeUtil.gson.fromJson(jsonObject.get("references"), mapType));
+                if(jsonObject.get("exception") != null){
+                        responseMeta.setException(jsonObject.get("exception").getAsString());
+                }
+                return responseMeta;
+            }
+        }).create();
+    }
     public StandardBaseClass(Class<?> instanceClass) throws InvocationTargetException, NoSuchMethodException, InstantiationException, IllegalAccessException {
         super(instanceClass);
     }
@@ -31,13 +65,12 @@ public abstract class StandardBaseClass extends BaseClass {
         Console.log(log.getMessage());
     }
 
-    @Override
-    public Object serializeAsObject(Object instance, MetaReferences references, Map<String, String> pools) throws IllegalAccessException {
+    public Object serialize(Object instance, MetaReferences references, Map<String, Object> pools) throws IllegalAccessException {
         if(instance == null)return null;
         else if(generics != null && instance instanceof Iterable){
             JsonArray jsonArray = new JsonArray();
             for (Object item : ((Iterable)instance)){
-                JsonElement msg = (JsonElement) generics[0].serializeAsObject(item, references,pools);
+                JsonElement msg = (JsonElement) generics[0].serialize(item, references,pools);
                 jsonArray.add(msg);
             }
             return jsonArray;
@@ -45,7 +78,7 @@ public abstract class StandardBaseClass extends BaseClass {
         else if(generics != null && instance instanceof Map){
             JsonObject jsonObject = new JsonObject();
             for (Map.Entry<Object,Object> item : ((Map<Object,Object>) instance).entrySet()){
-                jsonObject.add(generics[0].serialize(item.getKey(),references,pools), (JsonElement) generics[1].serializeAsObject(instance, references,pools));
+                jsonObject.add(((JsonPrimitive)generics[0].serialize(item.getKey(),references,pools)).getAsString(), (JsonElement) generics[1].serialize(instance, references,pools));
             }
             return jsonObject;
         }
@@ -54,7 +87,7 @@ public abstract class StandardBaseClass extends BaseClass {
             for (MetaField metaField : fields.values()){
                 Object object = metaField.getField().get(instance);
                 if(object == null)continue;
-                Object a = metaField.getBaseClass().serializeAsObject(object,references,pools);
+                Object a = metaField.getBaseClass().serialize(object,references,pools);
                 jsonObject.add(metaField.getName(), (JsonElement) a);
             }
             return jsonObject;
@@ -62,21 +95,21 @@ public abstract class StandardBaseClass extends BaseClass {
         else return SerializeUtil.gson.toJsonTree(instance);
     }
     @Override
-    public Object deserializeAsObject(Object rawJsonElement, MetaReferences references, Map<String, String> pools) throws InstantiationException, IllegalAccessException {
+    public Object deserialize(Object rawJsonElement, MetaReferences references, Map<String, Object> pools) throws InstantiationException, IllegalAccessException {
         JsonElement jsonElement = (JsonElement) rawJsonElement;
         if(rawJsonElement == null)return null;
         else if(jsonElement.isJsonNull()) return null;
         else if(generics != null && jsonElement.isJsonArray()){
             Collection instance = (Collection) instanceClass.newInstance();
             for (JsonElement element : jsonElement.getAsJsonArray()){
-                instance.add(generics[0].deserializeAsObject(element, references, pools));
+                instance.add(generics[0].deserialize(element, references, pools));
             }
             return instance;
         }
         else if(generics != null && jsonElement.isJsonObject() && Map.class.isAssignableFrom(instanceClass)){
             Map map = (Map) instanceClass.newInstance();
             for (Map.Entry<String,JsonElement> item : jsonElement.getAsJsonObject().entrySet()){
-                map.put(generics[0].deserialize(item.getKey(),references,pools),generics[1].deserializeAsObject(item.getValue(), references, pools));
+                map.put(generics[0].deserialize(new JsonPrimitive(item.getKey()),references,pools),generics[1].deserialize(item.getValue(), references, pools));
             }
             return map;
         }
@@ -84,22 +117,12 @@ public abstract class StandardBaseClass extends BaseClass {
             Object baseInstance = instanceClass.newInstance();
             JsonObject jsonObject = jsonElement.getAsJsonObject();
             for (MetaField metaField : fields.values()){
-                Object value = metaField.getBaseClass().deserializeAsObject(jsonObject.get(metaField.getName()),references,pools);
+                Object value = metaField.getBaseClass().deserialize(jsonObject.get(metaField.getName()),references,pools);
                 if(value == null)continue;
                 metaField.getField().set(baseInstance,value);
             }
             return baseInstance;
         }
         else return SerializeUtil.gson.fromJson(jsonElement,instanceClass);
-    }
-
-    @Override
-    public String serialize(Object instance, MetaReferences references, Map<String, String> pools) throws IllegalAccessException {
-        return SerializeUtil.gson.toJson(serializeAsObject(instance,references,pools));
-    }
-
-    @Override
-    public Object deserialize(String reference, MetaReferences references, Map<String, String> pools) throws InstantiationException, IllegalAccessException {
-        return deserializeAsObject(SerializeUtil.gson.fromJson(reference,JsonElement.class), references, pools);
     }
 }
