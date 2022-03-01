@@ -479,29 +479,7 @@ public abstract class User{
     }
 ```
 
-当然，这虽然符合引用的概念，但不排除需要同步的情况，这里提出两种解决方式
-
-```java
-    @Meta(nodes = {"Server_2","Server1"})
-    public Package removePackage(List<Package> packages){
-        Package aPackage = packages.get(0);
-        packages.remove(0);
-        aPackage.setName("已删除");
-        return aPackage//作为返回值，返回值依旧处于网络引用状态，所以依旧可以保持同步
-    }
-```
-
-```java
-    @Meta(nodes = {"Server_2","Server1"})
-    public Package removePackage(List<Package> packages,Package remove){
-        Package aPackage = packages.get(0);
-        packages.remove(0);
-        aPackage.setName("已删除");
-        remove = aPackage;//作为参数回传同步
-    }
-```
-
-
+当然，这虽然符合引用的概念，但不排除需要同步的情况，故我们做了额外的拓展，默认开启回传同步检查（遍历排查是否存在丢失引用）
 
 ## 关于我们
 

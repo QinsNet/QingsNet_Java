@@ -20,6 +20,8 @@ import lombok.experimental.Accessors;
 @Setter
 @Accessors(chain = true)
 public class ServiceConfig {
+    boolean referencesAllSync = true;
+
     public ServiceConfig(){
 
     }

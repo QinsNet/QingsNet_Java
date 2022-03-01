@@ -21,4 +21,5 @@ import lombok.experimental.Accessors;
 @Accessors(chain = true)
 public class RequestConfig {
     int timeout = 30000;
+    boolean referencesAllSync = true;
 }

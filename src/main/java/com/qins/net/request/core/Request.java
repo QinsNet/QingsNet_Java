@@ -42,7 +42,7 @@ public abstract class Request implements IRequest {
     @Getter
     protected final ConcurrentHashMap<String, RequestMeta> tasks = new ConcurrentHashMap<>();
     @Getter
-    protected RequestConfig requestConfig = new RequestConfig();
+    protected RequestConfig config = new RequestConfig();
     @Getter
     protected MetaClass metaClass;
 
@@ -105,7 +105,7 @@ public abstract class Request implements IRequest {
             sender.setMetaClass(metaClass);
             sender.setContext(context);
             Class<?> return_type = method.getReturnType();
-            int timeout = requestConfig.getTimeout();
+            int timeout = config.getTimeout();
             if(metaMethod.getMethodPact().getTimeout() != -1)timeout = metaMethod.getMethodPact().getTimeout();
             if(sender.send(context.getRequestMeta(),timeout)){
                 synchronized (context){
@@ -156,10 +156,12 @@ public abstract class Request implements IRequest {
                 Object result = context.getMetaMethod().getMetaReturn().deserialize(context.getResponseMeta().getResult(),context.getReferences(),context.getResponseMeta().getReferences());
                 context.setResult(result);
             }
-            //补足由于丢网络引用造成的未同步
-            for (Map.Entry<String,Object> item : context.getResponseMeta().getReferences().entrySet()){
-                if(!context.getReferences().getDeserializeObjects().containsKey(item.getKey())){
-                    context.getReferences().getBasesClass().get(item.getKey()).deserialize(item.getValue(),context.getReferences(),context.getResponseMeta().getReferences());
+            if(config.isReferencesAllSync()){
+                //补足由于丢网络引用造成的未同步
+                for (Map.Entry<String,Object> item : context.getResponseMeta().getReferences().entrySet()){
+                    if(!context.getReferences().getDeserializeObjects().containsKey(item.getKey())){
+                        context.getReferences().getBasesClass().get(item.getKey()).deserialize(item.getValue(),context.getReferences(),context.getResponseMeta().getReferences());
+                    }
                 }
             }
             synchronized (context){

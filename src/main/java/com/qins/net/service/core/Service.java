@@ -27,7 +27,7 @@ import java.util.Map;
 
 public abstract class Service implements IService {
     @Getter
-    protected ServiceConfig serviceConfig;
+    protected ServiceConfig config;
     @Getter
     protected final HashMap<String,MetaMethod> methods = new HashMap<>();
     @Getter
@@ -128,11 +128,14 @@ public abstract class Service implements IService {
                 if(metaReturn != null){
                     returnObject = metaReturn.serialize(localResult,context.getReferences(),references);
                 }
-                //补足由于丢网络引用造成的未同步
-                for (Map.Entry<String,Object> item : context.getReferences().getDeserializeObjects().entrySet()){
-                    if(!context.getReferences().getSerializeObjects().containsKey(item.getKey())){
-                        Object oldObject = item.getValue();
-                        context.getReferences().getBasesClass().get(item.getKey()).serialize(oldObject,context.getReferences(),references);
+
+                //补足由于无网络引用造成的未同步
+                if(config.isReferencesAllSync()){
+                    for (Map.Entry<String,Object> item : context.getReferences().getDeserializeObjects().entrySet()){
+                        if(!context.getReferences().getSerializeObjects().containsKey(item.getKey())){
+                            Object oldObject = item.getValue();
+                            context.getReferences().getBasesClass().get(item.getKey()).serialize(oldObject,context.getReferences(),references);
+                        }
                     }
                 }
                 return new ResponseMeta(instance,syncParams,returnObject,references);
