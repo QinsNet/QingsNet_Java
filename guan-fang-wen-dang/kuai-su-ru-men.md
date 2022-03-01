@@ -1,14 +1,142 @@
 ---
-description: 带您快速了解Ethereal
+description: 带您快速了解QinsNet
 ---
 
-# 快速入门
-
-## 引论
-
-### QinsNet
+# QinsNet
 
 > **状态同步式网络服务框架**
+## 入门
+
+### 一纸契约
+
+```java
+@NodeMapping(name="Beijing",host="localhost:28015")//节点一
+@NodeMapping(name="Shanghai",host="localhost:28016")//节点二
+@Meta(nodes = "Shanghai")//默认上海节点
+public abstract class User{
+    @Meta//共享资源
+    private String username;
+    @Meta
+    private String password;
+    @Meta
+    private Integer apiToken;
+    @Meta
+    private ArrayList<Package> packages;
+    @Meta//默认选择上海节点
+    public abstract boolean login();
+    @Meta
+    public abstract boolean newPack();
+    @Meta(nodes = {"Beijing","Shanghai"})//允许通过北京、上海两个节点进行网络请求
+    public abstract boolean addPack(@Meta Package aPackage);
+    @Meta(nodes = "User")//用户自身节点
+    public abstract void hello();
+}
+```
+
+客户端和服务端均可以通过此契约来配置网络服务，其中@Meta表明该资源为网络资源，具备网络共享（同步）的能力。
+
+契约支持**多节点**同时网络资源的发布与服务是共享的，倘若符合锥形NAT，用户本地方也是服务可达状态，即用户方拥有自己的节点以及自己的网络函数，服务方可以主动向用户方发起网络请求，与P2P概念一致。
+
+### Client
+
+```java
+@NodeMapping("Beijing","localhost:28015")//节点一
+@NodeMapping("Shanghai","localhost:28016")//节点二
+@Meta(nodes = "Shanghai")
+public abstract class User{
+    @Meta
+    private String username;
+    @Meta
+    private String password;
+    @Meta
+    private Integer apiToken;
+    @Meta
+    private ArrayList<Package> packages;
+    @Meta/
+    public abstract boolean login();
+    @Meta
+    public abstract boolean newPack();
+    @Meta(nodes = {"Beijing","Shanghai"})
+    public abstract boolean addPack(@Meta Package aPackage);
+    @Meta(nodes = "Beijing")
+    public void hello(){//不同节点只需负责好自己节点应该实现的方法就可以了
+       System.out.println(name + " Hello!!!");
+    }
+}
+```
+
+### Server
+
+```java
+@NodeMapping("Beijing","localhost:28015")//节点一
+@NodeMapping("Shanghai","localhost:28016")//节点二
+@Meta(nodes = "Shanghai")
+public abstract class User{
+    @Meta
+    private String username;
+    @Meta
+    private String password;
+    @Meta
+    private Integer apiToken;
+    @Meta
+    private ArrayList<Package> packages;
+
+    @Meta
+    public boolean login() throws NewInstanceException {
+        if("m839336369".equals(username) && "password".equals(password)){
+            this.apiToken = 1234;
+            this.password = "***";
+            return true;
+        }
+        else return false;
+    }
+    
+    @Meta(nodes = {"Server_2","Server1"})
+    public boolean newPack(){
+        try {
+            Package aPackage = MetaApplication.create(Package.class);
+            NodeUtil.copyNodeAll(this,aPackage);
+            aPackage.setName("A背包");
+            Package bPackage = MetaApplication.create(Package.class);
+            NodeUtil.copyNodeAll(this,bPackage);
+            bPackage.setName("B背包");
+            packages = new ArrayList<>();
+            packages.add(aPackage);
+            packages.add(bPackage);
+            return true;
+        } catch (NewInstanceException | TrackException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+    
+    
+    @Meta
+    public Boolean addPack(@Meta Package aPackage){
+        packages.add(aPackage);
+        return true;
+    }
+
+    @Meta(nodes = "User")
+    public abstract void hello();
+}
+```
+
+### 部署
+
+​       *网络化的请求逻辑与单机逻辑保持一致。*
+
+```java
+MetaApplication.run("client.yaml");//加载配置文件
+MetaApplication.defineNode("User", "localhost:28017");//定义全局节点
+User user = MetaApplication.create(User.class);
+if(user.login()){
+	System.out.println(name + " Hello!!!");
+}
+else{
+	System.out.println(name + " 登录失败.");
+}
+```
 
 ### 网络化
 
