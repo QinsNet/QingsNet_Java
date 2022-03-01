@@ -196,44 +196,39 @@ else Console.print("登录失败");
 
   更好的定义是：**状态同步式网络框架**，
 
-  更好的理解是：**共享实体**
-
-  总结就是，单机如何编程，网络化时
+  更好的理解是：**共享实体
 
 #### 责任说明
 
-1. Ethereal并非所有语言都会实现一套C\S，我们理性的认为，用C++搭建服务器是一个糟糕的决定，所以我们长期不会对C++的服务器版本进行支持，且短期并无意于C++客户端版本。我们深知C++客户端的迫切，所以我们采用WebSocket协议，同时也支持了HTTP协议，这两种协议无论在何种流行语言，都有完整的框架支持，所以依旧可以与Ethereal进行交互，确保了无Ethereal版本支持下的最低交互保证！
-2. Ethereal热衷于支持流行语言，无论是C\#、Java还是Python都有了可靠的支持，但也并非局限于这几种语言，我们仍在招募着志同道合的道友，同我们一起维护与拓展。
-3. Ethereal采用LGPL开源协议，我们希望Ethereal在社区帮助下持续健康的成长，更好的为社区做贡献。
-4. Ethereal长期支持，我们欢迎开发者对Ethereal进行尝鲜。
+1. QinsNet采用LGPL开源协议，我们希望QinsNet在社区帮助下持续健康的成长，更好的为社区做贡献。
+2. QinsNet长期支持，我们欢迎开发者对QinsNet进行尝鲜。
 
-### 入门
+## 入门
 
-接下来我们以C\#和Java版本来快速了解三步曲：类型、网关、服务\请求。
+#### 一纸契约：
 
-#### server\[C\#\]
-
-```text
-public class ServerService
-{
-    [Service]
-    public int Add(int a,int b)
-    {
-        return a + b;
-    }
+```java
+@NodeMapping("Beijing","localhost:28015")//节点一
+@NodeMapping("Shanghai","localhost:28016")//节点二
+@Meta(nodes = "Shanghai")//默认上海节点
+public abstract class User{
+    @Meta//共享资源
+    private String username;
+    //非共享资源
+    private String password;
+    @Meta
+    private Integer apiToken;
+    @Meta
+    private ArrayList<Package> packages;
+    @Meta//默认选择上海节点
+    public abstract boolean login();
+    @Meta
+    public abstract boolean newPack();
+    @Meta(nodes = {"Beijing","Shanghai"})//允许通过北京、上海两个节点进行网络请求
+    public abstract boolean addPack(@Meta Package aPackage);
+    @Meta(nodes = "Beijing")//额外增添北京节点
+    public abstract void hello();
 }
-
-//注册数据类型
-AbstractTypes types = new AbstractTypes();
-types.Add<int>("Int");
-types.Add<long>("Long");
-types.Add<string>("String");
-types.Add<bool>("Bool");
-types.Add<User>("User");
-Net node = NetCore.Register("name", Net.NetType.WebSocket); //注册网关
-server server = ServerCore.Register(node,"127.0.0.1:28015/NetDemo/");//注册服务端
-Service serviceNet = ServiceCore.Register<ServerService>(node, "server", types);//注册服务
-node.Publish();//启动
 ```
 
 #### Client\[Java\]

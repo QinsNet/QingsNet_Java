@@ -23,7 +23,7 @@ public abstract class User{
     @Meta
     public abstract boolean newPack();
     @Meta(nodes = {"Server_2","Server1"})
-    public abstract boolean addPack(@Meta Package aPackage, ArrayList<String> hash);
+    public abstract boolean addPack(@Meta Package aPackage);
     @Meta(nodes = "Server_2")
     public abstract void hello();
 }

@@ -56,7 +56,9 @@ public abstract class Request implements IRequest {
                     if((method.getModifiers() & Modifier.ABSTRACT) == 0)continue;
                     MetaMethod metaMethod = metaClass.getComponents().metaMethod().getConstructor(Method.class, Components.class).newInstance(method,metaClass.getComponents());
                     methods.put(metaMethod.getName(), metaMethod);
-                    metaMethod.getNodes().addAll(metaClass.getDefaultNodes());
+                    if(metaMethod.getNodes().size() == 0){
+                        metaMethod.getNodes().addAll(metaClass.getDefaultNodes());
+                    }
                 }
                 checkClass = checkClass.getSuperclass();
             }
