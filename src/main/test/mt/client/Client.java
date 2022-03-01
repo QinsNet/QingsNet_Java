@@ -19,13 +19,9 @@ public class Client {
         user.setPassword("password");
         if(user.login()){
             user.newPack();
-            user.hello();
             Package aPackage = MetaApplication.create(Package.class);
             aPackage.name = "C背包";
             user.addPack(aPackage);
-            user.addPack(aPackage);
-            aPackage.name = "D背包";
-            user.removePackage(aPackage);
             user.hello();
         }
     }

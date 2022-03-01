@@ -30,7 +30,4 @@ public abstract class User {
 
     @Meta(nodes = "Server_2")
     public abstract void hello();
-
-    @Meta
-    public abstract boolean removePackage(Package aPackage);
 }

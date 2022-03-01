@@ -27,7 +27,7 @@ import java.util.Map;
 
 public abstract class Service implements IService {
     @Getter
-    protected ServiceConfig config;
+    protected final ServiceConfig config = new ServiceConfig();
     @Getter
     protected final HashMap<String,MetaMethod> methods = new HashMap<>();
     @Getter
