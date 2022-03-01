@@ -186,6 +186,30 @@ else Console.print("登录失败");
 
   单机编程在安全、维护、数据交互上都存在着极为的不便，网络化愈发流行，但网络化却又一直无法摆脱逻辑复杂问题。
 
+#### 问题三[内存]：引用与拷贝
+
+```java
+//服务端逻辑
+public Package setPackage(User user,Package aPackage){
+	user.setPackage(aPackage);
+	return aPackage;
+}
+```
+
+```java
+//客户端逻辑
+User user = new User();
+UserService userService = new UserService();
+Package aPackage = new Package();
+Package bPackage = userService.setPackage(user,aPackage);
+user.getPackage();//报错，因为服务端的实体状态是无法同步到客户端的。
+//aPackage 与 bPackage 不为同一个实体，一般是基于序列化的深拷贝对象。
+```
+
+当服务完成后，User内部的aPackage应与返回值aPackage为同一对象，且User的状态改变。
+
+  但作为网络服务一方，显然无法具备让客户端User状态改变、引用同步这样的逻辑，这也是为什么造成了单机版编程与网络版编程差异的主要原因。
+
 ### QinsNet
 
   正题来了，前文说了许多单机版的开发优势以及安全等问题的劣势，作为单机版，安全、网络数据交互等问题是不可解决的，但是我们虽然无法解决单机版的劣势，但是我们可以解决网络版的劣势。
@@ -198,14 +222,9 @@ else Console.print("登录失败");
 
   更好的理解是：**共享实体
 
-### 责任说明
-
-1. QinsNet采用LGPL开源协议，我们希望QinsNet在社区帮助下持续健康的成长，更好的为社区做贡献。
-2. QinsNet长期支持，我们欢迎开发者对QinsNet进行尝鲜。
-
 ## 入门
 
-### 一纸契约：
+### 一纸契约
 
 ```java
 @NodeMapping("Beijing","localhost:28015")//节点一
@@ -325,15 +344,15 @@ public abstract class User{
 ​       *网络化的请求逻辑与单机逻辑保持一致。*
 
 ```java
-        MetaApplication.run("client.yaml");//加载配置文件
-        MetaApplication.defineNode("User", "localhost:28017");//定义全局节点
-        User user = MetaApplication.create(User.class);
-		if(user.login()){
-			System.out.println(name + " Hello!!!");
-        }
-		else{
-			System.out.println(name + " 登录失败.");
-        }
+MetaApplication.run("client.yaml");//加载配置文件
+MetaApplication.defineNode("User", "localhost:28017");//定义全局节点
+User user = MetaApplication.create(User.class);
+if(user.login()){
+	System.out.println(name + " Hello!!!");
+}
+else{
+	System.out.println(name + " 登录失败.");
+}
 ```
 
 ## 技术文档
@@ -468,6 +487,8 @@ public abstract class User{
 
 ### 网络引用
 
+  无论以什么方式（属性、参数、返回值），所有的数据都保持着一致的引用原则，客户端的引用状态与服务端的引用状态一致，回传同步之后，依旧保持一致。
+
   与本地引用一致，当所有共享网络资源都无法引用到该类时，该类将不会共享同步，如下述代码
 
 ```java
@@ -479,26 +500,107 @@ public abstract class User{
     }
 ```
 
-当然，这虽然符合引用的概念，但不排除需要同步的情况，故我们做了额外的拓展，默认开启回传同步检查（遍历排查是否存在丢失引用）
+  当然，这虽然符合引用的概念，但不排除需要同步的情况，故我们做了额外的拓展，默认开启回传同步检查，以上即使丢失网络引用，一样具备共享性质。
+
+###  网络节点
+
+-   全局节点
+
+  所有类节点都会包含全局节点信息，若类节点已存在，则不进行更替。
+
+```java
+MetaApplication.defineNode("User", "localhost:28017");
+MetaApplication.defineNode("Server_1", "localhost:28003");
+MetaApplication.defineNode("Server_2", "localhost:28003");
+```
+
+- 类节点
+
+  类节点保存内部方法请求的所有节点信息（包含节点地址）
+
+```java
+@NodeMapping(name="Beijing",host="localhost:28015")//节点一
+@NodeMapping(name="Shanghai",host="localhost:28016")//节点二
+@Meta(nodes = "Shanghai")//默认上海节点
+public abstract class User
+```
+
+- 请求节点
+
+  请求节点具备多节点支持，节点不包含地址信息，只包含节点名映射
+
+  若无节点定义，则采用类节点中的*@Meta(nodes = "Shanghai")*作为默认节点
+
+```java
+	@Meta(nodes = {"Server_2", "Server1"})
+    public abstract boolean addPack(@Meta Package aPackage);
+
+    @Meta(nodes = "Server_2")
+    public abstract void hello();
+
+    @Meta
+    public abstract boolean removePackage(Package aPackage);
+```
+
+- 动态配置节点
+
+  MetaApplication 允许动态设置节点信息
+
+```java
+//配置全局节点
+public static MetaApplication defineNode(String name, String address);
+//配置实体节点
+public static MetaApplication defineNode(Object instance, String name, String address);
+```
+
+### Meta注解
+
+- 类注解：网络元
+
+  value:映射名
+
+  nodes:默认节点
+
+```java
+@Meta(value = "User",nodes = "Shanghai")//默认上海节点
+public abstract class User
+```
+
+- 属性注解：共享资源
+
+  value:映射名
+
+```java
+@Meta(value = "User")
+private String password;
+```
+
+- 方法注解：网络请求
+
+  value:映射名
+
+  nodes:节点映射，空表示默认节点
+
+```java
+@Meta(value = "Login",nodes = "Shanghai")
+public abstract boolean login();
+```
+
+- 参数注解：共享资源
+
+  value:映射名
+
+```java
+public abstract boolean addPack(@Meta Package aPackage);
+```
 
 ## 关于我们
 
-### 团队成员
-
-## 白阳
+### 白阳
 
 _“黄昏，垂夜，星海，白珑。”_
 
-### 项目分配
+## 责任说明
 
-| 板块 | 语言\|框架 | 开发人员 |
-| :---: | :---: | :---: |
-| server | C\# | 白阳 |
-| Client | C\# | 白阳 |
-| server | Java | 007 |
-| Client | Java | anmmMa |
-| server | Python | Ckay |
-| Client | Python | 青山 |
-| Center | Vue | Laity |
-| Document | Jekyll | 白阳 |
-
+1. QinsNet采用LGPL开源协议，我们希望QinsNet在社区帮助下持续健康的成长，更好的为社区做贡献。
+2. QinsNet长期支持，我们欢迎开发者对QinsNet进行尝鲜。
