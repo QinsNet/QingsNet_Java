@@ -6,10 +6,12 @@ import lombok.Setter;
 
 @Getter
 @Setter
-@Meta(nodes = "User")
+@Meta(value = "Package",nodes = "User")
 public abstract class Package {
     @Meta
     String name;
+    @Meta
+    User user;
     @Meta
     public boolean pack(){
         if(name != null){

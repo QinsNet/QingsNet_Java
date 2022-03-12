@@ -2,9 +2,8 @@ package com.qins.net.node.http.recevier;
 
 import com.qins.net.core.boot.ApplicationConfig;
 import com.qins.net.core.console.Console;
-import com.qins.net.core.entity.TrackLog;
 import com.qins.net.core.entity.NodeAddress;
-import com.qins.net.meta.core.MetaClassLoader;
+import com.qins.net.meta.core.MetaClass;
 import com.qins.net.node.core.Server;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
@@ -17,21 +16,22 @@ import io.netty.handler.stream.ChunkedWriteHandler;
 import lombok.Getter;
 
 import java.lang.reflect.InvocationTargetException;
+import java.util.HashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class Receiver extends Server {
     protected ExecutorService es;
-    protected MetaClassLoader classLoader;
+    protected HashMap<String,MetaClass> metas;
     protected ApplicationConfig config;
     EventLoopGroup boss = new NioEventLoopGroup();
     EventLoopGroup work = new NioEventLoopGroup();
     @Getter
     protected Channel channel;
-    public Receiver(ApplicationConfig config,NodeAddress local, MetaClassLoader classLoader) {
+    public Receiver(ApplicationConfig config, NodeAddress local, HashMap<String, MetaClass> metas) {
         this.config = config;
         this.local = local;
-        this.classLoader = classLoader;
+        this.metas = metas;
     }
     @Override
     public boolean start(){
@@ -48,7 +48,7 @@ public class Receiver extends Server {
                             ch.pipeline().addLast(new HttpObjectAggregator(config.getMaxBufferSize()));
                             ch.pipeline().addLast(new ChunkedWriteHandler());
                             //Service
-                            ch.pipeline().addLast(new ServiceHandler(es, classLoader,local));
+                            ch.pipeline().addLast(new ServiceHandler(es, metas,local));
                         }
                     });
             channel = bootstrap.bind(local.getHost(),local.getPort()).addListener((ChannelFutureListener) future -> {

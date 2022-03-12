@@ -12,7 +12,7 @@ import java.util.ArrayList;
 
 @Getter
 @Setter
-@Meta(nodes = "Server")
+@Meta(value = "User",nodes = "Server")
 public abstract class User{
     @Meta
     private String username;

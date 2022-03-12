@@ -14,39 +14,25 @@ public class MetaClassLoader extends ClassLoader{
     private final HashMap<String,BaseClass> bases = new HashMap<>();
     private final HashMap<String,MetaClass> metas = new HashMap<>();
 
-    public BaseClass loadClass(String typeName, Class<?> instanceClass) throws LoadClassException {
+    public BaseClass loadClass(Class<?> instanceClass) throws LoadClassException {
         try {
-            if(bases.containsKey(typeName))return bases.get(typeName);
+            Meta meta = instanceClass.getAnnotation(Meta.class);
+            String name = meta == null || "".equals(meta.value()) ? instanceClass.getName() : meta.value();
+            if(bases.containsKey(name))return bases.get(name);
             else {
                 Components components = instanceClass.getAnnotation(Components.class) != null ? instanceClass.getAnnotation(Components.class) : Components.class.getAnnotation(Components.class);
                 BaseClass baseClass;
-                Meta meta = instanceClass.getAnnotation(Meta.class);
                 if(meta != null){
-                    baseClass = loadMetaClass(instanceClass);
+                    baseClass = components.metaClass().getConstructor(Class.class).newInstance(instanceClass);
+                    metas.put(name, (MetaClass) baseClass);
                 }
                 else {
                     baseClass = components.baseClass().getConstructor(Class.class).newInstance(instanceClass);
                 }
-                bases.put(typeName, baseClass);
+                bases.put(name, baseClass);
+                baseClass.link();
                 return baseClass;
             }
-        }
-        catch (NoSuchMethodException | InvocationTargetException | InstantiationException | IllegalAccessException e) {
-            throw new LoadClassException(e);
-        }
-    }
-    public BaseClass loadMetaClass(Class<?> instanceClass) throws LoadClassException {
-        try {
-            Meta meta = instanceClass.getAnnotation(Meta.class);
-            if(meta != null){
-                String name = "".equals(meta.value()) ? instanceClass.getSimpleName() : meta.value();
-                if(metas.containsKey(name))return metas.get(name);
-                Components components = instanceClass.getAnnotation(Components.class) != null ? instanceClass.getAnnotation(Components.class) : Components.class.getAnnotation(Components.class);
-                BaseClass baseClass = components.metaClass().getConstructor(Class.class).newInstance(instanceClass);
-                metas.put(name, (MetaClass) baseClass);
-                return baseClass;
-            }
-            else throw new LoadClassException(String.format("%s 未定义@Meta", instanceClass.getName()));
         }
         catch (NoSuchMethodException | InvocationTargetException | InstantiationException | IllegalAccessException e) {
             throw new LoadClassException(e);

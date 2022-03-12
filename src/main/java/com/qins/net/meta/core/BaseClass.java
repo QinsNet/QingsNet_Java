@@ -25,6 +25,14 @@ public abstract class BaseClass {
         this.instanceClass = instanceClass;
         components = instanceClass.getAnnotation(Components.class);
         if(components == null)components = Components.class.getAnnotation(Components.class);
+    }
+    public abstract Object deserialize(Object jsonElement, MetaReferences references, Map<String,Object> pools) throws InstantiationException, IllegalAccessException;
+
+    public void onException(TrackException.ExceptionCode code, String message) {
+        onException(new TrackException(code,message));
+    }
+
+    protected void link() throws NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException {
         for (Field field : AnnotationUtil.getFields(instanceClass, Meta.class)){
             field.setAccessible(true);
             MetaField metaField = components.metaField().getConstructor(Field.class,Components.class).newInstance(field,components);
@@ -33,13 +41,6 @@ public abstract class BaseClass {
     }
 
     public abstract Object serialize(Object instance, MetaReferences references, Map<String,Object> pools) throws IllegalAccessException;
-    public abstract Object deserialize(Object jsonElement, MetaReferences references, Map<String,Object> pools) throws InstantiationException, IllegalAccessException;
-
-    public abstract void sync(Object oldInstance,Object newInstance,Object rawInstance,MetaReferences references,Map<String,Object> pools) throws IllegalAccessException, InstantiationException;
-
-    public void onException(TrackException.ExceptionCode code, String message) {
-        onException(new TrackException(code,message));
-    }
 
     public abstract void onException(Exception exception);
 

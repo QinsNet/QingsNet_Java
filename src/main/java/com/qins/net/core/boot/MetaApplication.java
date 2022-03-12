@@ -26,7 +26,7 @@ public class MetaApplication {
             Meta meta = instanceClass.getAnnotation(Meta.class);
             if(meta == null)throw new LoadClassException(String.format("%s 未定义@Meta", instanceClass.getName()));
             MetaClassLoader classLoader = context.getMetaClassLoader();
-            MetaClass metaClass = (MetaClass) classLoader.loadMetaClass(instanceClass);
+            MetaClass metaClass = (MetaClass) classLoader.loadClass(instanceClass);
             Object instance = metaClass.newInstance(new HashMap<>());
             return (T) instance;
         }
@@ -43,7 +43,7 @@ public class MetaApplication {
         context.getThread().setContextClassLoader(context.getMetaClassLoader());
         Thread.currentThread().setContextClassLoader(context.getMetaClassLoader());
         context.setConfig(loadConfig(path));
-        context.setServer(new Receiver(context.getConfig(),new NodeAddress("localhost",context.getConfig().getPort()), context.getMetaClassLoader()));
+        context.setServer(new Receiver(context.getConfig(),new NodeAddress("localhost",context.getConfig().getPort()), context.getMetaClassLoader().getMetas()));
         context.getServer().start();
         return null;
     }
@@ -51,7 +51,7 @@ public class MetaApplication {
     public static MetaApplication publish(Class<?> instanceClass) throws LoadClassException {
         Meta meta = instanceClass.getAnnotation(Meta.class);
         if(meta == null)throw new LoadClassException(String.format("%s 未定义@Meta", instanceClass.getName()));
-        context.getMetaClassLoader().loadMetaClass(instanceClass);
+        context.getMetaClassLoader().loadClass(instanceClass);
         return null;
     }
 

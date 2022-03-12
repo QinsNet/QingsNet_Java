@@ -202,9 +202,8 @@ else Console.print("登录失败");
 
 ```java
 //服务端逻辑
-public Package setPackage(User user,Package aPackage){
+public void setPackage(User user,Package aPackage){
 	user.setPackage(aPackage);
-	return aPackage;
 }
 ```
 

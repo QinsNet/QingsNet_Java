@@ -20,6 +20,7 @@ public class Client {
         if(user.login()){
             user.newPack();
             Package aPackage = MetaApplication.create(Package.class);
+            aPackage.user = user;
             aPackage.name = "C背包";
             user.addPack(aPackage);
             user.hello();

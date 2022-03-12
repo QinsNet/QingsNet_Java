@@ -2,6 +2,7 @@ package mt.server;
 
 import com.qins.net.core.boot.MetaApplication;
 import com.qins.net.core.exception.LoadClassException;
+import com.qins.net.meta.core.MetaClassLoader;
 
 public class Server {
     public static void main(String[] args) throws LoadClassException {

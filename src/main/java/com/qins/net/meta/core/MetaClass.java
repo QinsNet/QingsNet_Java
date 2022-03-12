@@ -29,7 +29,9 @@ public abstract class MetaClass extends BaseClass {
     protected HashMap<String,String> nodes = new HashMap<>();
     protected HashSet<String> defaultNodes = new HashSet<>();
 
-    protected void linkMetas() {
+    @Override
+    protected void link() throws InvocationTargetException, NoSuchMethodException, InstantiationException, IllegalAccessException {
+        super.link();
         for (MetaField metaField : fields.values()){
             if(metaField.getField().getType().getAnnotation(Meta.class) != null){
                 metas.put(metaField.name,metaField);
@@ -40,24 +42,21 @@ public abstract class MetaClass extends BaseClass {
     public MetaClass(Class<?> instanceClass) throws NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException {
         super(instanceClass);
         Meta meta = instanceClass.getAnnotation(Meta.class);
-        if(meta != null){
-            name = "".equals(meta.value()) ? instanceClass.getSimpleName() : meta.value();
-            for (Map.Entry<String,String> item : MetaApplication.getContext().getNodes().entrySet()){
-                nodes.putIfAbsent(item.getKey(),item.getValue());
-            }
-            if(meta.nodes().length != 0){
-                defaultNodes = new HashSet<>(Arrays.asList(meta.nodes()));
-            }
-            service = components.service().getConstructor(MetaClass.class).newInstance(this);
-            request = components.request().getConstructor(MetaClass.class).newInstance(this);
-            for (Annotation annotations : instanceClass.getAnnotations()){
-                if(annotations instanceof NodeMappings){
-                    for (NodeMapping nodeMapping : ((NodeMappings) annotations).value()){
-                        nodes.put(nodeMapping.name(),nodeMapping.host());
-                    }
+        name = "".equals(meta.value()) ? instanceClass.getSimpleName() : meta.value();
+        for (Map.Entry<String,String> item : MetaApplication.getContext().getNodes().entrySet()){
+            nodes.putIfAbsent(item.getKey(),item.getValue());
+        }
+        if(meta.nodes().length != 0){
+            defaultNodes = new HashSet<>(Arrays.asList(meta.nodes()));
+        }
+        service = components.service().getConstructor(MetaClass.class).newInstance(this);
+        request = components.request().getConstructor(MetaClass.class).newInstance(this);
+        for (Annotation annotations : instanceClass.getAnnotations()){
+            if(annotations instanceof NodeMappings){
+                for (NodeMapping nodeMapping : ((NodeMappings) annotations).value()){
+                    nodes.put(nodeMapping.name(),nodeMapping.host());
                 }
             }
-            linkMetas();
         }
     }
     public abstract <T> T newInstance(Map<String,String> nodes) throws NewInstanceException;

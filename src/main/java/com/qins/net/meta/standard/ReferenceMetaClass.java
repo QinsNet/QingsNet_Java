@@ -4,6 +4,8 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
 import com.qins.net.meta.core.MetaField;
 import com.qins.net.meta.core.MetaReferences;
+import com.qins.net.util.SerializeUtil;
+import javafx.util.Pair;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -45,48 +47,24 @@ public abstract class ReferenceMetaClass extends StandardMetaClass {
     public Object deserialize(Object rawJsonElement, MetaReferences references, Map<String, Object> pools) throws InstantiationException, IllegalAccessException {
         if(rawJsonElement == null)return null;
         String name = ((JsonPrimitive)rawJsonElement).getAsString();
+        JsonElement jsonElement = (JsonElement) pools.get(name);
         Object instance;
         if(references.getDeserializeObjects().containsKey(name)){
             return references.getDeserializeObjects().get(name);
         }
         if(references.getSerializeObjects().containsKey(name)){
-            Object oldInstance = references.getSerializeObjects().get(name);
-            Object newInstance = super.deserialize(pools.get(name),references,pools);
-            sync(oldInstance,newInstance,rawJsonElement,references,pools);
-            instance = oldInstance;
+            instance = references.getSerializeObjects().get(name);
+        }
+        else if(jsonElement.isJsonPrimitive()){
+            instance = SerializeUtil.gson.fromJson(jsonElement,instanceClass);
         }
         else {
-            instance = super.deserialize(pools.get(name),references,pools);
+            instance = proxyClass.newInstance();
         }
         references.getDeserializeNames().put(instance,name);
         references.getDeserializeObjects().put(name,instance);
         references.getBasesClass().put(name,this);
+        super.deserialize(new Pair<>(instance,jsonElement),references,pools);
         return instance;
-    }
-
-    @Override
-    public void sync(Object oldInstance, Object newInstance, Object rawInstance, MetaReferences references, Map<String, Object> pools) throws IllegalAccessException, InstantiationException {
-        if(oldInstance == null || newInstance == null)return;
-        JsonElement jsonElement = (JsonElement) rawInstance;
-        if(jsonElement.isJsonArray() && generics != null && oldInstance instanceof Collection && newInstance instanceof Collection){
-            ArrayList<Object> items = new ArrayList<>();
-            for (JsonElement item : jsonElement.getAsJsonArray()){
-                Object newItem = this.deserialize(item,references,pools);
-                Object oldItem = references.getSerializeObjects().get(item.getAsString());
-                if(oldItem == null) items.add(newItem);
-                else items.add(oldItem);
-            }
-        }
-        else if(generics != null && oldInstance instanceof Map && newInstance instanceof Map){
-            ((Map<?, ?>) oldInstance).clear();
-            ((Map<?, ?>) oldInstance).putAll((Map) newInstance);
-        }
-        else if(fields.size() != 0){
-            for (MetaField metaField : fields.values()){
-                Field field = metaField.getField();
-                Object newValue = field.get(newInstance);
-                field.set(oldInstance,newValue);
-            }
-        }
     }
 }

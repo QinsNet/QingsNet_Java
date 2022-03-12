@@ -10,6 +10,7 @@ import com.qins.net.meta.core.MetaField;
 import com.qins.net.meta.core.BaseClass;
 import com.qins.net.meta.core.MetaReferences;
 import com.qins.net.util.SerializeUtil;
+import javafx.util.Pair;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Type;
@@ -64,7 +65,6 @@ public abstract class StandardBaseClass extends BaseClass {
     public void onLog(TrackLog log) {
         Console.log(log.getMessage());
     }
-
     public Object serialize(Object instance, MetaReferences references, Map<String, Object> pools) throws IllegalAccessException {
         if(instance == null)return null;
         else if(generics != null && instance instanceof Iterable){
@@ -96,33 +96,30 @@ public abstract class StandardBaseClass extends BaseClass {
     }
     @Override
     public Object deserialize(Object rawJsonElement, MetaReferences references, Map<String, Object> pools) throws InstantiationException, IllegalAccessException {
-        JsonElement jsonElement = (JsonElement) rawJsonElement;
-        if(rawJsonElement == null)return null;
-        else if(jsonElement.isJsonNull()) return null;
+        Pair<Object,JsonElement> pair = (Pair<Object, JsonElement>) rawJsonElement;
+        Object instance = pair.getKey();
+        JsonElement jsonElement = pair.getValue();
+        if(jsonElement.isJsonNull()) return null;
         else if(generics != null && jsonElement.isJsonArray()){
-            Collection instance = (Collection) instanceClass.newInstance();
+            Collection collection = (Collection) instance;
             for (JsonElement element : jsonElement.getAsJsonArray()){
-                instance.add(generics[0].deserialize(element, references, pools));
+                collection.add(generics[0].deserialize(element, references, pools));
             }
-            return instance;
         }
         else if(generics != null && jsonElement.isJsonObject() && Map.class.isAssignableFrom(instanceClass)){
-            Map map = (Map) instanceClass.newInstance();
+            Map map = (Map) instance;
             for (Map.Entry<String,JsonElement> item : jsonElement.getAsJsonObject().entrySet()){
                 map.put(generics[0].deserialize(new JsonPrimitive(item.getKey()),references,pools),generics[1].deserialize(item.getValue(), references, pools));
             }
-            return map;
         }
         else if(jsonElement.isJsonObject()){
-            Object baseInstance = instanceClass.newInstance();
             JsonObject jsonObject = jsonElement.getAsJsonObject();
             for (MetaField metaField : fields.values()){
                 Object value = metaField.getBaseClass().deserialize(jsonObject.get(metaField.getName()),references,pools);
                 if(value == null)continue;
-                metaField.getField().set(baseInstance,value);
+                metaField.getField().set(instance,value);
             }
-            return baseInstance;
         }
-        else return SerializeUtil.gson.fromJson(jsonElement,instanceClass);
+        return instance;
     }
 }
