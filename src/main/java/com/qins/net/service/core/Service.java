@@ -122,17 +122,17 @@ public abstract class Service implements IService {
                 //After
                 afterEvent(metaMethod.getMethod(),context,localResult);
                 HashMap<String,Object> syncParams = new HashMap<>();
-                HashMap<String,Object> references = new HashMap<>();
+                Map<String,Object> references = context.getReferencesContext().getSerializePools();
                 for(MetaParameter metaParameter : metaMethod.getMetaParameters().values()){
                     Object param = context.getParams().get(metaParameter.getName());
-                    syncParams.put(metaParameter.getName(),metaParameter.getBaseClass().serialize(param,context.getReferencesContext()));
+                    syncParams.put(metaParameter.getName(),StandardMetaSerialize.serialize(param,context.getReferencesContext()));
                 }
-                Object instance = metaClass.serialize(context.getInstance(),context.getReferencesContext());
+                Object instance = StandardMetaSerialize.serialize(context.getInstance(),context.getReferencesContext());
                 //Return
                 BaseClass metaReturn = metaMethod.getMetaReturn();
                 Object returnObject = null;
                 if(metaReturn != null){
-                    returnObject = metaReturn.serialize(localResult,context.getReferencesContext());
+                    returnObject = StandardMetaSerialize.serialize(localResult,context.getReferencesContext());
                 }
 
                 //补足由于无网络引用造成的未同步

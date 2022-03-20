@@ -22,17 +22,5 @@ public abstract class MetaParameter{
         name = meta == null || "".equals(meta.value()) ? parameter.getName() : meta.value();
         this.parameter = parameter;
         this.baseClass = MetaApplication.getContext().getMetaClassLoader().loadClass(parameter.getType());
-        if(parameter.getParameterizedType() instanceof ParameterizedType){
-            Type[] actualTypeArguments = ((ParameterizedType) parameter.getParameterizedType()).getActualTypeArguments();
-            baseClass.generics = new BaseClass[actualTypeArguments.length];
-            int i = 0;
-            for (Type argument : actualTypeArguments){
-                if(argument instanceof Class){
-                    Class<?> instanceClass = (Class<?>) argument;
-                    BaseClass value = MetaApplication.getContext().getMetaClassLoader().loadClass(instanceClass);
-                    baseClass.generics[i++] = value;
-                }
-            }
-        }
     }
 }

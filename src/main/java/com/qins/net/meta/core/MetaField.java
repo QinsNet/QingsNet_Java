@@ -24,17 +24,5 @@ public abstract class MetaField {
         name = "".equals(meta.value()) ? field.getName() : meta.value();
         this.field = field;
         this.baseClass = MetaApplication.getContext().getMetaClassLoader().loadClass(field.getType());
-        if(field.getGenericType() instanceof ParameterizedType){
-            Type[] actualTypeArguments = ((ParameterizedType) field.getGenericType()).getActualTypeArguments();
-            baseClass.generics = new MetaClass[actualTypeArguments.length];
-            int i = 0;
-            for (Type argument : actualTypeArguments){
-                if(argument instanceof Class){
-                    Class<?> instanceClass = (Class<?>) argument;
-                    BaseClass value = MetaApplication.getContext().getMetaClassLoader().loadClass(instanceClass);
-                    baseClass.generics[i++] = value;
-                }
-            }
-        }
     }
 }

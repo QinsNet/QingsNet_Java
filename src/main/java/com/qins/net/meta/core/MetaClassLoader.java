@@ -21,15 +21,27 @@ public class MetaClassLoader{
     }
     public BaseClass loadClass(String name,Class<?> instanceClass) throws LoadClassException {
         try {
+            if(types.containsKey(instanceClass)){
+                return types.get(instanceClass);
+            }
+            else if(bases.containsKey(name)){
+                return bases.get(name);
+            }
             Components components = instanceClass.getAnnotation(Components.class) != null ? instanceClass.getAnnotation(Components.class) : Components.class.getAnnotation(Components.class);
             BaseClass baseClass;
             if(instanceClass.getAnnotation(Meta.class) != null){
-                baseClass = components.metaClass().getConstructor(Class.class).newInstance(instanceClass);
+                baseClass = components.metaClass().getConstructor(String.class,Class.class).newInstance(name,instanceClass);
                 metas.put(name, (MetaClass) baseClass);
                 types.put(((MetaClass) baseClass).getProxyClass(),baseClass);
             }
             else {
-                baseClass = components.baseClass().getConstructor(Class.class).newInstance(instanceClass);
+                if(instanceClass == Boolean.class || instanceClass == Character.class || instanceClass == Byte.class
+                        || instanceClass == Short.class || instanceClass == Integer.class || instanceClass == Long.class
+                        || instanceClass == Float.class || instanceClass == Double.class || instanceClass == Void.class
+                        || instanceClass == String.class || instanceClass.isPrimitive()){
+                    baseClass = components.primitiveClass().getConstructor(String.class,Class.class).newInstance(name,instanceClass);
+                }
+                else baseClass = components.referenceClass().getConstructor(String.class,Class.class).newInstance(name,instanceClass);
                 types.put(baseClass.getInstanceClass(),baseClass);
             }
             bases.put(name, baseClass);

@@ -3,9 +3,12 @@ package com.qins.net.meta.cglib;
 import com.google.gson.*;
 import com.google.gson.reflect.TypeToken;
 import com.qins.net.core.entity.NetMeta;
+import com.qins.net.core.exception.DeserializeException;
 import com.qins.net.core.exception.NewInstanceException;
+import com.qins.net.core.exception.SerializeException;
 import com.qins.net.meta.annotation.Meta;
 import com.qins.net.meta.core.ReferencesContext;
+import com.qins.net.meta.standard.ReferenceMetaClass;
 import com.qins.net.meta.standard.StandardMetaClass;
 import com.qins.net.request.cglib.RequestInterceptor;
 import com.qins.net.util.SerializeUtil;
@@ -20,7 +23,7 @@ import java.lang.reflect.Type;
 import java.util.HashMap;
 import java.util.Map;
 
-public class CGLibClass extends StandardMetaClass {
+public class CGLibClass extends ReferenceMetaClass {
     static {
         SerializeUtil.gson = SerializeUtil.gson.newBuilder().registerTypeAdapter(NetMeta.class, new JsonDeserializer<NetMeta>() {
             final Type mapStringType = new TypeToken<HashMap<String,String>>(){}.getType();
@@ -40,8 +43,8 @@ public class CGLibClass extends StandardMetaClass {
             }
         }).create();
     }
-    public CGLibClass(Class<?> instanceClass) throws InvocationTargetException, NoSuchMethodException, InstantiationException, IllegalAccessException {
-        super(instanceClass);
+    public CGLibClass(String name,Class<?> instanceClass) throws InvocationTargetException, NoSuchMethodException, InstantiationException, IllegalAccessException {
+        super(name, instanceClass);
         //Proxy Instance
         Enhancer enhancer = new Enhancer();
         enhancer.setSuperclass(instanceClass);
@@ -72,7 +75,7 @@ public class CGLibClass extends StandardMetaClass {
     }
 
     @Override
-    public Object serialize(Object instance, ReferencesContext context) throws IllegalAccessException {
+    public Object serialize(Object instance, ReferencesContext context) throws SerializeException {
         if(instance == null)return null;
         Object rawInstance = super.serialize(instance, context);
         RequestInterceptor interceptor = (RequestInterceptor) ((Factory)instance).getCallback(1);
@@ -81,17 +84,22 @@ public class CGLibClass extends StandardMetaClass {
     }
 
     @Override
-    public Object deserialize(Object rawJsonElement, ReferencesContext context) throws InstantiationException, IllegalAccessException {
-        if(rawJsonElement == null)return null;
-        JsonElement jsonElement = (JsonElement) rawJsonElement;
-        NetMeta netMeta = SerializeUtil.gson.fromJson(jsonElement,NetMeta.class);
-        Factory factory;
-        if(netMeta.getInstance() != null){
-            factory = (Factory) super.deserialize(netMeta.getInstance(), context);
+    public Object deserialize(Object rawJsonElement, ReferencesContext context) throws DeserializeException {
+        try {
+            if(rawJsonElement == null)return null;
+            JsonElement jsonElement = (JsonElement) rawJsonElement;
+            NetMeta netMeta = SerializeUtil.gson.fromJson(jsonElement,NetMeta.class);
+            Factory factory;
+            if(netMeta.getInstance() != null){
+                factory = (Factory) super.deserialize(netMeta.getInstance(), context);
+            }
+            else factory = (Factory) proxyClass.newInstance();
+            factory.setCallbacks(new Callback[]{NoOp.INSTANCE,new RequestInterceptor(request, netMeta.getNodes())});
+            return factory;
         }
-        else factory = (Factory) proxyClass.newInstance();
-        factory.setCallbacks(new Callback[]{NoOp.INSTANCE,new RequestInterceptor(request, netMeta.getNodes())});
-        return factory;
+        catch (IllegalAccessException | InstantiationException e){
+            throw new DeserializeException(e);
+        }
     }
 
 }

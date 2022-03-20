@@ -105,7 +105,7 @@ public class PackageScanner {
             try {
                 //(Thread.currentThread().getContextClassLoader().getResource(""))
                 //(来得到当前的classpath的绝对路径的URI表示法。)
-                Enumeration<URL> resources = classloader.getResources(path);
+                Enumeration<URL> resources = classloader.getResources(path.replace(".","/"));
                 while(resources.hasMoreElements()) {
                     //先获得本类的所在位置
                     URL url = resources.nextElement();

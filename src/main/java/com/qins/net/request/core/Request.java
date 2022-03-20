@@ -10,6 +10,7 @@ import com.qins.net.core.aop.context.ExceptionEventContext;
 import com.qins.net.core.entity.NodeAddress;
 import com.qins.net.core.entity.RequestMeta;
 import com.qins.net.core.entity.ResponseMeta;
+import com.qins.net.core.exception.SerializeException;
 import com.qins.net.core.exception.TrackException;
 import com.qins.net.core.exception.NotFoundNodeException;
 import com.qins.net.meta.annotation.Components;
@@ -95,9 +96,8 @@ public abstract class Request implements IRequest {
             int i = 0;
             for (Map.Entry<String,MetaParameter> keyValue : metaMethod.getParameters().entrySet()){
                 String name = keyValue.getKey();
-                MetaParameter parameter = keyValue.getValue();
                 context.getParams().put(name,args[i]);
-                context.getRequestMeta().getParams().put(name,parameter.getBaseClass().serialize(args[i],context.getReferencesContext()));
+                context.getRequestMeta().getParams().put(name,StandardMetaSerialize.serialize(args[i],context.getReferencesContext()));
                 i++;
             }
             beforeEvent(method,context);
@@ -172,12 +172,12 @@ public abstract class Request implements IRequest {
             metaClass.onException(e);
         }
     }
-    public RequestMeta prepareRequestMeta(RequestContext context, MetaMethod metaMethod, Object instance) throws IllegalAccessException {
+    public RequestMeta prepareRequestMeta(RequestContext context, MetaMethod metaMethod, Object instance) throws SerializeException {
         RequestMeta requestMeta = new RequestMeta();
         requestMeta.setMapping(metaClass.getName() + "/" + metaMethod.getName());
         requestMeta.setParams(new HashMap<>());
-        requestMeta.setReferences(new HashMap<>());
-        requestMeta.setInstance(metaClass.serialize(instance, context.getReferencesContext()));
+        requestMeta.setReferences(context.getReferencesContext().getSerializePools());
+        requestMeta.setInstance(StandardMetaSerialize.serialize(instance, context.getReferencesContext()));
         return requestMeta;
     }
 

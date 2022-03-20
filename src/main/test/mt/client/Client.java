@@ -7,10 +7,12 @@ import com.qins.net.service.core.Service;
 import com.qins.net.util.SerializeUtil;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 
 public class Client {
-    public static void main(String[] args) throws NewInstanceException, TrackException {
+    public static void main(String[] args) throws NewInstanceException {
         MetaApplication.run("client.yaml");
+        MetaApplication.getContext().getMetaClassLoader().getScanner().getPaths().add("mt.client");
         MetaApplication.defineNode("User", "localhost:28017");
         MetaApplication.defineNode("Server_1", "localhost:28003");
         MetaApplication.defineNode("Server_2", "localhost:28003");

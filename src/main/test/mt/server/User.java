@@ -52,7 +52,7 @@ public abstract class User{
             Package aPackage = MetaApplication.create(Package.class);
             NodeUtil.copyNodeAll(this,aPackage);
             aPackage.setName("A背包");
-            Package bPackage = MetaApplication.create(Package.class);
+            Package bPackage = MetaApplication.create(ServicePackage.class);
             NodeUtil.copyNodeAll(this,bPackage);
             bPackage.setName("B背包");
             packages = new ArrayList<>();

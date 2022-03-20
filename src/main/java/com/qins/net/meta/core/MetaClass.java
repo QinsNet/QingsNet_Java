@@ -24,7 +24,6 @@ public abstract class MetaClass extends BaseClass {
     protected HashMap<String, MetaField> metas = new HashMap<>();
     protected EventManager eventManager = new EventManager();
     protected InstanceManager instanceManager = new InstanceManager();
-    protected String name;
     protected Class<?> proxyClass;
     protected HashMap<String,String> nodes = new HashMap<>();
     protected HashSet<String> defaultNodes = new HashSet<>();
@@ -39,10 +38,9 @@ public abstract class MetaClass extends BaseClass {
         }
     }
 
-    public MetaClass(Class<?> instanceClass) throws NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException {
-        super(instanceClass);
+    public MetaClass(String name,Class<?> instanceClass) throws NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException {
+        super(name,instanceClass);
         Meta meta = instanceClass.getAnnotation(Meta.class);
-        name = "".equals(meta.value()) ? instanceClass.getSimpleName() : meta.value();
         for (Map.Entry<String,String> item : MetaApplication.getContext().getNodes().entrySet()){
             nodes.putIfAbsent(item.getKey(),item.getValue());
         }

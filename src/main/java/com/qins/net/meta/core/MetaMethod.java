@@ -37,6 +37,7 @@ public abstract class MetaMethod {
         else nodes = new HashSet<>();
         if(method.getReturnType() != void.class && method.getReturnType() != Void.class){
             Type returnType = method.getGenericReturnType();
+            Class klss = method.getReturnType();
             metaReturn = MetaApplication.getContext().getMetaClassLoader().loadClass(method.getReturnType());
         }
         parameters = new HashMap<>();
