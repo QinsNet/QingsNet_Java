@@ -15,7 +15,7 @@ import java.lang.annotation.*;
 @Retention(RetentionPolicy.RUNTIME)
 @Components()
 public @interface Components {
-    Class<? extends BaseClass> baseClass() default ReferenceBaseClass.class;
+    Class<? extends BaseClass> baseClass() default StandardBaseClass.class;
     Class<? extends MetaField> metaField() default StandardMetaField.class;
     Class<? extends MetaMethod> metaMethod() default StandardMetaMethod.class;
     Class<? extends MetaParameter> metaParameter() default StandardMetaParameter.class;

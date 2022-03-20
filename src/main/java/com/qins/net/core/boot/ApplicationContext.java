@@ -17,5 +17,4 @@ public class ApplicationContext {
     private MetaClassLoader metaClassLoader;
     private Server server;
     private HashMap<String,String> nodes;
-    private Thread thread;
 }

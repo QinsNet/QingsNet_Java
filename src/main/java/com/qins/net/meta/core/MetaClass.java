@@ -59,8 +59,7 @@ public abstract class MetaClass extends BaseClass {
             }
         }
     }
+
     public abstract <T> T newInstance(Map<String,String> nodes) throws NewInstanceException;
-    public <T> T newInstance(Object rawInstance,MetaReferences references,Map<String,Object> pools) throws NewInstanceException, InstantiationException, IllegalAccessException {
-        return (T) deserialize(rawInstance,references,pools);
-    }
+
 }

@@ -13,6 +13,7 @@ import com.qins.net.core.exception.TrackException;
 import com.qins.net.meta.annotation.Components;
 import com.qins.net.meta.annotation.Meta;
 import com.qins.net.meta.core.*;
+import com.qins.net.meta.standard.StandardMetaSerialize;
 import com.qins.net.service.event.InterceptorEvent;
 import com.qins.net.service.event.delegate.InterceptorDelegate;
 import com.qins.net.core.exception.ResponseException;
@@ -48,6 +49,7 @@ public abstract class Service implements IService {
             checkClass = checkClass.getSuperclass();
         }
     }
+
     public boolean onInterceptor(RequestMeta requestMeta)
     {
         for (InterceptorDelegate item : interceptorEvent.getListeners())
@@ -84,18 +86,22 @@ public abstract class Service implements IService {
         else throw e;
     }
     public Object receive(RequestMeta requestMeta) {
-        ServiceContext context = new ServiceContext().setReferences(new MetaReferences()).setRequestMeta(requestMeta).setMapping(requestMeta.getMapping().split("/")[2]);
+        ServiceContext context = new ServiceContext()
+                .setReferencesContext(new ReferencesContext())
+                .setRequestMeta(requestMeta)
+                .setMapping(requestMeta.getMapping().split("/")[2]);
+        context.getReferencesContext().setDeserializePools(requestMeta.getReferences());
         try {
             MetaMethod metaMethod = methods.get(context.getMapping());
             if(metaMethod == null){
                 throw new ResponseException(ResponseException.ExceptionCode.NotFoundMethod, String.format("Mapping:%s 未找到",requestMeta.getMapping()));
             }
-            context.setInstance(metaClass.newInstance(context.getRequestMeta().getInstance(),context.getReferences(),requestMeta.getReferences()));
+            context.setInstance(StandardMetaSerialize.deserialize(context.getRequestMeta().getInstance(),context.getReferencesContext()));
             if(onInterceptor(requestMeta)){
                 context.setParams(new HashMap<>());
                 for (MetaParameter metaParameter : metaMethod.getParameters().values()){
                     Object rawParam = context.getRequestMeta().getParams().get(metaParameter.getName());
-                    Object param = metaParameter.getBaseClass().deserialize(rawParam,context.getReferences(),requestMeta.getReferences());
+                    Object param = StandardMetaSerialize.deserialize(rawParam, context.getReferencesContext());
                     context.getParams().put(metaParameter.getName(),param);
                 }
                 //Before
@@ -119,22 +125,22 @@ public abstract class Service implements IService {
                 HashMap<String,Object> references = new HashMap<>();
                 for(MetaParameter metaParameter : metaMethod.getMetaParameters().values()){
                     Object param = context.getParams().get(metaParameter.getName());
-                    syncParams.put(metaParameter.getName(),metaParameter.getBaseClass().serialize(param,context.getReferences(),references));
+                    syncParams.put(metaParameter.getName(),metaParameter.getBaseClass().serialize(param,context.getReferencesContext()));
                 }
-                Object instance = metaClass.serialize(context.getInstance(),context.getReferences(),references);
+                Object instance = metaClass.serialize(context.getInstance(),context.getReferencesContext());
                 //Return
                 BaseClass metaReturn = metaMethod.getMetaReturn();
                 Object returnObject = null;
                 if(metaReturn != null){
-                    returnObject = metaReturn.serialize(localResult,context.getReferences(),references);
+                    returnObject = metaReturn.serialize(localResult,context.getReferencesContext());
                 }
 
                 //补足由于无网络引用造成的未同步
                 if(config.isReferencesAllSync()){
-                    for (Map.Entry<String,Object> item : context.getReferences().getDeserializeObjects().entrySet()){
-                        if(!context.getReferences().getSerializeObjects().containsKey(item.getKey())){
+                    for (Map.Entry<String,Object> item : context.getReferencesContext().getDeserializeObjects().entrySet()){
+                        if(!context.getReferencesContext().getSerializeObjects().containsKey(item.getKey())){
                             Object oldObject = item.getValue();
-                            context.getReferences().getBasesClass().get(item.getKey()).serialize(oldObject,context.getReferences(),references);
+                            StandardMetaSerialize.serialize(oldObject,context.getReferencesContext());
                         }
                     }
                 }

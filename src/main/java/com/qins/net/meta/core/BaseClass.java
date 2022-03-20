@@ -1,5 +1,6 @@
 package com.qins.net.meta.core;
 
+import com.qins.net.core.exception.NewInstanceException;
 import com.qins.net.meta.annotation.Components;
 import com.qins.net.core.exception.TrackException;
 import com.qins.net.core.entity.TrackLog;
@@ -11,7 +12,6 @@ import lombok.Setter;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
-import java.util.Map;
 
 @Getter
 @Setter
@@ -26,7 +26,7 @@ public abstract class BaseClass {
         components = instanceClass.getAnnotation(Components.class);
         if(components == null)components = Components.class.getAnnotation(Components.class);
     }
-    public abstract Object deserialize(Object jsonElement, MetaReferences references, Map<String,Object> pools) throws InstantiationException, IllegalAccessException;
+    public abstract Object deserialize(Object instance, ReferencesContext context) throws InstantiationException, IllegalAccessException;
 
     public void onException(TrackException.ExceptionCode code, String message) {
         onException(new TrackException(code,message));
@@ -40,7 +40,7 @@ public abstract class BaseClass {
         }
     }
 
-    public abstract Object serialize(Object instance, MetaReferences references, Map<String,Object> pools) throws IllegalAccessException;
+    public abstract Object serialize(Object instance, ReferencesContext context) throws IllegalAccessException;
 
     public abstract void onException(Exception exception);
 
@@ -49,4 +49,6 @@ public abstract class BaseClass {
     }
 
     public abstract void onLog(TrackLog log);
+    public abstract <T> T newInstance() throws NewInstanceException;
+
 }

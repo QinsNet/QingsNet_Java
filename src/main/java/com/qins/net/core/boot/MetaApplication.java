@@ -8,6 +8,7 @@ import com.qins.net.meta.annotation.Meta;
 import com.qins.net.meta.core.MetaClass;
 import com.qins.net.meta.core.MetaClassLoader;
 import com.qins.net.core.entity.NodeAddress;
+import com.qins.net.meta.util.PackageScanner;
 import com.qins.net.node.http.recevier.Receiver;
 import com.qins.net.node.util.NodeUtil;
 import com.qins.net.util.SerializeUtil;
@@ -16,6 +17,7 @@ import lombok.NonNull;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.HashMap;
 
 public class MetaApplication {
@@ -37,12 +39,9 @@ public class MetaApplication {
 
     public static MetaApplication run(String path){
         context = new ApplicationContext();
-        context.setThread(Thread.currentThread());
         context.setNodes(new HashMap<>());
-        context.setMetaClassLoader(new MetaClassLoader());
-        context.getThread().setContextClassLoader(context.getMetaClassLoader());
-        Thread.currentThread().setContextClassLoader(context.getMetaClassLoader());
         context.setConfig(loadConfig(path));
+        context.setMetaClassLoader(new MetaClassLoader(new PackageScanner(new ArrayList<>())));
         context.setServer(new Receiver(context.getConfig(),new NodeAddress("localhost",context.getConfig().getPort()), context.getMetaClassLoader().getMetas()));
         context.getServer().start();
         return null;

@@ -5,8 +5,8 @@ import com.google.gson.reflect.TypeToken;
 import com.qins.net.core.entity.NetMeta;
 import com.qins.net.core.exception.NewInstanceException;
 import com.qins.net.meta.annotation.Meta;
-import com.qins.net.meta.core.MetaReferences;
-import com.qins.net.meta.standard.ReferenceMetaClass;
+import com.qins.net.meta.core.ReferencesContext;
+import com.qins.net.meta.standard.StandardMetaClass;
 import com.qins.net.request.cglib.RequestInterceptor;
 import com.qins.net.util.SerializeUtil;
 import net.sf.cglib.proxy.Callback;
@@ -20,7 +20,7 @@ import java.lang.reflect.Type;
 import java.util.HashMap;
 import java.util.Map;
 
-public class CGLibClass extends ReferenceMetaClass {
+public class CGLibClass extends StandardMetaClass {
     static {
         SerializeUtil.gson = SerializeUtil.gson.newBuilder().registerTypeAdapter(NetMeta.class, new JsonDeserializer<NetMeta>() {
             final Type mapStringType = new TypeToken<HashMap<String,String>>(){}.getType();
@@ -54,7 +54,6 @@ public class CGLibClass extends ReferenceMetaClass {
         });
         setProxyClass(enhancer.createClass());
     }
-
     @Override
     public <T> T newInstance(Map<String, String> nodes) throws NewInstanceException {
         try {
@@ -71,22 +70,24 @@ public class CGLibClass extends ReferenceMetaClass {
             throw new NewInstanceException(e.getCause());
         }
     }
+
     @Override
-    public Object serialize(Object instance, MetaReferences references, Map<String, Object> pools) throws IllegalAccessException {
+    public Object serialize(Object instance, ReferencesContext context) throws IllegalAccessException {
         if(instance == null)return null;
-        Object rawInstance = super.serialize(instance,references,pools);
+        Object rawInstance = super.serialize(instance, context);
         RequestInterceptor interceptor = (RequestInterceptor) ((Factory)instance).getCallback(1);
         NetMeta netMeta = new NetMeta(rawInstance,interceptor.getNodes());
         return SerializeUtil.gson.toJsonTree(netMeta,NetMeta.class);
     }
+
     @Override
-    public Object deserialize(Object rawJsonElement, MetaReferences references, Map<String, Object> pools) throws InstantiationException, IllegalAccessException {
+    public Object deserialize(Object rawJsonElement, ReferencesContext context) throws InstantiationException, IllegalAccessException {
         if(rawJsonElement == null)return null;
         JsonElement jsonElement = (JsonElement) rawJsonElement;
         NetMeta netMeta = SerializeUtil.gson.fromJson(jsonElement,NetMeta.class);
         Factory factory;
         if(netMeta.getInstance() != null){
-            factory = (Factory) super.deserialize(netMeta.getInstance(), references,pools);
+            factory = (Factory) super.deserialize(netMeta.getInstance(), context);
         }
         else factory = (Factory) proxyClass.newInstance();
         factory.setCallbacks(new Callback[]{NoOp.INSTANCE,new RequestInterceptor(request, netMeta.getNodes())});
