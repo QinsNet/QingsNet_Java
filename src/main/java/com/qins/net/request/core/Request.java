@@ -1,5 +1,6 @@
 package com.qins.net.request.core;
 
+import com.google.gson.JsonPrimitive;
 import com.qins.net.core.aop.annotation.AfterEvent;
 import com.qins.net.core.aop.annotation.BeforeEvent;
 import com.qins.net.core.aop.annotation.ExceptionEvent;
@@ -18,7 +19,7 @@ import com.qins.net.meta.annotation.Meta;
 import com.qins.net.meta.core.MetaClass;
 import com.qins.net.meta.core.MetaMethod;
 import com.qins.net.meta.core.MetaParameter;
-import com.qins.net.meta.core.ReferencesContext;
+import com.qins.net.meta.core.SerializeContext;
 import com.qins.net.meta.standard.StandardMetaSerialize;
 import com.qins.net.node.core.Node;
 import com.qins.net.request.aop.annotation.FailEvent;
@@ -86,7 +87,7 @@ public abstract class Request implements IRequest {
             MetaMethod metaMethod = methods.get("".equals(meta.value()) ? method.getName() : meta.value());
             Object result = null;
             context.setInstance(instance)
-                    .setReferencesContext(new ReferencesContext())
+                    .setSerializeContext(new SerializeContext())
                     .setMetaMethod(metaMethod)
                     .setParams(new HashMap<>())
                     .setRemote(searchNode(nodes,metaMethod))
@@ -97,7 +98,7 @@ public abstract class Request implements IRequest {
             for (Map.Entry<String,MetaParameter> keyValue : metaMethod.getParameters().entrySet()){
                 String name = keyValue.getKey();
                 context.getParams().put(name,args[i]);
-                context.getRequestMeta().getParams().put(name,StandardMetaSerialize.serialize(args[i],context.getReferencesContext()));
+                context.getRequestMeta().getParams().put(name,StandardMetaSerialize.serialize(args[i],context.getSerializeContext()));
                 i++;
             }
             beforeEvent(method,context);
@@ -135,35 +136,17 @@ public abstract class Request implements IRequest {
             if(context.getResponseMeta().getException() != null){
                 errorEvent(context.getMetaMethod().getMethod(),context, context.getResponseMeta().getException());
             }
-            context.getReferencesContext().setDeserializePools(context.getResponseMeta().getReferences());
-            StandardMetaSerialize.deserialize(context.getResponseMeta().getInstance(), context.getReferencesContext());
-            if(context.getResponseMeta().getParams() != null){
-                for (Map.Entry<String,Object> keyValue:context.getResponseMeta().getParams().entrySet()){
-                    String name = keyValue.getKey();
-                    Object rawParam = keyValue.getValue();
-                    MetaParameter metaParameter = context.getMetaMethod().getParameters().get(name);
-                    if(metaParameter == null){
-                        throw new TrackException(TrackException.ExceptionCode.NotFoundMetaParameter,String.format("%s从远程提供方同步时，%s方法的%s参数未找到", metaClass.getName(),context.getMetaMethod().getName(),name));
-                    }
-                    Object oldParam = context.getParams().get(name);
-                    if(oldParam == null){
-                        throw new TrackException(TrackException.ExceptionCode.NotFoundParameter,String.format("%s从远程提供方同步时，%s方法的%s参数未找到", metaClass.getName(),context.getMetaMethod().getName(),name));
-                    }
-                    StandardMetaSerialize.deserialize(rawParam, context.getReferencesContext());
-                }
+            context.getSerializeContext().setDeserializePools(context.getResponseMeta().getReferences());
+
+            for (Map.Entry<Object,Object> item : context.getSerializeContext().getSerializeObjects().entrySet()){
+                StandardMetaSerialize.deserialize(item.getKey(),context.getSerializeContext());
             }
+
             if(context.getResponseMeta().getResult() != null){
-                Object result = StandardMetaSerialize.deserialize(context.getResponseMeta().getResult(), context.getReferencesContext());
+                Object result = StandardMetaSerialize.deserialize(context.getResponseMeta().getResult(), context.getSerializeContext());
                 context.setResult(result);
             }
-            if(config.isReferencesAllSync()){
-                //补足由于丢网络引用造成的未同步
-                for (Map.Entry<String,Object> item : context.getResponseMeta().getReferences().entrySet()){
-                    if(!context.getReferencesContext().getDeserializeObjects().containsKey(item.getKey())){
-                        StandardMetaSerialize.deserialize(item.getValue(),context.getReferencesContext());
-                    }
-                }
-            }
+
             synchronized (context){
                 context.notify();
             }
@@ -176,8 +159,8 @@ public abstract class Request implements IRequest {
         RequestMeta requestMeta = new RequestMeta();
         requestMeta.setMapping(metaClass.getName() + "/" + metaMethod.getName());
         requestMeta.setParams(new HashMap<>());
-        requestMeta.setReferences(context.getReferencesContext().getSerializePools());
-        requestMeta.setInstance(StandardMetaSerialize.serialize(instance, context.getReferencesContext()));
+        requestMeta.setReferences(context.getSerializeContext().getSerializePools());
+        requestMeta.setInstance(StandardMetaSerialize.serialize(instance, context.getSerializeContext()));
         return requestMeta;
     }
 

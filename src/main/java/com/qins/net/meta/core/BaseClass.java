@@ -14,7 +14,6 @@ import lombok.Setter;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
-import java.util.function.Function;
 
 @Getter
 @Setter
@@ -30,7 +29,7 @@ public abstract class BaseClass {
         if(components == null)components = Components.class.getAnnotation(Components.class);
         this.name = name;
     }
-    public abstract Object deserialize(Object instance, ReferencesContext context) throws InstantiationException, IllegalAccessException, DeserializeException;
+    public abstract Object deserialize(Object rawInstance, SerializeContext context) throws InstantiationException, IllegalAccessException, DeserializeException;
 
     public void onException(TrackException.ExceptionCode code, String message) {
         onException(new TrackException(code,message));
@@ -44,7 +43,7 @@ public abstract class BaseClass {
         }
     }
 
-    public abstract Object serialize(Object instance, ReferencesContext context) throws IllegalAccessException, SerializeException;
+    public abstract Object serialize(Object instance, SerializeContext context) throws IllegalAccessException, SerializeException;
 
     public abstract void onException(Exception exception);
 

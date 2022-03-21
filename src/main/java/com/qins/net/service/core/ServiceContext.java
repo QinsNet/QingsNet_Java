@@ -1,7 +1,7 @@
 package com.qins.net.service.core;
 
 import com.qins.net.core.entity.RequestMeta;
-import com.qins.net.meta.core.ReferencesContext;
+import com.qins.net.meta.core.SerializeContext;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
@@ -16,5 +16,5 @@ public class ServiceContext {
     private RequestMeta requestMeta;
     private HashMap<String,Object> params;
     private String mapping;
-    private ReferencesContext referencesContext;
+    private SerializeContext serializeContext;
 }

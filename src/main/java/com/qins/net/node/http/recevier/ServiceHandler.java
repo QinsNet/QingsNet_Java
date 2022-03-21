@@ -87,8 +87,9 @@ public class ServiceHandler extends SimpleChannelInboundHandler<FullHttpRequest>
         }
         else if(data instanceof ResponseMeta){
             ResponseMeta responseMeta = (ResponseMeta) data;
-            String a = SerializeUtil.gson.toJson(responseMeta);
-            DefaultFullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,HttpResponseStatus.OK,Unpooled.copiedBuffer(SerializeUtil.gson.toJson(responseMeta).getBytes(StandardCharsets.UTF_8)));
+            String body = SerializeUtil.gson.toJson(responseMeta);
+            System.out.println(body);
+            DefaultFullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,HttpResponseStatus.OK,Unpooled.copiedBuffer(body.getBytes(StandardCharsets.UTF_8)));
             send(response);
             Console.debug(data.toString());
         }

@@ -1,15 +1,13 @@
 package com.qins.net.meta.standard;
 
 import com.google.gson.JsonElement;
+import com.google.gson.JsonPrimitive;
 import com.qins.net.core.exception.DeserializeException;
-import com.qins.net.core.exception.NewInstanceException;
 import com.qins.net.core.exception.SerializeException;
-import com.qins.net.meta.core.BaseClass;
-import com.qins.net.meta.core.ReferencesContext;
+import com.qins.net.meta.core.SerializeContext;
 import com.qins.net.util.SerializeUtil;
 
 import java.lang.reflect.InvocationTargetException;
-import java.util.Map;
 
 public class PrimitiveBaseClass extends StandardBaseClass {
 
@@ -18,14 +16,14 @@ public class PrimitiveBaseClass extends StandardBaseClass {
     }
 
     @Override
-    public Object serialize(Object instance, ReferencesContext context) throws SerializeException {
+    public Object serialize(Object instance, SerializeContext context) throws SerializeException {
         if(instance == null)return null;
-        return SerializeUtil.gson.toJsonTree(instance,instanceClass);
+        return new JsonPrimitive(getName() + "@" + instance);
     }
 
     @Override
-    public Object deserialize(Object rawJsonElement, ReferencesContext context) throws DeserializeException {
-        if(rawJsonElement == null)return null;
-        return SerializeUtil.gson.fromJson((JsonElement) rawJsonElement,instanceClass);
+    public Object deserialize(Object rawInstance, SerializeContext context) {
+        if(rawInstance == null)return null;
+        return SerializeUtil.gson.fromJson(((JsonPrimitive) rawInstance).getAsString().split("@")[1],instanceClass);
     }
 }

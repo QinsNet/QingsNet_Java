@@ -15,7 +15,7 @@ import java.util.Map;
 @Accessors(chain = true)
 public class NetMeta {
     @Meta
-    Object instance;
+    String instance;
     @Meta
     Map<String,String> nodes;
     public NetMeta(){

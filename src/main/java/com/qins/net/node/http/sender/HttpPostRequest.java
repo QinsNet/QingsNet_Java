@@ -69,8 +69,9 @@ public class HttpPostRequest extends Node {
                                     .build())
                             .addHeader(HttpHeaderNames.CONTENT_TYPE.toString(), HttpHeaderValues.APPLICATION_JSON.toString())
                             .addHeader("protocol", requestMeta.getProtocol());
-            String a = SerializeUtil.gson.toJson(requestMeta);
-            RequestBody requestBody = RequestBody.create(a.getBytes(StandardCharsets.UTF_8));
+            String body = SerializeUtil.gson.toJson(requestMeta);
+            System.out.println(body);
+            RequestBody requestBody = RequestBody.create(body.getBytes(StandardCharsets.UTF_8));
             request.post(requestBody);
             send(request.build());
             return true;

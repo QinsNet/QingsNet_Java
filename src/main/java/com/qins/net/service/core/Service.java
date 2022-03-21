@@ -87,21 +87,21 @@ public abstract class Service implements IService {
     }
     public Object receive(RequestMeta requestMeta) {
         ServiceContext context = new ServiceContext()
-                .setReferencesContext(new ReferencesContext())
+                .setSerializeContext(new SerializeContext())
                 .setRequestMeta(requestMeta)
                 .setMapping(requestMeta.getMapping().split("/")[2]);
-        context.getReferencesContext().setDeserializePools(requestMeta.getReferences());
+        context.getSerializeContext().setDeserializePools(requestMeta.getReferences());
         try {
             MetaMethod metaMethod = methods.get(context.getMapping());
             if(metaMethod == null){
                 throw new ResponseException(ResponseException.ExceptionCode.NotFoundMethod, String.format("Mapping:%s 未找到",requestMeta.getMapping()));
             }
-            context.setInstance(StandardMetaSerialize.deserialize(context.getRequestMeta().getInstance(),context.getReferencesContext()));
+            context.setInstance(StandardMetaSerialize.deserialize(context.getRequestMeta().getInstance(),context.getSerializeContext()));
             if(onInterceptor(requestMeta)){
                 context.setParams(new HashMap<>());
                 for (MetaParameter metaParameter : metaMethod.getParameters().values()){
                     Object rawParam = context.getRequestMeta().getParams().get(metaParameter.getName());
-                    Object param = StandardMetaSerialize.deserialize(rawParam, context.getReferencesContext());
+                    Object param = StandardMetaSerialize.deserialize(rawParam, context.getSerializeContext());
                     context.getParams().put(metaParameter.getName(),param);
                 }
                 //Before
@@ -122,29 +122,18 @@ public abstract class Service implements IService {
                 //After
                 afterEvent(metaMethod.getMethod(),context,localResult);
                 HashMap<String,Object> syncParams = new HashMap<>();
-                Map<String,Object> references = context.getReferencesContext().getSerializePools();
-                for(MetaParameter metaParameter : metaMethod.getMetaParameters().values()){
-                    Object param = context.getParams().get(metaParameter.getName());
-                    syncParams.put(metaParameter.getName(),StandardMetaSerialize.serialize(param,context.getReferencesContext()));
-                }
-                Object instance = StandardMetaSerialize.serialize(context.getInstance(),context.getReferencesContext());
-                //Return
-                BaseClass metaReturn = metaMethod.getMetaReturn();
-                Object returnObject = null;
-                if(metaReturn != null){
-                    returnObject = StandardMetaSerialize.serialize(localResult,context.getReferencesContext());
-                }
+                Map<String,Object> references = context.getSerializeContext().getSerializePools();
 
-                //补足由于无网络引用造成的未同步
-                if(config.isReferencesAllSync()){
-                    for (Map.Entry<String,Object> item : context.getReferencesContext().getDeserializeObjects().entrySet()){
-                        if(!context.getReferencesContext().getSerializeObjects().containsKey(item.getKey())){
-                            Object oldObject = item.getValue();
-                            StandardMetaSerialize.serialize(oldObject,context.getReferencesContext());
-                        }
-                    }
+                for (Map.Entry<Object,Object> item : context.getSerializeContext().getDeserializeObjects().entrySet()){
+                    StandardMetaSerialize.serialize(item.getValue(),context.getSerializeContext());
                 }
-                return new ResponseMeta(instance,syncParams,returnObject,references);
+                Object instance = StandardMetaSerialize.serialize(context.getInstance(),context.getSerializeContext());
+                //Return
+                Object result = null;
+                if(metaMethod.getMetaReturn().getInstanceClass() != void.class && metaMethod.getMetaReturn().getInstanceClass() != Void.class){
+                    result = StandardMetaSerialize.serialize(localResult,context.getSerializeContext());
+                }
+                return new ResponseMeta(instance,syncParams,result,references);
             }
             else throw new ResponseException(ResponseException.ExceptionCode.Intercepted,"请求已被拦截",null);
         }
