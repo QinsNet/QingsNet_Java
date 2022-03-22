@@ -9,12 +9,13 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 public class EventManager {
     private static final Pattern pattern = Pattern.compile("\\w+");
     private HashMap<Pair<String, String>, Method> methodEvents = new HashMap<>();
-    public void invokeEvent(Object instance,String function, HashMap<String, Object> params, EventContext context) throws TrackException, InvocationTargetException, IllegalAccessException {
+    public void invokeEvent(Object instance, String function, Map<String, Object> params, EventContext context) throws TrackException, InvocationTargetException, IllegalAccessException {
         //这里性能会有问题，后期优化.
         java.util.regex.Matcher matcher = pattern.matcher(function);
         ArrayList<String> matches = new ArrayList<>();
@@ -24,7 +25,7 @@ public class EventManager {
         if ((matches.size() % 2) != 0 || matches.size() < 2) throw new TrackException(TrackException.ExceptionCode.Initialize, String.format("%s不合法", function));
         String instanceName = matches.get(0);
         String mapping = matches.get(1);
-        HashMap<String ,String > paramsMapping = new HashMap<>(matches.size()- 2);
+        Map<String ,String > paramsMapping = new HashMap<>(matches.size()- 2);
         for (int i = 2; i < matches.size();)
         {
             paramsMapping.put(matches.get(i++), matches.get(i++));

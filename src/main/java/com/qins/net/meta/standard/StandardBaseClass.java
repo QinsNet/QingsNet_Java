@@ -9,9 +9,9 @@ import com.qins.net.core.entity.TrackLog;
 import com.qins.net.core.exception.DeserializeException;
 import com.qins.net.core.exception.NewInstanceException;
 import com.qins.net.core.exception.SerializeException;
-import com.qins.net.meta.core.MetaField;
 import com.qins.net.meta.core.BaseClass;
 import com.qins.net.meta.core.ReferencesContext;
+import com.qins.net.request.core.RequestReferences;
 import com.qins.net.util.SerializeUtil;
 
 import java.lang.reflect.InvocationTargetException;
@@ -76,92 +76,97 @@ public class StandardBaseClass extends BaseClass {
             throw new NewInstanceException(e);
         }
     }
+
     @Override
-    public Object serialize(Object instance, ReferencesContext context) throws SerializeException {
-        //引用池检查
-        JsonPrimitive key = null;
-        Integer address = System.identityHashCode(instance);
-        if(context.getSerializeNames().containsKey(address)){
-            return context.getSerializeNames().get(address);
-        }
-        if(context.getDeserializeNames().containsKey(address)){
-            key = (JsonPrimitive) context.getDeserializeNames().get(address);
-        }
-        else key = new JsonPrimitive(this.getName()  + "@" +  Integer.toHexString(instance.hashCode()));
-        context.getSerializeNames().put(address, key);
-        context.getSerializeObjects().put(key,instance);
-        //序列化
-        try {
-            if(instance == null)return null;
-            JsonElement rawInstance = export(instance,context);
-            context.getSerializePools().put(key.getAsString(),rawInstance);
-            return key;
-        }
-        catch (IllegalAccessException e){
-            throw new SerializeException(e);
-        }
-    }
-    @Override
-    public Object deserialize(Object rawInstance, ReferencesContext context) throws DeserializeException {
-        if(rawInstance == null) return null;
-        try {
-            //引用池检查
-            Object instance = null;
-            JsonPrimitive key = (JsonPrimitive) rawInstance;
-            if(context.getDeserializeObjects().containsKey(key)){
-                return context.getDeserializeObjects().get(key);
-            }
-            if(context.getSerializeObjects().containsKey(key)){
-                instance = context.getSerializeObjects().get(key);
-            }
-            else {
-                instance = newInstance();
-            }
-            Integer address = System.identityHashCode(instance);
-            context.getDeserializeNames().put(address, key);
-            context.getDeserializeObjects().put(key,instance);
-            //逆序列化
-            JsonElement jsonElement = (JsonElement) context.getDeserializePools().get(key.getAsString());
-            update(instance,jsonElement,context);
-            return instance;
-        }
-        catch (NewInstanceException | IllegalAccessException e) {
-            throw new DeserializeException(e);
-        }
-    }
-    public void update(Object instance, JsonElement jsonElement, ReferencesContext context) throws DeserializeException, IllegalAccessException {
-        if(jsonElement == null)return;
-        if(jsonElement.isJsonArray() && Collection.class.isAssignableFrom(instanceClass)){
-            Collection collection = (Collection) instance;
-            collection.clear();
-            for (JsonElement element : jsonElement.getAsJsonArray()){
-                collection.add(StandardMetaSerialize.deserialize(element, context));
-            }
-        }
-        else if(jsonElement.isJsonObject() && Map.class.isAssignableFrom(instanceClass)){
-            Map map = (Map) instance;
-            map.clear();
-            for (Map.Entry<String,JsonElement> item : jsonElement.getAsJsonObject().entrySet()){
-                map.put(StandardMetaSerialize.deserialize(new JsonPrimitive(item.getKey()), context),StandardMetaSerialize.deserialize(item.getValue(), context));
-            }
-        }
-    }
-    public JsonElement export(Object instance, ReferencesContext context) throws SerializeException, IllegalAccessException {
+    public String serialize(Object instance, RequestReferences references) throws SerializeException {
         if(instance == null)return null;
+        //引用池检查
+        if(references.getSerializeValues().containsKey(instance)){
+            return references.getSerializeValues().get(instance);
+        }
+        String key = this.getName()  + "@" +  Integer.toHexString(instance.hashCode());
+        references.getSerializeValues().put(instance, key);
+        references.getSerializeObjects().put(key,instance);
+        //序列化
         if(instance instanceof Iterable){
             JsonArray jsonArray = new JsonArray();
             for (Object item : ((Iterable)instance)){
-                jsonArray.add((JsonPrimitive) StandardMetaSerialize.serialize(item, context));
+                String rawItem = StandardMetaSerialize.serialize(item, references);
+                if(rawItem == null)continue;
+                jsonArray.add(new JsonPrimitive(rawItem));
             }
-            return jsonArray;
+            if(jsonArray.size() == 0)return null;
+            references.getSerializePool().put(key,jsonArray);
         }
         else if(instance instanceof Map){
             JsonObject jsonObject = new JsonObject();
             for (Map.Entry<Object,Object> item : ((Map<Object,Object>) instance).entrySet()){
-                jsonObject.add(((JsonPrimitive)StandardMetaSerialize.serialize(item.getKey(), context)).getAsString(), (JsonElement) StandardMetaSerialize.serialize(instance, context));
+                String rawItemKey = StandardMetaSerialize.serialize(item.getKey(), references);
+                String rawItemValue = StandardMetaSerialize.serialize(item.getValue(), references);
+                if(rawItemKey == null || rawItemValue == null)continue;
+                jsonObject.add(rawItemKey,new JsonPrimitive(rawItemValue));
             }
-            return jsonObject;
+            if(jsonObject.size() == 0)return null;
+            references.getSerializePool().put(key,jsonObject);
         }
-        else return null;
+        return key;
     }
+
+    @Override
+    public Object deserialize(String rawInstance, RequestReferences references) throws DeserializeException, NewInstanceException {
+        if(rawInstance == null)return null;
+        if(references.getDeserializeObjects().containsKey(rawInstance)){
+            return references.getDeserializeObjects().get(rawInstance);
+        }
+        Object instance = references.getSerializeObjects().get(rawInstance);
+        if(instance == null)instance = newInstance();
+        references.getDeserializeObjects().put(rawInstance,instance);
+        JsonElement newRawInstance = (JsonElement) references.getDeserializePool().get(rawInstance);
+        if(newRawInstance == null)return null;
+        if(newRawInstance.isJsonArray() && Collection.class.isAssignableFrom(instanceClass)){
+            Collection collection = (Collection) instance;
+            collection.clear();
+            for (JsonElement element : newRawInstance.getAsJsonArray()){
+                collection.add(StandardMetaSerialize.deserialize(element.getAsString(), references));
+            }
+        }
+        else if(newRawInstance.isJsonObject() && Map.class.isAssignableFrom(instanceClass)){
+            Map map = (Map) instance;
+            map.clear();
+            for (Map.Entry<String,JsonElement> item : newRawInstance.getAsJsonObject().entrySet()){
+                map.put(StandardMetaSerialize.deserialize(item.getKey(), references),StandardMetaSerialize.deserialize(item.getValue().getAsString(), references));
+            }
+        }
+        return instance;
+    }
+
+
+    @Override
+    public Object deserializeService(String rawInstance, ReferencesContext context) throws DeserializeException, NewInstanceException {
+        if(rawInstance == null)return null;
+        if(context.getDeserializeObjects().containsKey(rawInstance)){
+            return context.getDeserializeObjects().get(rawInstance);
+        }
+        Object instance = newInstance();
+        context.getDeserializeObjects().put(rawInstance,instance);
+        context.getDeserializeValues().put(instance,rawInstance);
+        JsonElement newRawInstance = (JsonElement) context.getDeserializePool().get(rawInstance);
+        if(newRawInstance == null)return null;
+        if(newRawInstance.isJsonArray() && Collection.class.isAssignableFrom(instanceClass)){
+            Collection collection = (Collection) instance;
+            collection.clear();
+            for (JsonElement element : newRawInstance.getAsJsonArray()){
+                collection.add(StandardMetaSerialize.deserialize(element.getAsString(),context));
+            }
+        }
+        else if(newRawInstance.isJsonObject() && Map.class.isAssignableFrom(instanceClass)){
+            Map map = (Map) instance;
+            map.clear();
+            for (Map.Entry<String,JsonElement> item : newRawInstance.getAsJsonObject().entrySet()){
+                map.put(StandardMetaSerialize.deserialize(item.getKey(), context),StandardMetaSerialize.deserialize(item.getValue().getAsString(), context));
+            }
+        }
+        return instance;
+    }
+
 }

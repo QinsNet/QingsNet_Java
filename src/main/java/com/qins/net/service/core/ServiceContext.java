@@ -19,7 +19,9 @@ public class ServiceContext {
     private ResponseMeta responseMeta;
     private HashMap<String,Object> params;
     private String mapping;
-    private ReferencesContext referencesContext;
+    private HashMap<Object,Object> deserializes;
+    private HashMap<String,Object> serializePool;
+    private HashMap<String,Object> deserializePool;
     private MetaMethod metaMethod;
     private Object result;
 }

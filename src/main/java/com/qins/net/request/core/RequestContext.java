@@ -10,6 +10,7 @@ import lombok.Setter;
 import lombok.experimental.Accessors;
 
 import java.util.HashMap;
+import java.util.Map;
 
 @Getter
 @Setter
@@ -19,11 +20,9 @@ public class RequestContext {
     private RequestMeta requestMeta;
     private Object instance;
     private MetaMethod metaMethod;
-    private HashMap<String,Object> params;
-    private HashMap<Object,Object> serializes;
-    private ReferencesContext referencesContext;
+    private Map<String,Object> params;
+    private ReferencesContext context;
     private NodeAddress remote;
     private Object result;
     private boolean isVoid = false;
-
 }

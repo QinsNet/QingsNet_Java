@@ -1,30 +1,17 @@
 package com.qins.net.core.aop.context;
 
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.Setter;
+
 import java.lang.reflect.Method;
 import java.util.HashMap;
+import java.util.Map;
 
+@Getter
+@Setter
+@AllArgsConstructor
 public class EventContext {
+    private Map<String, Object> parameters;
     private Method method;
-    private HashMap<String, Object> parameters;
-
-    public EventContext(HashMap<String, Object> parameters,Method method) {
-        this.method = method;
-        this.parameters = parameters;
-    }
-
-    public Method getMethod() {
-        return method;
-    }
-
-    public void setMethod(Method method) {
-        this.method = method;
-    }
-
-    public HashMap<String, Object> getParameters() {
-        return parameters;
-    }
-
-    public void setParameters(HashMap<String, Object> parameters) {
-        this.parameters = parameters;
-    }
 }
