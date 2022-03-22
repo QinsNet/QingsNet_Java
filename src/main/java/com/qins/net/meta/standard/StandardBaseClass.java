@@ -11,7 +11,7 @@ import com.qins.net.core.exception.NewInstanceException;
 import com.qins.net.core.exception.SerializeException;
 import com.qins.net.meta.core.MetaField;
 import com.qins.net.meta.core.BaseClass;
-import com.qins.net.meta.core.SerializeContext;
+import com.qins.net.meta.core.ReferencesContext;
 import com.qins.net.util.SerializeUtil;
 
 import java.lang.reflect.InvocationTargetException;
@@ -31,7 +31,7 @@ public class StandardBaseClass extends BaseClass {
                 requestMeta
                         .setProtocol(jsonObject.get("protocol").getAsString())
                         .setMapping(jsonObject.get("mapping").getAsString())
-                        .setInstance(jsonObject.get("instance"))
+                        .setInstance(SerializeUtil.gson.fromJson(jsonObject.get("instance"), mapType))
                         .setParams(SerializeUtil.gson.fromJson(jsonObject.get("params"), mapType))
                         .setReferences(SerializeUtil.gson.fromJson(jsonObject.get("references"), mapType));
                 return requestMeta;
@@ -43,8 +43,8 @@ public class StandardBaseClass extends BaseClass {
                 ResponseMeta responseMeta = new ResponseMeta();
                 responseMeta
                         .setProtocol(jsonObject.get("protocol").getAsString())
-                        .setInstance(jsonObject.get("instance"))
                         .setResult(jsonObject.get("result"))
+                        .setInstance(SerializeUtil.gson.fromJson(jsonObject.get("instance"), mapType))
                         .setParams(SerializeUtil.gson.fromJson(jsonObject.get("params"), mapType))
                         .setReferences(SerializeUtil.gson.fromJson(jsonObject.get("references"), mapType));
                 if(jsonObject.get("exception") != null){
@@ -77,7 +77,7 @@ public class StandardBaseClass extends BaseClass {
         }
     }
     @Override
-    public Object serialize(Object instance, SerializeContext context) throws SerializeException {
+    public Object serialize(Object instance, ReferencesContext context) throws SerializeException {
         //引用池检查
         JsonPrimitive key = null;
         Integer address = System.identityHashCode(instance);
@@ -102,7 +102,7 @@ public class StandardBaseClass extends BaseClass {
         }
     }
     @Override
-    public Object deserialize(Object rawInstance, SerializeContext context) throws DeserializeException {
+    public Object deserialize(Object rawInstance, ReferencesContext context) throws DeserializeException {
         if(rawInstance == null) return null;
         try {
             //引用池检查
@@ -129,7 +129,7 @@ public class StandardBaseClass extends BaseClass {
             throw new DeserializeException(e);
         }
     }
-    public void update(Object instance,JsonElement jsonElement,SerializeContext context) throws DeserializeException, IllegalAccessException {
+    public void update(Object instance, JsonElement jsonElement, ReferencesContext context) throws DeserializeException, IllegalAccessException {
         if(jsonElement == null)return;
         if(jsonElement.isJsonArray() && Collection.class.isAssignableFrom(instanceClass)){
             Collection collection = (Collection) instance;
@@ -145,16 +145,8 @@ public class StandardBaseClass extends BaseClass {
                 map.put(StandardMetaSerialize.deserialize(new JsonPrimitive(item.getKey()), context),StandardMetaSerialize.deserialize(item.getValue(), context));
             }
         }
-        else if(jsonElement.isJsonObject()){
-            JsonObject jsonObject = jsonElement.getAsJsonObject();
-            for (MetaField metaField : fields.values()){
-                Object value = StandardMetaSerialize.deserialize(jsonObject.get(metaField.getName()), context);
-                if(value == null)continue;
-                metaField.getField().set(instance,value);
-            }
-        }
     }
-    public JsonElement export(Object instance,SerializeContext context) throws SerializeException, IllegalAccessException {
+    public JsonElement export(Object instance, ReferencesContext context) throws SerializeException, IllegalAccessException {
         if(instance == null)return null;
         if(instance instanceof Iterable){
             JsonArray jsonArray = new JsonArray();
@@ -167,15 +159,6 @@ public class StandardBaseClass extends BaseClass {
             JsonObject jsonObject = new JsonObject();
             for (Map.Entry<Object,Object> item : ((Map<Object,Object>) instance).entrySet()){
                 jsonObject.add(((JsonPrimitive)StandardMetaSerialize.serialize(item.getKey(), context)).getAsString(), (JsonElement) StandardMetaSerialize.serialize(instance, context));
-            }
-            return jsonObject;
-        }
-        else if(fields.size() != 0){
-            JsonObject jsonObject = new JsonObject();
-            for (MetaField metaField : fields.values()){
-                Object object = metaField.getField().get(instance);
-                if(object == null)continue;
-                jsonObject.add(metaField.getName(), (JsonPrimitive) StandardMetaSerialize.serialize(object, context));
             }
             return jsonObject;
         }

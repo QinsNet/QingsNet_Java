@@ -2,8 +2,11 @@ package com.qins.net.meta.core;
 
 import com.qins.net.meta.annotation.Components;
 import com.qins.net.core.exception.LoadClassException;
-import com.qins.net.meta.annotation.Meta;
+import com.qins.net.meta.annotation.field.Sync;
+import com.qins.net.meta.annotation.instance.MetaPact;
+import com.qins.net.meta.annotation.parameter.ParameterPact;
 import com.qins.net.meta.util.PackageScanner;
+import com.qins.net.util.AnnotationUtil;
 import lombok.Getter;
 
 import java.lang.reflect.InvocationTargetException;
@@ -29,10 +32,13 @@ public class MetaClassLoader{
             }
             Components components = instanceClass.getAnnotation(Components.class) != null ? instanceClass.getAnnotation(Components.class) : Components.class.getAnnotation(Components.class);
             BaseClass baseClass;
-            if(instanceClass.getAnnotation(Meta.class) != null){
-                baseClass = components.metaClass().getConstructor(String.class,Class.class).newInstance(name,instanceClass);
-                metas.put(name, (MetaClass) baseClass);
-                types.put(((MetaClass) baseClass).getProxyClass(),baseClass);
+            if(AnnotationUtil.getMetaPact(instanceClass) != null){
+                MetaClass metaClass = components.metaClass().getConstructor(String.class,Class.class).newInstance(name,instanceClass);
+                baseClass = metaClass;
+                metas.put(name, metaClass);
+                types.put(baseClass.getInstanceClass(),baseClass);
+                types.put(metaClass.getProxyClass(),metaClass);
+                metaClass.link();
             }
             else {
                 if(instanceClass == Boolean.class || instanceClass == Character.class || instanceClass == Byte.class
@@ -45,7 +51,6 @@ public class MetaClassLoader{
                 types.put(baseClass.getInstanceClass(),baseClass);
             }
             bases.put(name, baseClass);
-            baseClass.link();
             return baseClass;
         }
         catch (NoSuchMethodException | InvocationTargetException | InstantiationException | IllegalAccessException e) {
@@ -56,9 +61,11 @@ public class MetaClassLoader{
         if(types.containsKey(instanceClass)){
             return types.get(instanceClass);
         }
-        Meta meta = instanceClass.getAnnotation(Meta.class);
-        String name = meta == null || "".equals(meta.value()) ? instanceClass.getName() : meta.value();
-        return loadClass(name,instanceClass);
+        MetaPact pact = AnnotationUtil.getMetaPact(instanceClass);
+        if(pact != null){
+            return loadClass(pact.getName(),instanceClass);
+        }
+        else return loadClass(instanceClass.getName(),instanceClass);
     }
     public BaseClass loadClass(String name) throws LoadClassException, ClassNotFoundException {
         if(bases.containsKey(name)){

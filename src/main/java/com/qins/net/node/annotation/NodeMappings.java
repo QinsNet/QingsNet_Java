@@ -1,6 +1,6 @@
 package com.qins.net.node.annotation;
 
-import com.qins.net.meta.annotation.MethodMapping;
+import com.qins.net.meta.annotation.method.MethodMapping;
 
 import java.lang.annotation.*;
 

@@ -14,8 +14,8 @@ public class Client {
         MetaApplication.run("client.yaml");
         MetaApplication.getContext().getMetaClassLoader().getScanner().getPaths().add("mt.client");
         MetaApplication.defineNode("User", "localhost:28017");
-        MetaApplication.defineNode("Server_1", "localhost:28003");
-        MetaApplication.defineNode("Server_2", "localhost:28003");
+        MetaApplication.defineNode("Shanghai", "localhost:28003");
+        MetaApplication.defineNode("Beijing", "localhost:28003");
         User user = MetaApplication.create(User.class);
         user.setUsername("m839336369");
         user.setPassword("password");

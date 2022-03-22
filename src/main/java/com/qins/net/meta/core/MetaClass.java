@@ -4,15 +4,20 @@ import com.qins.net.core.aop.EventManager;
 import com.qins.net.core.boot.MetaApplication;
 import com.qins.net.core.exception.NewInstanceException;
 import com.qins.net.core.instance.InstanceManager;
-import com.qins.net.meta.annotation.Meta;
+import com.qins.net.meta.annotation.Components;
+import com.qins.net.meta.annotation.field.Sync;
+import com.qins.net.meta.annotation.instance.Meta;
+import com.qins.net.meta.annotation.instance.MetaPact;
 import com.qins.net.node.annotation.NodeMapping;
 import com.qins.net.node.annotation.NodeMappings;
 import com.qins.net.request.core.Request;
 import com.qins.net.service.core.Service;
+import com.qins.net.util.AnnotationUtil;
 import lombok.Getter;
 import lombok.Setter;
 
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 
@@ -21,39 +26,45 @@ import java.util.*;
 public abstract class MetaClass extends BaseClass {
     protected Request request;
     protected Service service;
-    protected HashMap<String, MetaField> metas = new HashMap<>();
     protected EventManager eventManager = new EventManager();
     protected InstanceManager instanceManager = new InstanceManager();
     protected Class<?> proxyClass;
-    protected HashMap<String,String> nodes = new HashMap<>();
-    protected HashSet<String> defaultNodes = new HashSet<>();
-
-    @Override
-    protected void link() throws InvocationTargetException, NoSuchMethodException, InstantiationException, IllegalAccessException {
-        super.link();
-        for (MetaField metaField : fields.values()){
-            if(metaField.getField().getType().getAnnotation(Meta.class) != null){
-                metas.put(metaField.name,metaField);
-            }
-        }
-    }
+    protected Set<String> defaultNodes;
+    protected HashMap<String, String> nodes = new HashMap<>();
+    protected HashMap<String, MetaField> fields = new HashMap<>();
+    protected HashMap<String, MetaField> syncFields = new HashMap<>();
+    protected Components components;
 
     public MetaClass(String name,Class<?> instanceClass) throws NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException {
         super(name,instanceClass);
-        Meta meta = instanceClass.getAnnotation(Meta.class);
+        this.components = instanceClass.getAnnotation(Components.class);
+        if(components == null)this.components = Components.class.getAnnotation(Components.class);
+        MetaPact pact = AnnotationUtil.getMetaPact(instanceClass);
+        assert pact != null;
         for (Map.Entry<String,String> item : MetaApplication.getContext().getNodes().entrySet()){
             nodes.putIfAbsent(item.getKey(),item.getValue());
         }
-        if(meta.nodes().length != 0){
-            defaultNodes = new HashSet<>(Arrays.asList(meta.nodes()));
+        if(pact.getNodes() != null){
+            defaultNodes = pact.getNodes();
         }
-        service = components.service().getConstructor(MetaClass.class).newInstance(this);
-        request = components.request().getConstructor(MetaClass.class).newInstance(this);
         for (Annotation annotations : instanceClass.getAnnotations()){
             if(annotations instanceof NodeMappings){
                 for (NodeMapping nodeMapping : ((NodeMappings) annotations).value()){
                     nodes.put(nodeMapping.name(),nodeMapping.host());
                 }
+            }
+        }
+    }
+
+    public void link() throws NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException {
+        service = components.service().getConstructor(MetaClass.class).newInstance(this);
+        request = components.request().getConstructor(MetaClass.class).newInstance(this);
+        for (Field field : AnnotationUtil.getMetaFields(instanceClass)){
+            field.setAccessible(true);
+            MetaField metaField = components.metaField().getConstructor(Field.class,Components.class).newInstance(field,components);
+            fields.put(metaField.name, metaField);
+            if(metaField.sync){
+                syncFields.put(metaField.name,metaField);
             }
         }
     }

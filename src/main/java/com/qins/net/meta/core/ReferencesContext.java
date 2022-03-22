@@ -8,7 +8,7 @@ import java.util.Map;
 
 @Getter
 @Setter
-public class SerializeContext {
+public class ReferencesContext {
     Map<Integer,Object> serializeNames = new HashMap<>();
     Map<Integer,Object> deserializeNames = new HashMap<>();
     Map<Object,Object> serializeObjects = new HashMap<>();

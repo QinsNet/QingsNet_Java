@@ -1,11 +1,9 @@
 package com.qins.net.core.entity;
 
-import com.qins.net.meta.annotation.Meta;
+import com.qins.net.meta.annotation.field.Sync;
 import lombok.*;
 import lombok.experimental.Accessors;
 
-import java.io.IOException;
-import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.Map;
@@ -15,17 +13,17 @@ import java.util.Map;
 @Setter
 @Accessors(chain = true)
 public class ResponseMeta {
-    @Meta
+    @Sync
     private String protocol = "Sync-Response-1.0";
-    @Meta
+    @Sync
     private Object result;
-    @Meta
+    @Sync
     private String exception;
-    @Meta
-    private Object instance;
-    @Meta
+    @Sync
+    private Map<String,Object> instance;
+    @Sync
     private Map<String,Object> params;
-    @Meta
+    @Sync
     private Map<String,Object> references;
 
     public ResponseMeta(){
@@ -33,7 +31,6 @@ public class ResponseMeta {
     }
     public ResponseMeta(String exception){
         this.exception = exception;
-        System.out.println(exception);
     }
 
     public ResponseMeta(Exception e) {
@@ -43,14 +40,13 @@ public class ResponseMeta {
             PrintWriter pw = new PrintWriter(sw);
             e.printStackTrace(pw);
             exception = sw.toString();
-            System.out.println(exception);
         }
         catch (Exception e2) {
             exception = "WriteExceptionError";
         }
     }
 
-    public ResponseMeta(Object instance,Map<String,Object> params, Object result,Map<String,Object> references) {
+    public ResponseMeta(Map<String,Object> instance,Map<String,Object> params, Object result,Map<String,Object> references) {
         this.result = result;
         this.instance = instance;
         this.params = params;

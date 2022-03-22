@@ -1,6 +1,9 @@
 package mt.client;
 
-import com.qins.net.meta.annotation.Meta;
+import com.qins.net.meta.annotation.field.Async;
+import com.qins.net.meta.annotation.field.Sync;
+import com.qins.net.meta.annotation.instance.Meta;
+import com.qins.net.node.annotation.Post;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -8,26 +11,26 @@ import java.util.ArrayList;
 
 @Getter
 @Setter
-@Meta(value = "User",nodes = "Server_1")
+@Meta(nodes = "Shanghai")
 public abstract class User {
-    @Meta
+    @Sync
     private String username;
-    @Meta
+    @Async
     private String password;
-    @Meta
+    @Sync
     private Integer apiToken;
-    @Meta
+    @Sync
     private ArrayList<Package> packages;
 
-    @Meta
+    @Post
     public abstract boolean login();
 
-    @Meta
+    @Post
     public abstract boolean newPack();
 
-    @Meta(nodes = {"Server_2", "Server1"})
-    public abstract boolean addPack(@Meta Package aPackage);
+    @Post(nodes = {"Beijing", "Shanghai"})
+    public abstract boolean addPack(Package aPackage);
 
-    @Meta(nodes = "Server_2")
+    @Post(nodes = "Shanghai")
     public abstract void hello();
 }

@@ -2,9 +2,8 @@ package com.qins.net.util;
 
 import com.google.gson.ExclusionStrategy;
 import com.google.gson.FieldAttributes;
-import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
-import com.qins.net.meta.annotation.Meta;
+import com.qins.net.meta.annotation.field.Sync;
 import org.yaml.snakeyaml.Yaml;
 
 public class SerializeUtil {
@@ -13,7 +12,7 @@ public class SerializeUtil {
             .setExclusionStrategies(new ExclusionStrategy() {
                 @Override
                 public boolean shouldSkipField(FieldAttributes fieldAttributes) {
-                    return fieldAttributes.getAnnotation(Meta.class) == null;
+                    return fieldAttributes.getAnnotation(Sync.class) == null;
                 }
 
                 @Override
@@ -23,5 +22,4 @@ public class SerializeUtil {
             })
             .create();
     public static Yaml yaml = new Yaml();
-
 }

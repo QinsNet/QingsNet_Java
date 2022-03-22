@@ -4,8 +4,9 @@ import com.qins.net.core.boot.MetaApplication;
 import com.qins.net.core.exception.TrackException;
 import com.qins.net.core.exception.LoadClassException;
 import com.qins.net.meta.annotation.Components;
-import com.qins.net.meta.annotation.Meta;
-import com.qins.net.request.annotation.MethodPact;
+import com.qins.net.meta.annotation.field.Sync;
+import com.qins.net.meta.annotation.method.MethodPact;
+import com.qins.net.node.core.Node;
 import com.qins.net.util.AnnotationUtil;
 import lombok.Getter;
 import lombok.Setter;
@@ -13,7 +14,6 @@ import lombok.Setter;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
-import java.lang.reflect.Type;
 import java.util.*;
 
 @Getter
@@ -22,30 +22,30 @@ public abstract class MetaMethod {
     private Method method;
     private String name;
     private Set<String> nodes;
-    private HashMap<String, MetaParameter> parameters;
-    private HashMap<String, MetaParameter> metaParameters;
+    private HashMap<String, MetaParameter> parameters = new HashMap<>();
+    private HashMap<String, MetaParameter> syncParameters = new HashMap<>();
     private BaseClass metaReturn;
-    private MethodPact methodPact;
+    private int timeout;
+    private Class<? extends Node> nodeClass;
+
     public MetaMethod(Method method,Components components) throws LoadClassException, NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException, TrackException {
         this.method = method;
-        this.methodPact = AnnotationUtil.getMethodPact(method);
-        Meta meta = method.getAnnotation(Meta.class);
-        this.name = "".equals(meta.value()) ? method.getName() : meta.value();
-        if(meta.nodes().length != 0){
-            nodes = new HashSet<>(Arrays.asList(meta.nodes()));
+        MethodPact pact = AnnotationUtil.getMethodPact(method);
+        assert pact != null;
+        this.name = pact.getName();
+        this.nodeClass = pact.getNodeClass();
+        if(pact.getNodes() != null){
+            nodes = pact.getNodes();
         }
         else nodes = new HashSet<>();
         metaReturn = MetaApplication.getContext().getMetaClassLoader().loadClass(method.getReturnType());
-        parameters = new HashMap<>();
-        metaParameters = new HashMap<>();
         for (Parameter parameter : method.getParameters()){
             MetaParameter metaParameter = components.metaParameter()
                     .getConstructor(Parameter.class,Components.class)
                     .newInstance(parameter,components);
-            parameters.put(metaParameter.getName(),metaParameter);
-            Meta paramMeta = parameter.getAnnotation(Meta.class);
-            if(paramMeta != null){
-                metaParameters.put(metaParameter.getName(),metaParameter);
+            parameters.put(metaParameter.name,metaParameter);
+            if(metaParameter.sync){
+                syncParameters.put(metaParameter.name, metaParameter);
             }
         }
     }

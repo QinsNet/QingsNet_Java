@@ -14,7 +14,7 @@ public class NodeUtil {
             RequestInterceptor interceptor = (RequestInterceptor) ((Factory) instance).getCallback(1);
             return interceptor.getNodes();
         }
-        else throw new TrackException(TrackException.ExceptionCode.NotMetaClass,instance.getClass().getName() + "未标记@Meta");
+        else throw new TrackException(TrackException.ExceptionCode.NotMetaClass,instance.getClass().getName() + "未标记@Sync");
     }
     public static boolean defineNode(Object instance,String mapping,String address) throws TrackException {
         Map<String,String> nodes = getNodes(instance);

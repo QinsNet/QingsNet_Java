@@ -1,6 +1,6 @@
 package com.qins.net.core.entity;
 
-import com.qins.net.meta.annotation.Meta;
+import com.qins.net.meta.annotation.field.Sync;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
@@ -13,14 +13,14 @@ import java.util.Map;
 @Setter
 @Accessors(chain = true)
 public class RequestMeta {
-    @Meta
+    @Sync
     private String protocol = "Sync-Request-1.0";
-    @Meta
+    @Sync
     private String mapping;
-    @Meta
+    @Sync
     private Map<String,Object> params;
-    @Meta
+    @Sync
     private Map<String,Object> references;
-    @Meta
-    private Object instance = "";
+    @Sync
+    private Map<String,Object> instance;
 }

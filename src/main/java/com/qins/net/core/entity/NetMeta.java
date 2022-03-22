@@ -1,12 +1,11 @@
 package com.qins.net.core.entity;
 
-import com.qins.net.meta.annotation.Meta;
+import com.qins.net.meta.annotation.field.Sync;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 
-import java.util.HashMap;
 import java.util.Map;
 
 @Getter
@@ -14,9 +13,9 @@ import java.util.Map;
 @AllArgsConstructor
 @Accessors(chain = true)
 public class NetMeta {
-    @Meta
+    @Sync
     String instance;
-    @Meta
+    @Sync
     Map<String,String> nodes;
     public NetMeta(){
 

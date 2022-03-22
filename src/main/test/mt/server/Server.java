@@ -7,9 +7,8 @@ import com.qins.net.meta.core.MetaClassLoader;
 public class Server {
     public static void main(String[] args) throws LoadClassException {
         MetaApplication.run("server.yaml");
-        MetaApplication.defineNode("User", "localhost:28017");
-        MetaApplication.defineNode("Server_1", "localhost:28003");
-        MetaApplication.defineNode("Server_2", "localhost:28003");
+        MetaApplication.defineNode("Shanghai", "localhost:28003");
+        MetaApplication.defineNode("Beijing", "localhost:28003");
         MetaApplication.publish(User.class);
     }
 }

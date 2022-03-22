@@ -4,13 +4,15 @@ import com.qins.net.core.console.Console;
 import com.qins.net.core.exception.TrackException;
 import com.qins.net.core.exception.LoadClassException;
 import com.qins.net.core.exception.NewInstanceException;
-import com.qins.net.meta.annotation.Meta;
+import com.qins.net.meta.annotation.field.Sync;
+import com.qins.net.meta.annotation.instance.MetaPact;
 import com.qins.net.meta.core.MetaClass;
 import com.qins.net.meta.core.MetaClassLoader;
 import com.qins.net.core.entity.NodeAddress;
 import com.qins.net.meta.util.PackageScanner;
 import com.qins.net.node.http.recevier.Receiver;
 import com.qins.net.node.util.NodeUtil;
+import com.qins.net.util.AnnotationUtil;
 import com.qins.net.util.SerializeUtil;
 import lombok.Getter;
 import lombok.NonNull;
@@ -25,8 +27,8 @@ public class MetaApplication {
     private static ApplicationContext context;
     public @NonNull static <T> T create(Class<?> instanceClass) throws NewInstanceException {
         try {
-            Meta meta = instanceClass.getAnnotation(Meta.class);
-            if(meta == null)throw new LoadClassException(String.format("%s 未定义@Meta", instanceClass.getName()));
+            MetaPact pact = AnnotationUtil.getMetaPact(instanceClass);
+            if(pact == null)throw new LoadClassException(String.format("%s 未定义@Meta", instanceClass.getName()));
             MetaClassLoader classLoader = context.getMetaClassLoader();
             MetaClass metaClass = (MetaClass) classLoader.loadClass(instanceClass);
             Object instance = metaClass.newInstance(new HashMap<>());
@@ -48,8 +50,8 @@ public class MetaApplication {
     }
 
     public static MetaApplication publish(Class<?> instanceClass) throws LoadClassException {
-        Meta meta = instanceClass.getAnnotation(Meta.class);
-        if(meta == null)throw new LoadClassException(String.format("%s 未定义@Meta", instanceClass.getName()));
+        MetaPact pact = AnnotationUtil.getMetaPact(instanceClass);
+        if(pact == null)throw new LoadClassException(String.format("%s 未定义@Meta", instanceClass.getName()));
         context.getMetaClassLoader().loadClass(instanceClass);
         return null;
     }

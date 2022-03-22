@@ -1,19 +1,16 @@
 package com.qins.net.meta.standard;
 
-import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
 import com.qins.net.core.boot.MetaApplication;
 import com.qins.net.core.exception.DeserializeException;
 import com.qins.net.core.exception.LoadClassException;
-import com.qins.net.core.exception.NewInstanceException;
 import com.qins.net.core.exception.SerializeException;
 import com.qins.net.meta.core.BaseClass;
-import com.qins.net.meta.core.SerializeContext;
-import javafx.util.Pair;
+import com.qins.net.meta.core.ReferencesContext;
 
 public class StandardMetaSerialize {
 
-    public static Object serialize(Object instance, SerializeContext context) throws SerializeException {
+    public static Object serialize(Object instance, ReferencesContext context) throws SerializeException {
         try {
             if(instance == null)return null;
             BaseClass baseClass = MetaApplication.getContext().getMetaClassLoader().loadClass(instance.getClass());
@@ -23,7 +20,7 @@ public class StandardMetaSerialize {
         }
     }
 
-    public static Object deserialize(Object rawJsonElement, SerializeContext context) throws DeserializeException {
+    public static Object deserialize(Object rawJsonElement, ReferencesContext context) throws DeserializeException {
         try {
             if(rawJsonElement == null)return null;
             String name = ((JsonPrimitive) rawJsonElement).getAsString();

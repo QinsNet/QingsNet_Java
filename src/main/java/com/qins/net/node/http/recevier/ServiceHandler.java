@@ -5,6 +5,8 @@ import com.qins.net.core.entity.ResponseMeta;
 import com.qins.net.meta.core.MetaClass;
 import com.qins.net.core.entity.NodeAddress;
 import com.qins.net.meta.core.MetaClassLoader;
+import com.qins.net.meta.core.ReferencesContext;
+import com.qins.net.service.core.ServiceContext;
 import com.qins.net.util.SerializeUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
@@ -60,14 +62,18 @@ public class ServiceHandler extends SimpleChannelInboundHandler<FullHttpRequest>
                 return;
             }
             requestMeta.setMapping(uri.getPath()).setProtocol(req.headers().get("protocol"));
-            if(requestMeta.getParams() == null)requestMeta.setParams(new HashMap<>());
             MetaClass metaClass = metas.get(requestMeta.getMapping().split("/")[1]);
             if(metaClass == null){
                 send(new ResponseMeta((String.format("%s请求类未找到", requestMeta.getMapping()))));
                 return;
             }
+            ServiceContext context = new ServiceContext();
+            context.setReferencesContext(new ReferencesContext())
+                    .setRequestMeta(requestMeta)
+                    .setMapping(requestMeta.getMapping().split("/")[2]);
             es.submit(() -> {
-                send(metaClass.getService().receive(requestMeta));
+                metaClass.getService().receive(context);
+                send(context.getResponseMeta());
             });
         }
         catch (Exception e){
@@ -78,12 +84,12 @@ public class ServiceHandler extends SimpleChannelInboundHandler<FullHttpRequest>
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         send(new ResponseMeta(new Exception(cause)));
-        super.exceptionCaught(ctx, cause);
     }
 
     public boolean send(Object data) {
         if(data == null){
-            return true;
+            ctx.close();
+            return false;
         }
         else if(data instanceof ResponseMeta){
             ResponseMeta responseMeta = (ResponseMeta) data;
@@ -102,6 +108,7 @@ public class ServiceHandler extends SimpleChannelInboundHandler<FullHttpRequest>
         else if(data instanceof String){
             send(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,HttpResponseStatus.OK, Unpooled.copiedBuffer((String) data,StandardCharsets.UTF_8)));
         }
+        else ctx.close();
         return true;
     }
 

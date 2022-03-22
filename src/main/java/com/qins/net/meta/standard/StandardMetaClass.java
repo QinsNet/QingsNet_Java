@@ -6,11 +6,12 @@ import com.qins.net.core.entity.TrackLog;
 import com.qins.net.core.exception.DeserializeException;
 import com.qins.net.core.exception.NewInstanceException;
 import com.qins.net.core.exception.SerializeException;
-import com.qins.net.meta.annotation.Meta;
+import com.qins.net.meta.annotation.field.Sync;
 import com.qins.net.meta.core.MetaClass;
 import com.qins.net.meta.core.MetaField;
-import com.qins.net.meta.core.SerializeContext;
+import com.qins.net.meta.core.ReferencesContext;
 import com.qins.net.request.cglib.RequestInterceptor;
+import com.qins.net.util.AnnotationUtil;
 import com.qins.net.util.SerializeUtil;
 import net.sf.cglib.proxy.Callback;
 import net.sf.cglib.proxy.Enhancer;
@@ -33,7 +34,7 @@ public class StandardMetaClass extends MetaClass {
         enhancer.setCallbackTypes(new Class[]{NoOp.class, RequestInterceptor.class});
         enhancer.setCallbackFilter(method ->
         {
-            if(method.getAnnotation(Meta.class) == null)return 0;
+            if(AnnotationUtil.getMethodPact(method) == null)return 0;
             if((method.getModifiers() & Modifier.ABSTRACT) == 0)return 0;
             return 1;
         });
@@ -67,7 +68,7 @@ public class StandardMetaClass extends MetaClass {
         Console.log(log.getMessage());
     }
     @Override
-    public Object serialize(Object instance, SerializeContext context) throws SerializeException {
+    public Object serialize(Object instance, ReferencesContext context) throws SerializeException {
         if(instance == null)return null;
         //引用池检查
         JsonPrimitive key = null;
@@ -96,7 +97,7 @@ public class StandardMetaClass extends MetaClass {
         }
     }
     @Override
-    public Object deserialize(Object rawInstance, SerializeContext context) throws DeserializeException {
+    public Object deserialize(Object rawInstance, ReferencesContext context) throws DeserializeException {
         if(rawInstance == null) return null;
         try {
             //引用池检查
@@ -125,7 +126,7 @@ public class StandardMetaClass extends MetaClass {
             throw new DeserializeException(e);
         }
     }
-    public void update(Object instance,JsonElement jsonElement,SerializeContext context) throws DeserializeException, IllegalAccessException {
+    public void update(Object instance, JsonElement jsonElement, ReferencesContext context) throws DeserializeException, IllegalAccessException {
         if(jsonElement == null)return;
         if(jsonElement.isJsonArray() && Collection.class.isAssignableFrom(instanceClass)){
             Collection collection = (Collection) instance;
@@ -150,7 +151,7 @@ public class StandardMetaClass extends MetaClass {
             }
         }
     }
-    public JsonElement export(Object instance,SerializeContext context) throws SerializeException, IllegalAccessException {
+    public JsonElement export(Object instance, ReferencesContext context) throws SerializeException, IllegalAccessException {
         if(instance == null)return null;
         if(instance instanceof Iterable){
             JsonArray jsonArray = new JsonArray();

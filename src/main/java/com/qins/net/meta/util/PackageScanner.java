@@ -1,12 +1,15 @@
 package com.qins.net.meta.util;
 
-import com.qins.net.meta.annotation.Meta;
+import com.qins.net.meta.annotation.field.Sync;
+import com.qins.net.meta.annotation.instance.MetaPact;
+import com.qins.net.util.AnnotationUtil;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 import java.io.File;
 import java.io.FileFilter;
 import java.io.IOException;
+import java.lang.annotation.Annotation;
 import java.net.JarURLConnection;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -47,9 +50,9 @@ public class PackageScanner {
                             ||klass.isPrimitive()) {
                         continue;
                     }
-                    Meta meta = klass.getAnnotation(Meta.class);
-                    String klassName = meta == null || "".equals(meta.value()) ? klass.getName() : meta.value();
-                    if(klassName.equals(name)){
+                    MetaPact pact = AnnotationUtil.getMetaPact(klass);
+                    if(pact == null)continue;;
+                    if(pact.getName().equals(name)){
                         return klass;
                     }
                 } catch (ClassNotFoundException e) {
@@ -80,9 +83,9 @@ public class PackageScanner {
                         || klass.isPrimitive()) {
                     continue;
                 }
-                Meta meta = klass.getAnnotation(Meta.class);
-                String klassName = meta == null || "".equals(meta.value()) ? klass.getName() : meta.value();
-                if(klassName.equals(name)){
+                MetaPact pact = AnnotationUtil.getMetaPact(klass);
+                if(pact == null)continue;;
+                if(pact.getName().equals(name)){
                     return klass;
                 }
             } catch (ClassNotFoundException e) {
