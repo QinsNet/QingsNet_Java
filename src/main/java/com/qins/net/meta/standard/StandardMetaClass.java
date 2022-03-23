@@ -21,6 +21,7 @@ import net.sf.cglib.proxy.NoOp;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
 import java.util.*;
+import java.util.function.Function;
 
 public class StandardMetaClass extends MetaClass {
     static Random random = new Random();
@@ -67,7 +68,6 @@ public class StandardMetaClass extends MetaClass {
     }
     @Override
     public String serialize(Object instance, RequestReferences references) throws SerializeException {
-        if(instance == null)return null;
         Integer address = System.identityHashCode(instance);
         //检查是否已经序列化
         if(references.getSerializeReferences().containsKey(address)){
@@ -79,36 +79,12 @@ public class StandardMetaClass extends MetaClass {
         references.getSerializeObjects().put(value,instance);
         //序列化
         try {
-            JsonElement rawInstance;
-            if(instance instanceof Collection){
-                JsonArray jsonArray = new JsonArray();
-                rawInstance = jsonArray;
-                for (Object item : ((Iterable)instance)){
-                    String rawItem = StandardMetaSerialize.serialize(item, references);
-                    if(rawItem == null)jsonArray.add((String) null);
-                    else jsonArray.add(new JsonPrimitive(rawItem));
-                }
-            }
-            else if(instance instanceof Map){
-                JsonObject jsonObject = new JsonObject();
-                rawInstance = jsonObject;
-                for (Map.Entry<Object,Object> item : ((Map<Object,Object>) instance).entrySet()){
-                    String rawKey = StandardMetaSerialize.serialize(item, references);
-                    String rawValue = StandardMetaSerialize.serialize(item, references);
-                    assert rawKey != null;
-                    if(rawValue == null)jsonObject.add(rawKey, null);
-                    else jsonObject.add(rawKey, new JsonPrimitive(rawValue));
-                }
-            }
-            else {
-                JsonObject jsonObject = new JsonObject();
-                rawInstance = jsonObject;
-                for (MetaField metaField : fields.values()){
-                    Object object = metaField.getField().get(instance);
-                    if(object == null)continue;
-                    String rawField = StandardMetaSerialize.serialize(object, references);
-                    if(rawField != null) jsonObject.add(metaField.getName(),new JsonPrimitive(rawField));
-                }
+            JsonObject rawInstance = new JsonObject();
+            for (MetaField metaField : fields.values()){
+                Object object = metaField.getField().get(instance);
+                String rawField = StandardMetaSerialize.serialize(object, references);
+                if(rawField == null)rawInstance.add(metaField.getName(),null);
+                else rawInstance.add(metaField.getName(),new JsonPrimitive(rawField));
             }
             RequestInterceptor interceptor = (RequestInterceptor) ((Factory)instance).getCallback(1);
             JsonObject jsonObject = new JsonObject();
@@ -123,7 +99,6 @@ public class StandardMetaClass extends MetaClass {
     }
     @Override
     public Object deserialize(String rawInstance, RequestReferences references) throws DeserializeException {
-        if(rawInstance == null) return null;
         try {
             //检查是否已经逆序列化
             if(references.getDeserializeObjects().containsKey(rawInstance)){
@@ -138,32 +113,23 @@ public class StandardMetaClass extends MetaClass {
             if(jsonObject == null)return instance;
             JsonElement jsonElement = jsonObject.get("instance");
             if(jsonElement != null){
-                if(jsonElement.isJsonArray() && Collection.class.isAssignableFrom(instanceClass)){
-                    Collection collection = (Collection) instance;
-                    for (JsonElement rawItem : jsonElement.getAsJsonArray()){
-                        Object item = StandardMetaSerialize.deserialize(rawItem.getAsString(),references);
-                        collection.add(item);
-                    }
-                }
-                else if(jsonElement.isJsonObject() && Map.class.isAssignableFrom(instanceClass)){
-                    Map map = (Map) instance;
-                    for (Map.Entry<String,JsonElement> rawItem : jsonElement.getAsJsonObject().entrySet()){
-                        Object key = StandardMetaSerialize.deserialize(rawItem.getKey(),references);
-                        Object value = StandardMetaSerialize.deserialize(rawItem.getValue().getAsString(),references);
-                        map.put(key,value);
-                    }
-                }
-                if(jsonElement.isJsonObject()){
-                    JsonObject rawFields = jsonElement.getAsJsonObject();
-                    for (MetaField metaField : fields.values()){
-                        Object value = StandardMetaSerialize.deserialize(rawFields.get(metaField.getName()).getAsString(), references);
-                        metaField.getField().set(instance,value);
+                JsonObject rawFields = jsonElement.getAsJsonObject();
+                for (MetaField metaField : syncFields.values()){
+                    JsonElement rawField = rawFields.get(metaField.getName());
+                    if(rawField != null){
+                        if(rawField.isJsonNull()){
+                            metaField.getField().set(instance,null);
+                        }
+                        else {
+                            Object value = StandardMetaSerialize.deserialize(rawField.getAsString(), references);
+                            metaField.getField().set(instance,value);
+                        }
                     }
                 }
             }
             JsonElement rawNodes = jsonObject.get("nodes");
             if(rawNodes != null){
-                HashMap<String,String> nodes = SerializeUtil.gson.fromJson(jsonObject.get("nodes"),HashMap.class);
+                HashMap<String,String> nodes = SerializeUtil.gson.fromJson(rawNodes,HashMap.class);
                 ((Factory)instance).setCallbacks(new Callback[]{NoOp.INSTANCE,new RequestInterceptor(request, nodes)});
             }
             return instance;
@@ -175,7 +141,6 @@ public class StandardMetaClass extends MetaClass {
 
     @Override
     public String serialize(Object instance, ServiceReferences references) throws SerializeException {
-        if(instance == null)return null;
         Integer address = System.identityHashCode(instance);
         //检查是否已经序列化
         if(references.getSerializeReferences().containsKey(address)){
@@ -191,104 +156,68 @@ public class StandardMetaClass extends MetaClass {
             while (references.getDeserializePool().containsKey(value));
         }
         references.getSerializeReferences().put(address,value);
+
         //序列化
         try {
-            JsonElement rawInstance = null;
-            if(instance instanceof Collection){
-                boolean update = false;
-                List<String> oldJsonArray = SerializeUtil.gson.fromJson((JsonElement) references.getDeserializePool().get(value),List.class);
-                if(oldJsonArray != null){
-                    String[] oldArray = oldJsonArray.toArray(new String[0]);
-                    String[] newArray = ((Collection<String>) instance).toArray(new String[0]);
-                    if(oldArray.length == newArray.length){
-                        for(int i = 0; i< oldArray.length; i++){
-                            String newRef = serialize(newArray[i],references);
-                            if(newRef == null)newRef = references.getDeserializeReferences().get(System.identityHashCode(newArray[i]));
-                            if(!Objects.equals(newRef, oldArray[i])){
-                                update=true;
-                                break;
+            JsonObject oldRawMeta = (JsonObject) references.getDeserializePool().get(value);
+            JsonObject rawMeta = new JsonObject();
+            JsonObject rawInstance = new JsonObject();
+            rawMeta.add("instance",rawInstance);
+            if(oldRawMeta != null){//是否存在旧Meta
+                JsonObject oldRawInstance = (JsonObject) oldRawMeta.get("instance");
+                if(oldRawInstance != null){//是否存在旧Instance
+                    for (MetaField metaField : syncFields.values()){//对比更新
+                        Object field = metaField.getField().get(instance);
+                        String newRawField = references.getDeserializeReferences().get(System.identityHashCode(field));
+                        if(newRawField == null) newRawField = StandardMetaSerialize.serialize(field,references);
+                        String oldRawField = SerializeUtil.getStringOrNull(oldRawInstance.get(metaField.getName()));
+                        if(!Objects.equals(newRawField, oldRawField)){
+                            String rawField = StandardMetaSerialize.serialize(field, references);
+                            if(rawField == null)rawInstance.add(metaField.getName(),null);
+                            else rawInstance.add(metaField.getName(),new JsonPrimitive(rawField));
+                        }
+                    }
+                }
+                else {//生成新的Instance
+                    for (MetaField metaField : syncFields.values()){
+                        Object field = metaField.getField().get(instance);
+                        String rawField = StandardMetaSerialize.serialize(field, references);
+                        if(rawField == null)rawInstance.add(metaField.getName(),null);
+                        else rawInstance.add(metaField.getName(),new JsonPrimitive(rawField));
+                    }
+                }
+                Object oldRawNodes = oldRawMeta.get("nodes");
+                if(oldRawNodes != null){//是否存在旧Nodes
+                    RequestInterceptor interceptor = (RequestInterceptor) ((Factory)instance).getCallback(1);
+                    Map<String,String> oldNodes = SerializeUtil.gson.fromJson(oldRawMeta.get("nodes"),HashMap.class);
+                    Map<String,String> newNodes = interceptor.getNodes();
+                    if(newNodes != null && oldNodes != null){//是否存在新Nodes
+                        for(Map.Entry<String,String> item : oldNodes.entrySet()){
+                            if(!newNodes.containsKey(item.getKey()) || Objects.equals(newNodes.get(item.getKey()),item.getValue())){
+                                rawMeta.add("nodes", SerializeUtil.gson.toJsonTree(newNodes));
                             }
                         }
                     }
-                    else update = true;
+                    else rawMeta.add("nodes",null);
                 }
-                else update = true;
-                if(update){
-                    JsonArray jsonArray = new JsonArray();
-                    rawInstance = jsonArray;
-                    for (Object item : ((Iterable)instance)){
-                        String rawItem = StandardMetaSerialize.serialize(item, references);
-                        if(rawItem == null)jsonArray.add((String) null);
-                        else jsonArray.add(new JsonPrimitive(rawItem));
-                    }
+                else {//生成新Nodes
+                    RequestInterceptor interceptor = (RequestInterceptor) ((Factory)instance).getCallback(1);
+                    Map<String,String> newNodes = interceptor.getNodes();
+                    rawMeta.add("nodes", SerializeUtil.gson.toJsonTree(newNodes));
                 }
             }
-            else if(instance instanceof Map){
-                boolean update = false;
-                Map<String,String> oldJsonObject = SerializeUtil.gson.fromJson((JsonElement) references.getDeserializePool().get(value), LinkedHashMap.class);
-                if(oldJsonObject != null){
-                    //Key
-                    String[] oldKeys = oldJsonObject.keySet().toArray(new String[0]);
-                    Object[] newKeys = ((Map<Object, ?>) instance).keySet().toArray();
-                    if(oldKeys.length == newKeys.length){
-                        for(int i=0;i<oldKeys.length;i++){
-                            String newRef = serialize(newKeys[i],references);
-                            if(newRef == null)newRef = references.getDeserializeReferences().get(System.identityHashCode(newKeys[i]));
-                            if(!Objects.equals(newRef, oldKeys[i])){
-                                update=true;
-                                break;
-                            }
-                        }
-                    }
-                    else update = true;
-                    if(!update){
-                        //Key
-                        String[] oldValues = oldJsonObject.values().toArray(new String[0]);
-                        Object[] newValues = ((Map<Object, ?>) instance).keySet().toArray();
-                        if(oldValues.length == newValues.length){
-                            for(int i=0;i<oldValues.length;i++){
-                                String newRef = serialize(newValues[i],references);
-                                if(newRef == null)newRef = references.getDeserializeReferences().get(System.identityHashCode(newValues[i]));
-                                if(!Objects.equals(newRef, oldValues[i])){
-                                    update=true;
-                                    break;
-                                }
-                            }
-                        }
-                        else update = true;
-                    }
+            else {//生成新Meta
+                for (MetaField metaField : syncFields.values()){
+                    Object field = metaField.getField().get(instance);
+                    String rawField = StandardMetaSerialize.serialize(field, references);
+                    if(rawField == null)rawInstance.add(metaField.getName(),null);
+                    else rawInstance.add(metaField.getName(),new JsonPrimitive(rawField));
                 }
-                else update = true;
-                if(update){
-                    JsonObject jsonObject = new JsonObject();
-                    rawInstance = jsonObject;
-                    for (Map.Entry<Object,Object> item : ((Map<Object,Object>) instance).entrySet()){
-                        String rawKey = StandardMetaSerialize.serialize(item, references);
-                        String rawValue = StandardMetaSerialize.serialize(item, references);
-                        assert rawKey != null;
-                        if(rawValue == null)jsonObject.add(rawKey, null);
-                        else jsonObject.add(rawKey, new JsonPrimitive(rawValue));
-                    }
-                }
+                RequestInterceptor interceptor = (RequestInterceptor) ((Factory)instance).getCallback(1);
+                Map<String,String> newNodes = interceptor.getNodes();
+                rawMeta.add("nodes", SerializeUtil.gson.toJsonTree(newNodes));
             }
-            else {
-                JsonObject jsonObject = new JsonObject();
-                rawInstance = jsonObject;
-                for (MetaField metaField : fields.values()){
-                    Object object = metaField.getField().get(instance);
-                    if(object == null)continue;
-                    String rawField = StandardMetaSerialize.serialize(object, references);
-                    assert rawField != null;
-                    if(references.getSerializePool().containsKey(rawField)){
-                        jsonObject.add(metaField.getName(),new JsonPrimitive(rawField));
-                    }
-                }
-            }
-            RequestInterceptor interceptor = (RequestInterceptor) ((Factory)instance).getCallback(1);
-            JsonObject jsonObject = new JsonObject();
-            jsonObject.add("instance",rawInstance);
-            jsonObject.add("nodes", SerializeUtil.gson.toJsonTree(interceptor.getNodes()));
-            references.getSerializePool().put(value,jsonObject);
+            references.getSerializePool().put(value,rawMeta);
             return value;
         }
         catch (IllegalAccessException e){
@@ -298,7 +227,6 @@ public class StandardMetaClass extends MetaClass {
 
     @Override
     public Object deserialize(String rawInstance, ServiceReferences references) throws DeserializeException {
-        if(rawInstance == null) return null;
         try {
             //检查是否已经逆序列化
             if(references.getDeserializeObjects().containsKey(rawInstance)){
@@ -314,27 +242,11 @@ public class StandardMetaClass extends MetaClass {
             if(jsonObject == null)return instance;
             JsonElement jsonElement = jsonObject.get("instance");
             if(jsonElement != null){
-                if(jsonElement.isJsonArray() && Collection.class.isAssignableFrom(instanceClass)){
-                    Collection collection = (Collection) instance;
-                    collection.clear();
-                    for (JsonElement rawItem : jsonElement.getAsJsonArray()){
-                        Object item = StandardMetaSerialize.deserialize(rawItem.getAsString(),references);
-                        collection.add(item);
-                    }
-                }
-                else if(jsonElement.isJsonObject() && Map.class.isAssignableFrom(instanceClass)){
-                    Map map = (Map) instance;
-                    map.clear();
-                    for (Map.Entry<String,JsonElement> rawItem : jsonElement.getAsJsonObject().entrySet()){
-                        Object key = StandardMetaSerialize.deserialize(rawItem.getKey(),references);
-                        Object value = StandardMetaSerialize.deserialize(rawItem.getValue().getAsString(),references);
-                        map.put(key,value);
-                    }
-                }
-                else if(jsonElement.isJsonObject()){
-                    JsonObject rawFields = jsonElement.getAsJsonObject();
-                    for (MetaField metaField : fields.values()){
-                        Object value = StandardMetaSerialize.deserialize(rawFields.get(metaField.getName()).getAsString(), references);
+                JsonObject rawFields = jsonElement.getAsJsonObject();
+                for (MetaField metaField : fields.values()){
+                    JsonElement rawField = rawFields.get(metaField.getName());
+                    if(rawField != null && !rawField.isJsonNull()){
+                        Object value = StandardMetaSerialize.deserialize(rawField.getAsString(), references);
                         metaField.getField().set(instance,value);
                     }
                 }

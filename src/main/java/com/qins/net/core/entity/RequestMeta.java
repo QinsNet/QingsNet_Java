@@ -18,9 +18,9 @@ public class RequestMeta {
     @Sync
     private String mapping;
     @Sync
-    private Map<String,Object> params;
+    private Map<String,String> params;
     @Sync
     private Map<String,Object> references;
     @Sync
-    private Map<String,Object> instance;
+    private String instance;
 }

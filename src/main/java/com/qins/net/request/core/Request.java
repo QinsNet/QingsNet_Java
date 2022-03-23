@@ -82,6 +82,7 @@ public abstract class Request implements IRequest {
                     .setMetaMethod(metaMethod)
                     .setParams(new HashMap<>())
                     .setRemote(searchNode(nodes,metaMethod))
+                    .setReferences(new RequestReferences())
                     .setRequestMeta(buildRequestMeta(context,instance,args));
 
             beforeEvent(method,context);
@@ -130,15 +131,14 @@ public abstract class Request implements IRequest {
     }
     public void handleResponseMeta(RequestContext context) throws NotFoundInstanceFieldException, DeserializeException, IllegalAccessException, NotFoundParameterException {
         //引用池
-        context.setDeserializePool(context.getResponseMeta().getReferences());
+        context.getReferences().setDeserializePool(context.getResponseMeta().getReferences());
         //更新数据
-        for (Map.Entry<Object,String> item : context.getSerializes().entrySet()){
-            StandardMetaSerialize.deserialize(item.getValue(),item.getKey(),context);
+        for (Map.Entry<Integer,String> item : context.getReferences().getSerializeReferences().entrySet()){
+            StandardMetaSerialize.deserialize(item.getValue(),context.getReferences());
         }
-
         //返回值
         if(context.getResponseMeta().getResult() != null){
-            Object result = StandardMetaSerialize.deserialize(context.getResponseMeta().getResult(), context);
+            Object result = StandardMetaSerialize.deserialize(context.getResponseMeta().getResult(), context.getReferences());
             context.setResult(result);
         }
     }
@@ -146,22 +146,18 @@ public abstract class Request implements IRequest {
         RequestMeta requestMeta = new RequestMeta();
         requestMeta.setMapping(metaClass.getName() + "/" + context.getMetaMethod().getName());
         //实例
-        requestMeta.setInstance(new HashMap<>());
-        for (MetaField metaField : metaClass.getFields().values()){
-            Object field = metaField.getField().get(instance);
-            requestMeta.getInstance().put(metaField.getName(),StandardMetaSerialize.serialize(field,context));
-        }
+        requestMeta.setInstance(StandardMetaSerialize.serialize(instance,context.getReferences()));
         //参数
         requestMeta.setParams(new HashMap<>());
         int i = 0;
         for (Map.Entry<String,MetaParameter> keyValue : context.getMetaMethod().getParameters().entrySet()){
             String name = keyValue.getKey();
             context.getParams().put(name,args[i]);
-            context.getRequestMeta().getParams().put(name,StandardMetaSerialize.serialize(args[i],context));
+            requestMeta.getParams().put(name,StandardMetaSerialize.serialize(args[i],context.getReferences()));
             i++;
         }
         //缓冲池
-        requestMeta.setReferences(context.getSerializePool());
+        requestMeta.setReferences(context.getReferences().getSerializePool());
         return requestMeta;
     }
 

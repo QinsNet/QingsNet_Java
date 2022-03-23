@@ -1,5 +1,6 @@
 package com.qins.net.service.core;
 
+import com.google.gson.JsonPrimitive;
 import lombok.Getter;
 import lombok.Setter;
 

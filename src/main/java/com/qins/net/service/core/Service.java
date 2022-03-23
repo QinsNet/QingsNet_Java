@@ -116,43 +116,31 @@ public abstract class Service implements IService {
             context.setResponseMeta(new ResponseMeta(e));
         }
     }
-    public ResponseMeta buildResponseMeta(ServiceContext context) throws IllegalAccessException, SerializeException {
+    public ResponseMeta buildResponseMeta(ServiceContext context) throws SerializeException {
         ResponseMeta responseMeta = new ResponseMeta();
         context.setResponseMeta(responseMeta);
-        //实例
-        responseMeta.setInstance(new HashMap<>());
-        for (MetaField metaField : metaClass.getSyncFields().values()){
-            Object field = metaField.getField().get(context.getInstance());
-            responseMeta.getInstance().put(metaField.getName(),StandardMetaSerialize.serialize(field,context.getReferencesContext()));
-        }
-        //参数
-        responseMeta.setParams(new HashMap<>());
-        for (MetaParameter parameter : context.getMetaMethod().getSyncParameters().values()){
-            Object param = context.getParams().get(parameter.getName());
-            responseMeta.getParams().put(parameter.getName(), StandardMetaSerialize.serialize(param,context.getReferencesContext()));
+        //更新数据
+        for (Map.Entry<String,Object> item : context.getReferences().getDeserializeObjects().entrySet()){
+            StandardMetaSerialize.serialize(item.getValue(),context.getReferences());
         }
         //返回值
         if(context.getMetaMethod().getMetaReturn().getInstanceClass() != void.class && context.getMetaMethod().getMetaReturn().getInstanceClass() != Void.class){
-            responseMeta.setResult(StandardMetaSerialize.serialize(context.getResult(),context.getReferencesContext()));
+            responseMeta.setResult(StandardMetaSerialize.serialize(context.getResult(),context.getReferences()));
         }
         //缓冲池
-        responseMeta.setReferences(context.getReferencesContext().getSerializePools());
+        responseMeta.setReferences(context.getReferences().getSerializePool());
         return responseMeta;
     }
-    public void handleRequestMeta(ServiceContext context) throws DeserializeException, NotFoundInstanceFieldException, IllegalAccessException, NotFoundParameterException {
+    public void handleRequestMeta(ServiceContext context) throws DeserializeException {
         //引用池
-        context.getReferencesContext().setDeserializePools(context.getRequestMeta().getReferences());
+        context.getReferences().setDeserializePool(context.getRequestMeta().getReferences());
         //实例
-        for (MetaField metaField : metaClass.getFields().values()){
-            Object rawField = context.getRequestMeta().getInstance().get(metaField.getName());
-            Object field = StandardMetaSerialize.deserialize(rawField, context.getReferencesContext());
-            metaField.getField().set(context.getInstance(),field);
-        }
+        context.setInstance(StandardMetaSerialize.deserialize(context.getRequestMeta().getInstance(), context.getReferences()));
         //参数
         context.setParams(new HashMap<>());
         for (MetaParameter metaParameter : context.getMetaMethod().getParameters().values()){
-            Object rawParam = context.getRequestMeta().getParams().get(metaParameter.getName());
-            Object param = StandardMetaSerialize.deserialize(rawParam, context.getReferencesContext());
+            String rawParam = context.getRequestMeta().getParams().get(metaParameter.getName());
+            Object param = StandardMetaSerialize.deserialize(rawParam, context.getReferences());
             context.getParams().put(metaParameter.getName(),param);
         }
     }

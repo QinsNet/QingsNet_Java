@@ -3,7 +3,6 @@ package com.qins.net.service.core;
 import com.qins.net.core.entity.RequestMeta;
 import com.qins.net.core.entity.ResponseMeta;
 import com.qins.net.meta.core.MetaMethod;
-import com.qins.net.meta.core.ReferencesContext;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
@@ -19,9 +18,7 @@ public class ServiceContext {
     private ResponseMeta responseMeta;
     private HashMap<String,Object> params;
     private String mapping;
-    private HashMap<Object,Object> deserializes;
-    private HashMap<String,Object> serializePool;
-    private HashMap<String,Object> deserializePool;
+    private ServiceReferences references;
     private MetaMethod metaMethod;
     private Object result;
 }

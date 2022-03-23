@@ -3,12 +3,14 @@ package com.qins.net.util;
 import com.google.gson.ExclusionStrategy;
 import com.google.gson.FieldAttributes;
 import com.google.gson.Gson;
+import com.google.gson.JsonElement;
 import com.qins.net.meta.annotation.field.Sync;
 import org.yaml.snakeyaml.Yaml;
 
 public class SerializeUtil {
     public static Gson gson = new Gson()
             .newBuilder()
+            .serializeNulls()
             .setExclusionStrategies(new ExclusionStrategy() {
                 @Override
                 public boolean shouldSkipField(FieldAttributes fieldAttributes) {
@@ -22,4 +24,9 @@ public class SerializeUtil {
             })
             .create();
     public static Yaml yaml = new Yaml();
+
+    public static String getStringOrNull(JsonElement value){
+        if(value == null || value.isJsonNull())return null;
+        return value.getAsString();
+    }
 }

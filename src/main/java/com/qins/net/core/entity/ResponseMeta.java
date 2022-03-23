@@ -16,13 +16,9 @@ public class ResponseMeta {
     @Sync
     private String protocol = "Sync-Response-1.0";
     @Sync
-    private Object result;
+    private String result;
     @Sync
     private String exception;
-    @Sync
-    private Map<String,Object> instance;
-    @Sync
-    private Map<String,Object> params;
     @Sync
     private Map<String,Object> references;
 
@@ -44,12 +40,5 @@ public class ResponseMeta {
         catch (Exception e2) {
             exception = "WriteExceptionError";
         }
-    }
-
-    public ResponseMeta(Map<String,Object> instance,Map<String,Object> params, Object result,Map<String,Object> references) {
-        this.result = result;
-        this.instance = instance;
-        this.params = params;
-        this.references = references;
     }
 }

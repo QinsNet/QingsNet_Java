@@ -4,9 +4,8 @@ import com.qins.net.core.entity.RequestMeta;
 import com.qins.net.core.entity.ResponseMeta;
 import com.qins.net.meta.core.MetaClass;
 import com.qins.net.core.entity.NodeAddress;
-import com.qins.net.meta.core.MetaClassLoader;
-import com.qins.net.meta.core.ReferencesContext;
 import com.qins.net.service.core.ServiceContext;
+import com.qins.net.service.core.ServiceReferences;
 import com.qins.net.util.SerializeUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
@@ -68,7 +67,7 @@ public class ServiceHandler extends SimpleChannelInboundHandler<FullHttpRequest>
                 return;
             }
             ServiceContext context = new ServiceContext();
-            context.setReferencesContext(new ReferencesContext())
+            context.setReferences(new ServiceReferences())
                     .setRequestMeta(requestMeta)
                     .setMapping(requestMeta.getMapping().split("/")[2]);
             es.submit(() -> {
@@ -97,7 +96,6 @@ public class ServiceHandler extends SimpleChannelInboundHandler<FullHttpRequest>
             System.out.println(body);
             DefaultFullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,HttpResponseStatus.OK,Unpooled.copiedBuffer(body.getBytes(StandardCharsets.UTF_8)));
             send(response);
-            Console.debug(data.toString());
         }
         else if(data instanceof byte[]){
             send(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,HttpResponseStatus.OK, Unpooled.copiedBuffer((byte[]) data)));

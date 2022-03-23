@@ -57,7 +57,6 @@ public class HttpPostRequest extends Node {
     public boolean send(Object data,int timeout) {
         client = new OkHttpClient.Builder().callTimeout(timeout, TimeUnit.MILLISECONDS).readTimeout(timeout,TimeUnit.MILLISECONDS).build();
         if(data instanceof RequestMeta){
-            Console.debug(data.toString());
             RequestMeta requestMeta = (RequestMeta) data;
             Request.Builder request =
                     new Request.Builder()
