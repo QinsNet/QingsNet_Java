@@ -1,4 +1,5 @@
 package com.qins.net.node.http.recevier;
+import com.google.gson.JsonObject;
 import com.qins.net.core.console.Console;
 import com.qins.net.core.entity.RequestMeta;
 import com.qins.net.core.entity.ResponseMeta;
@@ -92,7 +93,10 @@ public class ServiceHandler extends SimpleChannelInboundHandler<FullHttpRequest>
         }
         else if(data instanceof ResponseMeta){
             ResponseMeta responseMeta = (ResponseMeta) data;
-            String body = SerializeUtil.gson.toJson(responseMeta);
+            JsonObject jsonObject = SerializeUtil.gson.toJsonTree(responseMeta).getAsJsonObject();
+            if(jsonObject.get("exception") != null && jsonObject.get("exception").isJsonNull())jsonObject.remove("exception");
+            if(jsonObject.get("result") != null && jsonObject.get("result").isJsonNull())jsonObject.remove("result");
+            String body = SerializeUtil.gson.toJson(jsonObject);
             System.out.println(body);
             DefaultFullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,HttpResponseStatus.OK,Unpooled.copiedBuffer(body.getBytes(StandardCharsets.UTF_8)));
             send(response);
