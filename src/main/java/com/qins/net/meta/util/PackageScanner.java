@@ -1,6 +1,5 @@
 package com.qins.net.meta.util;
 
-import com.qins.net.meta.annotation.field.Sync;
 import com.qins.net.meta.annotation.instance.MetaPact;
 import com.qins.net.util.AnnotationUtil;
 import lombok.AllArgsConstructor;
@@ -9,7 +8,6 @@ import lombok.Getter;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.IOException;
-import java.lang.annotation.Annotation;
 import java.net.JarURLConnection;
 import java.net.URISyntaxException;
 import java.net.URL;

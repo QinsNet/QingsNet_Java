@@ -1,6 +1,6 @@
 package com.qins.net.core.entity;
 
-import com.qins.net.meta.annotation.field.Sync;
+import com.qins.net.meta.annotation.serialize.Sync;
 import lombok.*;
 import lombok.experimental.Accessors;
 

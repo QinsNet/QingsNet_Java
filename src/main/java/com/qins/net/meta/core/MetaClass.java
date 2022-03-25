@@ -5,7 +5,6 @@ import com.qins.net.core.boot.MetaApplication;
 import com.qins.net.core.exception.NewInstanceException;
 import com.qins.net.core.instance.InstanceManager;
 import com.qins.net.meta.annotation.Components;
-import com.qins.net.meta.annotation.field.Sync;
 import com.qins.net.meta.annotation.instance.Meta;
 import com.qins.net.meta.annotation.instance.MetaPact;
 import com.qins.net.node.annotation.NodeMapping;
@@ -30,9 +29,8 @@ public abstract class MetaClass extends BaseClass {
     protected InstanceManager instanceManager = new InstanceManager();
     protected Class<?> proxyClass;
     protected Set<String> defaultNodes;
-    protected HashMap<String, String> nodes = new HashMap<>();
-    protected HashMap<String, MetaField> fields = new HashMap<>();
-    protected HashMap<String, MetaField> syncFields = new HashMap<>();
+    protected Map<String, String> nodes = new HashMap<>();
+    protected Map<String, MetaField> fields = new HashMap<>();
     protected Components components;
 
     public MetaClass(String name,Class<?> instanceClass) throws NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException {
@@ -55,20 +53,6 @@ public abstract class MetaClass extends BaseClass {
             }
         }
     }
-
-    public void link() throws NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException {
-        service = components.service().getConstructor(MetaClass.class).newInstance(this);
-        request = components.request().getConstructor(MetaClass.class).newInstance(this);
-        for (Field field : AnnotationUtil.getMetaFields(instanceClass)){
-            field.setAccessible(true);
-            MetaField metaField = components.metaField().getConstructor(Field.class,Components.class).newInstance(field,components);
-            fields.put(metaField.name, metaField);
-            if(metaField.sync){
-                syncFields.put(metaField.name,metaField);
-            }
-        }
-    }
-
     public abstract <T> T newInstance(Map<String,String> nodes) throws NewInstanceException;
 
 }

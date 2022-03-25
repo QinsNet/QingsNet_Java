@@ -1,12 +1,11 @@
 package com.qins.net.meta.annotation.method;
 
+import com.qins.net.core.lang.serialize.SerializeLang;
 import com.qins.net.node.core.Node;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 
-import java.util.HashMap;
-import java.util.List;
 import java.util.Set;
 
 @Getter
@@ -17,4 +16,6 @@ public class MethodPact {
         String name;
         Class<? extends Node> nodeClass;
         Set<String> nodes;
+        SerializeLang instanceSerializeLang;
+        SerializeLang returnSerializeLang;
 }

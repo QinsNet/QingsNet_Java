@@ -2,13 +2,12 @@ package com.qins.net.meta.core;
 
 import com.qins.net.meta.annotation.Components;
 import com.qins.net.core.exception.LoadClassException;
-import com.qins.net.meta.annotation.field.Sync;
 import com.qins.net.meta.annotation.instance.MetaPact;
-import com.qins.net.meta.annotation.parameter.ParameterPact;
 import com.qins.net.meta.util.PackageScanner;
 import com.qins.net.util.AnnotationUtil;
 import lombok.Getter;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Type;
 import java.util.HashMap;
@@ -38,7 +37,13 @@ public class MetaClassLoader{
                 metas.put(name, metaClass);
                 types.put(baseClass.getInstanceClass(),baseClass);
                 types.put(metaClass.getProxyClass(),metaClass);
-                metaClass.link();
+                metaClass.service = components.service().getConstructor(MetaClass.class).newInstance(metaClass);
+                metaClass.request = components.request().getConstructor(MetaClass.class).newInstance(metaClass);
+                for (Field field : AnnotationUtil.getMetaFields(instanceClass)){
+                    field.setAccessible(true);
+                    MetaField metaField = components.metaField().getConstructor(Field.class,Components.class).newInstance(field,components);
+                    metaClass.fields.put(metaField.name, metaField);
+                }
             }
             else {
                 if(instanceClass == Boolean.class || instanceClass == Character.class || instanceClass == Byte.class
@@ -82,4 +87,5 @@ public class MetaClassLoader{
             return loadClass(name,klass);
         }
     }
+
 }

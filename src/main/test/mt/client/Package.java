@@ -1,6 +1,6 @@
 package mt.client;
 
-import com.qins.net.meta.annotation.field.Sync;
+import com.qins.net.meta.annotation.field.Field;
 import com.qins.net.meta.annotation.instance.Meta;
 import com.qins.net.node.annotation.Post;
 import lombok.Getter;
@@ -10,9 +10,9 @@ import lombok.Setter;
 @Setter
 @Meta(value = "Package",nodes = "User")
 public abstract class Package {
-    @Sync
+    @Field
     String name;
-    @Sync
+    @Field
     User user;
     @Post
     public boolean pack(){

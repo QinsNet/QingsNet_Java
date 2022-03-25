@@ -1,10 +1,8 @@
 package com.qins.net.core.boot;
 
-import com.qins.net.core.console.Console;
 import com.qins.net.core.exception.TrackException;
 import com.qins.net.core.exception.LoadClassException;
 import com.qins.net.core.exception.NewInstanceException;
-import com.qins.net.meta.annotation.field.Sync;
 import com.qins.net.meta.annotation.instance.MetaPact;
 import com.qins.net.meta.core.MetaClass;
 import com.qins.net.meta.core.MetaClassLoader;
@@ -16,12 +14,14 @@ import com.qins.net.util.AnnotationUtil;
 import com.qins.net.util.SerializeUtil;
 import lombok.Getter;
 import lombok.NonNull;
+import lombok.extern.log4j.Log4j2;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+@Log4j2
 public class MetaApplication {
     @Getter
     private static ApplicationContext context;
@@ -76,8 +76,7 @@ public class MetaApplication {
                 config = SerializeUtil.yaml.load(new FileInputStream(file));
             }
             catch (FileNotFoundException e) {
-                Console.error(e.getMessage());
-                e.printStackTrace();
+                log.error(e);
             }
         }
         if(config == null){
@@ -86,8 +85,7 @@ public class MetaApplication {
                 String data = SerializeUtil.yaml.dump(config);
                 new FileOutputStream(file).write(data.getBytes(StandardCharsets.UTF_8));
             } catch (IOException e) {
-                Console.error(e.getMessage());
-                e.printStackTrace();
+                log.error(e);
             }
         }
         return config;

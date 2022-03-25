@@ -1,22 +1,29 @@
 package com.qins.net.util;
 
-import com.qins.net.meta.annotation.field.Async;
+import com.qins.net.core.exception.ObjectLangException;
+import com.qins.net.core.lang.serialize.ObjectLang;
 import com.qins.net.meta.annotation.field.FieldPact;
-import com.qins.net.meta.annotation.field.Sync;
+import com.qins.net.meta.annotation.field.Field;
 import com.qins.net.meta.annotation.instance.Meta;
 import com.qins.net.meta.annotation.instance.MetaPact;
 import com.qins.net.meta.annotation.method.MethodPact;
+import com.qins.net.meta.annotation.method.ReturnAsync;
+import com.qins.net.meta.annotation.method.ReturnSync;
+import com.qins.net.meta.annotation.parameter.MetaParam;
 import com.qins.net.meta.annotation.parameter.ParameterPact;
-import com.qins.net.node.annotation.Get;
+import com.qins.net.meta.annotation.serialize.Async;
+import com.qins.net.core.lang.serialize.SerializeLang;
+import com.qins.net.meta.annotation.serialize.Sync;
 import com.qins.net.node.annotation.Post;
 
+import javax.swing.text.html.Option;
 import java.lang.annotation.Annotation;
-import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Optional;
 
 public class AnnotationUtil {
     public static Annotation getAnnotation(Method method, Class<? extends Annotation> target){
@@ -28,6 +35,7 @@ public class AnnotationUtil {
         }
         return null;
     }
+
     public static Annotation getAnnotation(Class<?> root, Class<? extends Annotation> target){
         for (Annotation annotation : root.getDeclaredAnnotations()){
             if(annotation.annotationType() == target){
@@ -42,10 +50,12 @@ public class AnnotationUtil {
         }
         return null;
     }
-    public static ArrayList<Field> getMetaFields(Class<?> checkClass){
-        ArrayList<Field> fields = new ArrayList<>();
+
+
+    public static ArrayList<java.lang.reflect.Field> getMetaFields(Class<?> checkClass){
+        ArrayList<java.lang.reflect.Field> fields = new ArrayList<>();
         while (checkClass != null){
-            for (Field field : checkClass.getDeclaredFields()){
+            for (java.lang.reflect.Field field : checkClass.getDeclaredFields()){
                 if(getFieldPact(field) != null){
                     fields.add(field);
                 }
@@ -54,7 +64,8 @@ public class AnnotationUtil {
         }
         return fields;
     }
-    public static ArrayList<Method> getMetaMethods(Class<?> checkClass){
+
+    public static ArrayList<Method> getMetaMethods(Class<?> checkClass) throws ObjectLangException {
         ArrayList<Method> methods = new ArrayList<>();
         while (checkClass != null){
             for (Method method : checkClass.getDeclaredMethods())
@@ -65,51 +76,12 @@ public class AnnotationUtil {
         }
         return methods;
     }
-    public static MethodPact getMethodPact(Method method){
-        if(method.getAnnotation(Post.class) != null){
-            MethodPact pact = new MethodPact();
-            Post annotation = method.getAnnotation(Post.class);
-            pact.setName("".equals(annotation.value())? method.getName() : annotation.value())
-                    .setTimeout(annotation.timeout())
-                    .setNodes(new HashSet<>(Arrays.asList(annotation.nodes())))
-                    .setNodeClass(annotation.node());
-            return pact;
-        }
-        else if(method.getAnnotation(Get.class) != null){
-            MethodPact pact = new MethodPact();
-            Get annotation = method.getAnnotation(Get.class);
-            pact.setName("".equals(annotation.value())? method.getName() : annotation.value())
-                    .setTimeout(annotation.timeout())
-                    .setNodes(new HashSet<>(Arrays.asList(annotation.nodes())))
-                    .setNodeClass(annotation.node());
-            return pact;
-        }
-        return null;
-    }
-    public static FieldPact getFieldPact(Field field){
-        if(field.getAnnotation(Sync.class) != null){
-            FieldPact pact = new FieldPact();
-            Sync annotation = field.getAnnotation(Sync.class);
-            pact.setName("".equals(annotation.value())? field.getName() : annotation.value())
-                    .setSync(true);
-            return pact;
-        }
-        else if(field.getAnnotation(Async.class) != null){
-            FieldPact pact = new FieldPact();
-            Async annotation = field.getAnnotation(Async.class);
-            pact.setName("".equals(annotation.value())? field.getName() : annotation.value())
-                    .setNodes(annotation.nodes())
-                    .setSync(false);
-            return pact;
-        }
-        return null;
-    }
 
     public static MetaPact getMetaPact(Class<?> klass){
         if(klass.getAnnotation(Meta.class) != null){
-            MetaPact pact = new MetaPact();
             Meta annotation = klass.getAnnotation(Meta.class);
-            pact.setName("".equals(annotation.value())? klass.getSimpleName() : annotation.value())
+            MetaPact pact = new MetaPact()
+                    .setName("".equals(annotation.value())? klass.getSimpleName() : annotation.value())
                     .setNodes(new HashSet<>(Arrays.asList(annotation.nodes())));
             klass = klass.getSuperclass();
             while (klass != null){
@@ -123,21 +95,50 @@ public class AnnotationUtil {
         return null;
     }
 
-    public static ParameterPact getParameterPact(Parameter parameter){
-        if(parameter.getAnnotation(Sync.class) != null){
-            ParameterPact pact = new ParameterPact();
-            Sync annotation = parameter.getAnnotation(Sync.class);
-            pact.setName("".equals(annotation.value())? parameter.getName() : annotation.value());
-            pact.setSync(true);
-            return pact;
+    public static FieldPact getFieldPact(java.lang.reflect.Field field){
+        if(field.getAnnotation(Field.class) != null){
+            Field annotation = field.getAnnotation(Field.class);
+            return new FieldPact().setName("".equals(annotation.value())? field.getName() : annotation.value());
         }
-        if(parameter.getAnnotation(Async.class) != null){
-            ParameterPact pact = new ParameterPact();
-            Async annotation = parameter.getAnnotation(Async.class);
-            pact.setName("".equals(annotation.value())? parameter.getName() : annotation.value());
-            pact.setSync(false);
+        return null;
+    }
+
+    public static MethodPact getMethodPact(Method method) throws ObjectLangException {
+        if(method.getAnnotation(Post.class) != null){
+            Post annotation = method.getAnnotation(Post.class);
+            MethodPact pact = new MethodPact()
+                    .setName("".equals(annotation.value())? method.getName() : annotation.value())
+                    .setTimeout(annotation.timeout())
+                    .setNodes(new HashSet<>(Arrays.asList(annotation.nodes())))
+                    .setNodeClass(annotation.node())
+                    .setInstanceSerializeLang(new SerializeLang())
+                    .setReturnSerializeLang(new SerializeLang());
+            if(method.getAnnotation(Sync.class) != null){
+                pact.getInstanceSerializeLang().setSync(ObjectLang.process(method.getAnnotation(Sync.class).value()));
+            }
+            if(method.getAnnotation(Async.class) != null){
+                pact.getInstanceSerializeLang().setAsync(ObjectLang.process(method.getAnnotation(Async.class).value()));
+            }
+            if(method.getAnnotation(ReturnSync.class) != null){
+                pact.getReturnSerializeLang().setSync(ObjectLang.process(method.getAnnotation(ReturnSync.class).value()));
+            }
+            if(method.getAnnotation(ReturnAsync.class) != null){
+                pact.getReturnSerializeLang().setAsync(ObjectLang.process(method.getAnnotation(ReturnAsync.class).value()));
+            }
             return pact;
         }
         return null;
+    }
+    public static ParameterPact getParameterPact(Parameter parameter) throws ObjectLangException {
+        ParameterPact pact = new ParameterPact()
+                .setName(Optional.ofNullable(parameter.getAnnotation(MetaParam.class)).map(MetaParam::value).orElse(parameter.getName()))
+                .setSerializeLang(new SerializeLang());
+        if(parameter.getAnnotation(Sync.class) != null){
+            pact.getSerializeLang().setSync(ObjectLang.process(parameter.getAnnotation(Sync.class).value()));
+        }
+        if(parameter.getAnnotation(Async.class) != null){
+            pact.getSerializeLang().setAsync(ObjectLang.process(parameter.getAnnotation(Async.class).value()));
+        }
+        return pact;
     }
 }

@@ -1,5 +1,6 @@
 package com.qins.net.core.entity;
 
+import com.qins.net.meta.annotation.serialize.Sync;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;

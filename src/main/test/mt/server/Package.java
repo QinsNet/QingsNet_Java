@@ -1,6 +1,6 @@
 package mt.server;
 
-import com.qins.net.meta.annotation.field.Sync;
+import com.qins.net.meta.annotation.field.Field;
 import com.qins.net.meta.annotation.instance.Meta;
 import com.qins.net.node.annotation.Post;
 import lombok.Getter;
@@ -12,9 +12,9 @@ import lombok.experimental.Accessors;
 @Meta(value = "Package",nodes = "User")
 @Accessors(chain = true)
 public abstract class Package {
-    @Sync
+    @Field
     String name;
-    @Sync
+    @Field
     User user;
     @Post
     public abstract void pack();

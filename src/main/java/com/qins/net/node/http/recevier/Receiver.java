@@ -1,7 +1,6 @@
 package com.qins.net.node.http.recevier;
 
 import com.qins.net.core.boot.ApplicationConfig;
-import com.qins.net.core.console.Console;
 import com.qins.net.core.entity.NodeAddress;
 import com.qins.net.meta.core.MetaClass;
 import com.qins.net.node.core.Server;
@@ -14,12 +13,14 @@ import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.stream.ChunkedWriteHandler;
 import lombok.Getter;
+import lombok.extern.log4j.Log4j2;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+@Log4j2
 public class Receiver extends Server {
     protected ExecutorService es;
     protected HashMap<String,MetaClass> metas;
@@ -53,10 +54,10 @@ public class Receiver extends Server {
                     });
             channel = bootstrap.bind(local.getHost(),local.getPort()).addListener((ChannelFutureListener) future -> {
                 if (future.isSuccess()){
-                    Console.log(String.format("%s-%s 服务器部署成功", local.getHost(),local.getPort()));
+                    log.debug(String.format("%s-%s 服务器部署成功", local.getHost(),local.getPort()));
                 }
                 else {
-                    Console.log(String.format("%s-%s 服务器部署失败", local.getHost(),local.getPort()));
+                    log.debug(String.format("%s-%s 服务器部署失败", local.getHost(),local.getPort()));
                 }
             }).channel();
             if(config.isServerSync()){

@@ -9,6 +9,4 @@ import lombok.experimental.Accessors;
 @Accessors(chain = true)
 public class FieldPact {
     String name;
-    String[] nodes;
-    boolean sync = true;
 }

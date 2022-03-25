@@ -1,11 +1,15 @@
 package com.qins.net.meta.standard;
 
 import com.google.gson.*;
-import com.qins.net.core.console.Console;
 import com.qins.net.core.entity.TrackLog;
 import com.qins.net.core.exception.DeserializeException;
 import com.qins.net.core.exception.NewInstanceException;
+import com.qins.net.core.exception.ObjectLangException;
 import com.qins.net.core.exception.SerializeException;
+import com.qins.net.core.lang.serialize.FieldLang;
+import com.qins.net.core.lang.serialize.ObjectLang;
+import com.qins.net.core.lang.serialize.PrimitiveLang;
+import com.qins.net.core.lang.serialize.SerializeLang;
 import com.qins.net.meta.core.MetaClass;
 import com.qins.net.meta.core.MetaField;
 import com.qins.net.request.cglib.RequestInterceptor;
@@ -13,6 +17,7 @@ import com.qins.net.request.core.RequestReferences;
 import com.qins.net.service.core.ServiceReferences;
 import com.qins.net.util.AnnotationUtil;
 import com.qins.net.util.SerializeUtil;
+import lombok.extern.log4j.Log4j2;
 import net.sf.cglib.proxy.Callback;
 import net.sf.cglib.proxy.Enhancer;
 import net.sf.cglib.proxy.Factory;
@@ -21,8 +26,8 @@ import net.sf.cglib.proxy.NoOp;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
 import java.util.*;
-import java.util.function.Function;
 
+@Log4j2
 public class StandardMetaClass extends MetaClass {
     static Random random = new Random();
     public StandardMetaClass(String name,Class<?> instanceClass) throws InvocationTargetException, NoSuchMethodException, InstantiationException, IllegalAccessException {
@@ -33,7 +38,12 @@ public class StandardMetaClass extends MetaClass {
         enhancer.setCallbackTypes(new Class[]{NoOp.class, RequestInterceptor.class});
         enhancer.setCallbackFilter(method ->
         {
-            if(AnnotationUtil.getMethodPact(method) == null)return 0;
+            try {
+                if(AnnotationUtil.getMethodPact(method) == null)return 0;
+            } catch (ObjectLangException e) {
+                onException(e);
+                return 0;
+            }
             if((method.getModifiers() & Modifier.ABSTRACT) == 0)return 0;
             return 1;
         });
@@ -59,15 +69,16 @@ public class StandardMetaClass extends MetaClass {
 
     @Override
     public void onException(Exception exception) {
-        exception.printStackTrace();
+        log.error(exception);
     }
 
     @Override
-    public void onLog(TrackLog log) {
-        Console.log(log.getMessage());
+    public void onLog(TrackLog trackLog) {
+        log.info(trackLog.toString());
     }
+
     @Override
-    public String serialize(Object instance, RequestReferences references) throws SerializeException {
+    public String serialize(Object instance, SerializeLang serializeLang, RequestReferences references) throws SerializeException {
         Integer address = System.identityHashCode(instance);
         //检查是否已经序列化
         if(references.getSerializeReferences().containsKey(address)){
@@ -77,12 +88,15 @@ public class StandardMetaClass extends MetaClass {
         String value = this.getName()  + "@" +  Integer.toHexString(address);
         references.getSerializeReferences().put(address,value);
         references.getSerializeObjects().put(value,instance);
+        references.getSerializeLang().put(address,serializeLang);
         //序列化
         try {
             JsonObject rawInstance = new JsonObject();
-            for (MetaField metaField : fields.values()){
+            for (Map.Entry<MetaField,SerializeLang> item: filter(serializeLang,fields).entrySet()){
+                MetaField metaField = item.getKey();
+                SerializeLang childLang = item.getValue();
                 Object object = metaField.getField().get(instance);
-                String rawField = StandardMetaSerialize.serialize(object, references);
+                String rawField = StandardMetaSerialize.serialize(object, childLang, references);
                 if(rawField == null)rawInstance.add(metaField.getName(),null);
                 else rawInstance.add(metaField.getName(),new JsonPrimitive(rawField));
             }
@@ -98,7 +112,7 @@ public class StandardMetaClass extends MetaClass {
         }
     }
     @Override
-    public Object deserialize(String rawInstance, RequestReferences references) throws DeserializeException {
+    public Object deserialize(String rawInstance, SerializeLang serializeLang, RequestReferences references) throws DeserializeException {
         try {
             //检查是否已经逆序列化
             if(references.getDeserializeObjects().containsKey(rawInstance)){
@@ -107,21 +121,22 @@ public class StandardMetaClass extends MetaClass {
             Object instance = references.getSerializeObjects().get(rawInstance);
             if(instance == null)instance = newInstance();
             references.getDeserializeObjects().put(rawInstance,instance);
-
             //逆序列化
             JsonObject jsonObject = (JsonObject) references.getDeserializePool().get(rawInstance);
             if(jsonObject == null)return instance;
             JsonElement jsonElement = jsonObject.get("instance");
             if(jsonElement != null){
                 JsonObject rawFields = jsonElement.getAsJsonObject();
-                for (MetaField metaField : syncFields.values()){
+                for (Map.Entry<MetaField,SerializeLang> item: filter(serializeLang,fields).entrySet()){
+                    MetaField metaField = item.getKey();
+                    SerializeLang childLang = item.getValue();
                     JsonElement rawField = rawFields.get(metaField.getName());
                     if(rawField != null){
                         if(rawField.isJsonNull()){
                             metaField.getField().set(instance,null);
                         }
                         else {
-                            Object value = StandardMetaSerialize.deserialize(rawField.getAsString(), references);
+                            Object value = StandardMetaSerialize.deserialize(rawField.getAsString(), childLang, references);
                             metaField.getField().set(instance,value);
                         }
                     }
@@ -140,7 +155,7 @@ public class StandardMetaClass extends MetaClass {
     }
 
     @Override
-    public String serialize(Object instance, ServiceReferences references) throws SerializeException {
+    public String serialize(Object instance, SerializeLang serializeLang, ServiceReferences references) throws SerializeException {
         Integer address = System.identityHashCode(instance);
         //检查是否已经序列化
         if(references.getSerializeReferences().containsKey(address)){
@@ -166,22 +181,26 @@ public class StandardMetaClass extends MetaClass {
             if(oldRawMeta != null){//是否存在旧Meta
                 JsonObject oldRawInstance = (JsonObject) oldRawMeta.get("instance");
                 if(oldRawInstance != null){//是否存在旧Instance
-                    for (MetaField metaField : syncFields.values()){//对比更新
+                    for (Map.Entry<MetaField,SerializeLang> item: filter(serializeLang,fields).entrySet()){
+                        MetaField metaField = item.getKey();
+                        SerializeLang childLang = item.getValue();
                         Object field = metaField.getField().get(instance);
                         String newRawField = references.getDeserializeReferences().get(System.identityHashCode(field));
-                        if(newRawField == null) newRawField = StandardMetaSerialize.serialize(field,references);
+                        if(newRawField == null) newRawField = StandardMetaSerialize.serialize(field, childLang, references);
                         String oldRawField = SerializeUtil.getStringOrNull(oldRawInstance.get(metaField.getName()));
                         if(!Objects.equals(newRawField, oldRawField)){
-                            String rawField = StandardMetaSerialize.serialize(field, references);
+                            String rawField = StandardMetaSerialize.serialize(field, childLang, references);
                             if(rawField == null)rawInstance.add(metaField.getName(),null);
                             else rawInstance.add(metaField.getName(),new JsonPrimitive(rawField));
                         }
                     }
                 }
                 else {//生成新的Instance
-                    for (MetaField metaField : syncFields.values()){
+                    for (Map.Entry<MetaField,SerializeLang> item: filter(serializeLang,fields).entrySet()){
+                        MetaField metaField = item.getKey();
+                        SerializeLang childLang = item.getValue();
                         Object field = metaField.getField().get(instance);
-                        String rawField = StandardMetaSerialize.serialize(field, references);
+                        String rawField = StandardMetaSerialize.serialize(field, childLang, references);
                         if(rawField == null)rawInstance.add(metaField.getName(),null);
                         else rawInstance.add(metaField.getName(),new JsonPrimitive(rawField));
                     }
@@ -207,9 +226,11 @@ public class StandardMetaClass extends MetaClass {
                 }
             }
             else {//生成新Meta
-                for (MetaField metaField : syncFields.values()){
+                for (Map.Entry<MetaField,SerializeLang> item: filter(serializeLang,fields).entrySet()){
+                    MetaField metaField = item.getKey();
+                    SerializeLang childLang = item.getValue();
                     Object field = metaField.getField().get(instance);
-                    String rawField = StandardMetaSerialize.serialize(field, references);
+                    String rawField = StandardMetaSerialize.serialize(field, childLang, references);
                     if(rawField == null)rawInstance.add(metaField.getName(),null);
                     else rawInstance.add(metaField.getName(),new JsonPrimitive(rawField));
                 }
@@ -226,7 +247,7 @@ public class StandardMetaClass extends MetaClass {
     }
 
     @Override
-    public Object deserialize(String rawInstance, ServiceReferences references) throws DeserializeException {
+    public Object deserialize(String rawInstance, SerializeLang serializeLang, ServiceReferences references) throws DeserializeException {
         try {
             //检查是否已经逆序列化
             if(references.getDeserializeObjects().containsKey(rawInstance)){
@@ -236,17 +257,19 @@ public class StandardMetaClass extends MetaClass {
             Integer address = System.identityHashCode(instance);
             references.getDeserializeObjects().put(rawInstance,instance);
             references.getDeserializeReferences().put(address,rawInstance);
-
+            references.getSerializeLang().put(rawInstance,serializeLang);
             //逆序列化
             JsonObject jsonObject = (JsonObject) references.getDeserializePool().get(rawInstance);
             if(jsonObject == null)return instance;
             JsonElement jsonElement = jsonObject.get("instance");
             if(jsonElement != null){
                 JsonObject rawFields = jsonElement.getAsJsonObject();
-                for (MetaField metaField : fields.values()){
+                for (Map.Entry<MetaField,SerializeLang> item: filter(serializeLang,fields).entrySet()){
+                    MetaField metaField = item.getKey();
+                    SerializeLang childLang = item.getValue();
                     JsonElement rawField = rawFields.get(metaField.getName());
                     if(rawField != null && !rawField.isJsonNull()){
-                        Object value = StandardMetaSerialize.deserialize(rawField.getAsString(), references);
+                        Object value = StandardMetaSerialize.deserialize(rawField.getAsString(), childLang, references);
                         metaField.getField().set(instance,value);
                     }
                 }
@@ -263,6 +286,33 @@ public class StandardMetaClass extends MetaClass {
         }
     }
 
+    public Map<MetaField,SerializeLang> filter(SerializeLang serializeLang,Map<String,MetaField> fields){
+        Map<MetaField,SerializeLang> fieldsFilter = new LinkedHashMap<>();
+        for (Map.Entry<String,MetaField> item: fields.entrySet()){
+            ObjectLang sync = Optional.ofNullable(serializeLang).map(SerializeLang::getSync).orElse(null);
+            ObjectLang async = Optional.ofNullable(serializeLang).map(SerializeLang::getAsync).orElse(null);
+            ObjectLang childSync = null;
+            ObjectLang childAsync = null;
+            boolean isSync = false;
+            if(sync != null){
+                if(sync instanceof PrimitiveLang)isSync = true;
+                else if(sync instanceof FieldLang && ((FieldLang) sync).getChildren().containsKey(item.getKey())){
+                    childSync = ((FieldLang) sync).getChildren().get(item.getKey());
+                    isSync = true;
+                }
+            }
+            else isSync = true;
+            if(async != null){
+                if(async instanceof PrimitiveLang)isSync = false;
+                else if(async instanceof FieldLang && ((FieldLang) async).getChildren().containsKey(item.getKey())){
+                    childAsync = ((FieldLang) async).getChildren().get(item.getKey());
+                    isSync = false;
+                }
+            }
+            if(isSync)fieldsFilter.put(item.getValue(),new SerializeLang(childSync,childAsync));
+        }
+        return fieldsFilter;
+    }
 
     @Override
     public <T> T newInstance() throws NewInstanceException {

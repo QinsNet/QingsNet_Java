@@ -3,9 +3,10 @@ package mt.server;
 import com.qins.net.core.boot.MetaApplication;
 import com.qins.net.core.exception.TrackException;
 import com.qins.net.core.exception.NewInstanceException;
-import com.qins.net.meta.annotation.field.Async;
-import com.qins.net.meta.annotation.field.Sync;
+import com.qins.net.meta.annotation.field.Field;
 import com.qins.net.meta.annotation.instance.Meta;
+import com.qins.net.meta.annotation.serialize.Async;
+import com.qins.net.meta.annotation.serialize.Sync;
 import com.qins.net.node.annotation.Post;
 import com.qins.net.node.util.NodeUtil;
 import lombok.Getter;
@@ -17,17 +18,22 @@ import java.util.ArrayList;
 @Setter
 @Meta(value = "User",nodes = "Shanghai")
 public abstract class User{
-    @Sync
+    @Field
     private String username;
-    @Async
+    @Field
     private String password;
-    @Sync
+    @Field
     private Integer apiToken;
-    @Sync
+    @Field
     private ArrayList<Package> packages;
+    @Field
+    Package aPackage;
 
     @Post
-    public Boolean addPack(Package aPackage){
+    @Sync("{packages}")
+    @Async("{aPackage.name}")
+    public Boolean addPack(@Async("{name}")Package aPackage){
+        this.aPackage = aPackage;
         packages.add(aPackage);
         return true;
     }

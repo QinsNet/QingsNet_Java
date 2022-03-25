@@ -1,12 +1,10 @@
-package com.qins.net.meta.annotation.field;
+package com.qins.net.meta.annotation.serialize;
 
 import java.lang.annotation.*;
 
 @Documented
 @Target({ElementType.TYPE,ElementType.FIELD,ElementType.METHOD,ElementType.PARAMETER})
 @Retention(RetentionPolicy.RUNTIME)
-@Field
-public @interface Async {
+public @interface Sync {
     String value() default "";
-    String[] nodes() default {};
 }

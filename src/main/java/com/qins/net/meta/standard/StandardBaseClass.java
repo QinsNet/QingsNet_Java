@@ -2,22 +2,24 @@ package com.qins.net.meta.standard;
 
 import com.google.gson.*;
 import com.google.gson.reflect.TypeToken;
-import com.qins.net.core.console.Console;
 import com.qins.net.core.entity.RequestMeta;
 import com.qins.net.core.entity.ResponseMeta;
 import com.qins.net.core.entity.TrackLog;
 import com.qins.net.core.exception.DeserializeException;
 import com.qins.net.core.exception.NewInstanceException;
 import com.qins.net.core.exception.SerializeException;
+import com.qins.net.core.lang.serialize.SerializeLang;
 import com.qins.net.meta.core.BaseClass;
 import com.qins.net.request.core.RequestReferences;
 import com.qins.net.service.core.ServiceReferences;
 import com.qins.net.util.SerializeUtil;
+import lombok.extern.log4j.Log4j2;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Type;
 import java.util.*;
 
+@Log4j2
 public class StandardBaseClass extends BaseClass {
     static Random random = new Random();
     static {
@@ -60,7 +62,7 @@ public class StandardBaseClass extends BaseClass {
     }
 
     @Override
-    public String serialize(Object instance, RequestReferences references) throws SerializeException {
+    public String serialize(Object instance, SerializeLang serializeLang, RequestReferences references) throws SerializeException {
         Integer address = System.identityHashCode(instance);
         //检查是否已经序列化
         if(references.getSerializeReferences().containsKey(address)){
@@ -76,7 +78,7 @@ public class StandardBaseClass extends BaseClass {
             JsonArray jsonArray = new JsonArray();
             rawInstance = jsonArray;
             for (Object item : ((Iterable)instance)){
-                String rawItem = StandardMetaSerialize.serialize(item, references);
+                String rawItem = StandardMetaSerialize.serialize(item, null,references);
                 if(rawItem == null)jsonArray.add((String) null);
                 else jsonArray.add(new JsonPrimitive(rawItem));
             }
@@ -85,8 +87,8 @@ public class StandardBaseClass extends BaseClass {
             JsonObject jsonObject = new JsonObject();
             rawInstance = jsonObject;
             for (Map.Entry<Object,Object> item : ((Map<Object,Object>) instance).entrySet()){
-                String rawKey = StandardMetaSerialize.serialize(item, references);
-                String rawValue = StandardMetaSerialize.serialize(item, references);
+                String rawKey = StandardMetaSerialize.serialize(item, serializeLang, references);
+                String rawValue = StandardMetaSerialize.serialize(item, serializeLang, references);
                 assert rawKey != null;
                 if(rawValue == null)jsonObject.add(rawKey, null);
                 else jsonObject.add(rawKey, new JsonPrimitive(rawValue));
@@ -97,7 +99,7 @@ public class StandardBaseClass extends BaseClass {
     }
 
     @Override
-    public Object deserialize(String rawInstance, RequestReferences references) throws DeserializeException {
+    public Object deserialize(String rawInstance, SerializeLang serializeLang, RequestReferences references) throws DeserializeException {
         try {
             //检查是否已经逆序列化
             if(references.getDeserializeObjects().containsKey(rawInstance)){
@@ -114,7 +116,7 @@ public class StandardBaseClass extends BaseClass {
                 Collection collection = (Collection) instance;
                 ((Collection<?>) instance).clear();
                 for (JsonElement rawItem : jsonElement.getAsJsonArray()){
-                    Object item = StandardMetaSerialize.deserialize(rawItem.getAsString(),references);
+                    Object item = StandardMetaSerialize.deserialize(rawItem.getAsString(), serializeLang, references);
                     collection.add(item);
                 }
             }
@@ -122,8 +124,8 @@ public class StandardBaseClass extends BaseClass {
                 Map map = (Map) instance;
                 ((Map<?, ?>) instance).clear();
                 for (Map.Entry<String,JsonElement> rawItem : jsonElement.getAsJsonObject().entrySet()){
-                    Object key = StandardMetaSerialize.deserialize(rawItem.getKey(),references);
-                    Object value = StandardMetaSerialize.deserialize(rawItem.getValue().getAsString(),references);
+                    Object key = StandardMetaSerialize.deserialize(rawItem.getKey(), serializeLang, references);
+                    Object value = StandardMetaSerialize.deserialize(rawItem.getValue().getAsString(), serializeLang, references);
                     map.put(key,value);
                 }
             }
@@ -135,7 +137,7 @@ public class StandardBaseClass extends BaseClass {
     }
 
     @Override
-    public String serialize(Object instance, ServiceReferences references) throws SerializeException {
+    public String serialize(Object instance, SerializeLang serializeLang, ServiceReferences references) throws SerializeException {
         Integer address = System.identityHashCode(instance);
         //检查是否已经序列化
         if(references.getSerializeReferences().containsKey(address)){
@@ -161,7 +163,7 @@ public class StandardBaseClass extends BaseClass {
                 if(oldArray.size() == ((Collection<?>) instance).size()){
                     for(int i = 0; i< oldArray.size(); i++){
                         String newRef = references.getDeserializeReferences().get(System.identityHashCode(newArray[i]));
-                        if(newRef == null)newRef = StandardMetaSerialize.serialize(newArray[i],references);
+                        if(newRef == null)newRef = StandardMetaSerialize.serialize(newArray[i], serializeLang, references);
                         if(!Objects.equals(newRef, oldArray.get(i))){
                             update=true;
                             break;
@@ -175,7 +177,7 @@ public class StandardBaseClass extends BaseClass {
                 JsonArray jsonArray = new JsonArray();
                 rawInstance = jsonArray;
                 for (Object item : ((Iterable)instance)){
-                    String rawItem = StandardMetaSerialize.serialize(item, references);
+                    String rawItem = StandardMetaSerialize.serialize(item, serializeLang, references);
                     if(rawItem == null)jsonArray.add((String) null);
                     else jsonArray.add(new JsonPrimitive(rawItem));
                 }
@@ -191,7 +193,7 @@ public class StandardBaseClass extends BaseClass {
                 if(oldKeys.length == newKeys.length){
                     for(int i=0;i<oldKeys.length;i++){
                         String newRef = references.getDeserializeReferences().get(System.identityHashCode(newKeys[i]));
-                        if(newRef == null)newRef = StandardMetaSerialize.serialize(newKeys[i],references);
+                        if(newRef == null)newRef = StandardMetaSerialize.serialize(newKeys[i], serializeLang, references);
                         if(!Objects.equals(newRef, oldKeys[i])){
                             update=true;
                             break;
@@ -206,7 +208,7 @@ public class StandardBaseClass extends BaseClass {
                     if(oldValues.length == newValues.length){
                         for(int i=0;i<oldValues.length;i++){
                             String newRef = references.getDeserializeReferences().get(System.identityHashCode(newValues[i]));
-                            if(newRef == null)newRef = StandardMetaSerialize.serialize(newValues[i],references);
+                            if(newRef == null)newRef = StandardMetaSerialize.serialize(newValues[i], serializeLang, references);
                             if(!Objects.equals(newRef, oldValues[i])){
                                 update=true;
                                 break;
@@ -221,8 +223,8 @@ public class StandardBaseClass extends BaseClass {
                 JsonObject jsonObject = new JsonObject();
                 rawInstance = jsonObject;
                 for (Map.Entry<Object,Object> item : ((Map<Object,Object>) instance).entrySet()){
-                    String rawKey = StandardMetaSerialize.serialize(item, references);
-                    String rawValue = StandardMetaSerialize.serialize(item, references);
+                    String rawKey = StandardMetaSerialize.serialize(item, serializeLang, references);
+                    String rawValue = StandardMetaSerialize.serialize(item, serializeLang, references);
                     assert rawKey != null;
                     if(rawValue == null)jsonObject.add(rawKey, null);
                     else jsonObject.add(rawKey, new JsonPrimitive(rawValue));
@@ -234,7 +236,7 @@ public class StandardBaseClass extends BaseClass {
     }
 
     @Override
-    public Object deserialize(String rawInstance, ServiceReferences references) throws DeserializeException {
+    public Object deserialize(String rawInstance, SerializeLang serializeLang, ServiceReferences references) throws DeserializeException {
         try {
             //检查是否已经逆序列化
             if(references.getDeserializeObjects().containsKey(rawInstance)){
@@ -251,7 +253,7 @@ public class StandardBaseClass extends BaseClass {
                 Collection collection = (Collection) instance;
                 collection.clear();
                 for (JsonElement rawItem : jsonElement.getAsJsonArray()){
-                    Object item = StandardMetaSerialize.deserialize(rawItem.getAsString(),references);
+                    Object item = StandardMetaSerialize.deserialize(rawItem.getAsString(), serializeLang, references);
                     collection.add(item);
                 }
             }
@@ -259,8 +261,8 @@ public class StandardBaseClass extends BaseClass {
                 Map map = (Map) instance;
                 map.clear();
                 for (Map.Entry<String,JsonElement> rawItem : jsonElement.getAsJsonObject().entrySet()){
-                    Object key = StandardMetaSerialize.deserialize(rawItem.getKey(),references);
-                    Object value = StandardMetaSerialize.deserialize(rawItem.getValue().getAsString(),references);
+                    Object key = StandardMetaSerialize.deserialize(rawItem.getKey(), serializeLang, references);
+                    Object value = StandardMetaSerialize.deserialize(rawItem.getValue().getAsString(), serializeLang, references);
                     map.put(key,value);
                 }
             }
@@ -273,12 +275,12 @@ public class StandardBaseClass extends BaseClass {
 
     @Override
     public void onException(Exception exception) {
-        exception.printStackTrace();
+        log.error(exception);
     }
 
     @Override
-    public void onLog(TrackLog log) {
-        Console.log(log.getMessage());
+    public void onLog(TrackLog trackLog) {
+        log.info(trackLog.toString());
     }
 
     @Override

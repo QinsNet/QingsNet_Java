@@ -9,15 +9,13 @@ import com.qins.net.core.aop.context.EventContext;
 import com.qins.net.core.aop.context.ExceptionEventContext;
 import com.qins.net.core.entity.*;
 import com.qins.net.core.exception.*;
+import com.qins.net.core.lang.serialize.SerializeLang;
 import com.qins.net.meta.annotation.Components;
-import com.qins.net.meta.annotation.field.Sync;
 import com.qins.net.meta.core.*;
 import com.qins.net.meta.standard.StandardMetaSerialize;
-import com.qins.net.request.core.RequestContext;
 import com.qins.net.service.event.InterceptorEvent;
 import com.qins.net.service.event.delegate.InterceptorDelegate;
 import com.qins.net.util.AnnotationUtil;
-import com.sun.xml.internal.ws.client.ResponseContext;
 import lombok.Getter;
 
 import java.lang.reflect.InvocationTargetException;
@@ -37,12 +35,17 @@ public abstract class Service implements IService {
     @Getter
     protected final InterceptorEvent interceptorEvent = new InterceptorEvent();
 
-    public Service(MetaClass metaClass) throws NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException, LoadClassException, TrackException {
-        this.metaClass = metaClass;
-        for (Method method: AnnotationUtil.getMetaMethods(metaClass.getInstanceClass())){
-            if((method.getModifiers() & Modifier.ABSTRACT) != 0)continue;
-            MetaMethod metaMethod = metaClass.getComponents().metaMethod().getConstructor(Method.class, Components.class).newInstance(method,metaClass.getComponents());
-            methods.put(metaMethod.getName(), metaMethod);
+    public Service(MetaClass metaClass) throws NewInstanceException {
+        try {
+            this.metaClass = metaClass;
+            for (Method method: AnnotationUtil.getMetaMethods(metaClass.getInstanceClass())){
+                if((method.getModifiers() & Modifier.ABSTRACT) != 0)continue;
+                MetaMethod metaMethod = metaClass.getComponents().metaMethod().getConstructor(Method.class, Components.class).newInstance(method,metaClass.getComponents());
+                methods.put(metaMethod.getName(), metaMethod);
+            }
+        }
+        catch (Exception e){
+            throw new NewInstanceException(e);
         }
     }
     public boolean onInterceptor(RequestMeta requestMeta)
@@ -121,11 +124,15 @@ public abstract class Service implements IService {
         context.setResponseMeta(responseMeta);
         //更新数据
         for (Map.Entry<String,Object> item : context.getReferences().getDeserializeObjects().entrySet()){
-            StandardMetaSerialize.serialize(item.getValue(),context.getReferences());
+            SerializeLang serializeLang = context.getReferences().getSerializeLang().get(item.getKey());
+            StandardMetaSerialize.serialize(item.getValue(),serializeLang, context.getReferences());
         }
         //返回值
-        if(context.getMetaMethod().getMetaReturn().getInstanceClass() != void.class && context.getMetaMethod().getMetaReturn().getInstanceClass() != Void.class){
-            responseMeta.setResult(StandardMetaSerialize.serialize(context.getResult(),context.getReferences()));
+        MetaMethod returnMethod = context.getMetaMethod();
+        if(returnMethod.getMetaReturn().getInstanceClass() != void.class && returnMethod.getMetaReturn().getInstanceClass() != Void.class){
+            responseMeta.setResult(StandardMetaSerialize.serialize(context.getResult(),
+                    returnMethod.getReturnSerializeLang(),
+                    context.getReferences()));
         }
         //缓冲池
         responseMeta.setReferences(context.getReferences().getSerializePool());
@@ -135,12 +142,13 @@ public abstract class Service implements IService {
         //引用池
         context.getReferences().setDeserializePool(context.getRequestMeta().getReferences());
         //实例
-        context.setInstance(StandardMetaSerialize.deserialize(context.getRequestMeta().getInstance(), context.getReferences()));
+        context.setInstance(StandardMetaSerialize.deserialize(context.getRequestMeta().getInstance(),
+                context.getMetaMethod().getInstanceSerializeLang(), context.getReferences()));
         //参数
         context.setParams(new HashMap<>());
         for (MetaParameter metaParameter : context.getMetaMethod().getParameters().values()){
             String rawParam = context.getRequestMeta().getParams().get(metaParameter.getName());
-            Object param = StandardMetaSerialize.deserialize(rawParam, context.getReferences());
+            Object param = StandardMetaSerialize.deserialize(rawParam,context.getMetaMethod().getInstanceSerializeLang(),context.getReferences());
             context.getParams().put(metaParameter.getName(),param);
         }
     }

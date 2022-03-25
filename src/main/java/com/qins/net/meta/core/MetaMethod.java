@@ -1,11 +1,12 @@
 package com.qins.net.meta.core;
 
 import com.qins.net.core.boot.MetaApplication;
+import com.qins.net.core.exception.NewInstanceException;
 import com.qins.net.core.exception.TrackException;
 import com.qins.net.core.exception.LoadClassException;
 import com.qins.net.meta.annotation.Components;
-import com.qins.net.meta.annotation.field.Sync;
 import com.qins.net.meta.annotation.method.MethodPact;
+import com.qins.net.core.lang.serialize.SerializeLang;
 import com.qins.net.node.core.Node;
 import com.qins.net.util.AnnotationUtil;
 import lombok.Getter;
@@ -27,26 +28,33 @@ public abstract class MetaMethod {
     private BaseClass metaReturn;
     private int timeout;
     private Class<? extends Node> nodeClass;
+    private SerializeLang instanceSerializeLang;
+    private SerializeLang returnSerializeLang;
 
-    public MetaMethod(Method method,Components components) throws LoadClassException, NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException, TrackException {
-        this.method = method;
-        MethodPact pact = AnnotationUtil.getMethodPact(method);
-        assert pact != null;
-        this.name = pact.getName();
-        this.nodeClass = pact.getNodeClass();
-        if(pact.getNodes() != null){
-            nodes = pact.getNodes();
-        }
-        else nodes = new HashSet<>();
-        metaReturn = MetaApplication.getContext().getMetaClassLoader().loadClass(method.getReturnType());
-        for (Parameter parameter : method.getParameters()){
-            MetaParameter metaParameter = components.metaParameter()
-                    .getConstructor(Parameter.class,Components.class)
-                    .newInstance(parameter,components);
-            parameters.put(metaParameter.name,metaParameter);
-            if(metaParameter.sync){
-                syncParameters.put(metaParameter.name, metaParameter);
+    public MetaMethod(Method method,Components components) throws NewInstanceException {
+        try {
+            this.method = method;
+            MethodPact pact = AnnotationUtil.getMethodPact(method);
+            assert pact != null;
+            this.name = pact.getName();
+            this.nodeClass = pact.getNodeClass();
+            this.instanceSerializeLang = pact.getInstanceSerializeLang();
+            this.returnSerializeLang = pact.getReturnSerializeLang();
+
+            if(pact.getNodes() != null){
+                nodes = pact.getNodes();
             }
+            else nodes = new HashSet<>();
+            metaReturn = MetaApplication.getContext().getMetaClassLoader().loadClass(method.getReturnType());
+            for (Parameter parameter : method.getParameters()){
+                MetaParameter metaParameter = components.metaParameter()
+                        .getConstructor(Parameter.class,Components.class)
+                        .newInstance(parameter,components);
+                parameters.put(metaParameter.name,metaParameter);
+            }
+        }
+        catch (Exception e){
+            throw new NewInstanceException(e);
         }
     }
 }

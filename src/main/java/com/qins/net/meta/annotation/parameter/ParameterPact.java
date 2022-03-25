@@ -1,5 +1,6 @@
 package com.qins.net.meta.annotation.parameter;
 
+import com.qins.net.core.lang.serialize.SerializeLang;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
@@ -8,6 +9,6 @@ import lombok.experimental.Accessors;
 @Setter
 @Accessors(chain = true)
 public class ParameterPact {
-    String name;
-    boolean sync = true;
+    private String name;
+    private SerializeLang serializeLang;
 }

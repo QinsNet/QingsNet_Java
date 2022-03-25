@@ -11,6 +11,8 @@ import com.qins.net.core.entity.NodeAddress;
 import com.qins.net.core.entity.RequestMeta;
 import com.qins.net.core.entity.ResponseMeta;
 import com.qins.net.core.exception.*;
+import com.qins.net.core.lang.serialize.ObjectLang;
+import com.qins.net.core.lang.serialize.SerializeLang;
 import com.qins.net.meta.annotation.Components;
 import com.qins.net.meta.annotation.method.MethodPact;
 import com.qins.net.meta.core.*;
@@ -24,6 +26,7 @@ import com.qins.net.request.aop.context.ErrorEventContext;
 import com.qins.net.request.aop.context.SuccessEventContext;
 import com.qins.net.request.aop.context.TimeoutEventContext;
 import com.qins.net.util.AnnotationUtil;
+import javafx.util.Pair;
 import lombok.Getter;
 
 import java.lang.reflect.InvocationTargetException;
@@ -134,11 +137,15 @@ public abstract class Request implements IRequest {
         context.getReferences().setDeserializePool(context.getResponseMeta().getReferences());
         //更新数据
         for (Map.Entry<Integer,String> item : context.getReferences().getSerializeReferences().entrySet()){
-            StandardMetaSerialize.deserialize(item.getValue(),context.getReferences());
+            SerializeLang serializeLang = context.getReferences().getSerializeLang().get(item.getKey());
+            StandardMetaSerialize.deserialize(item.getValue(),serializeLang, context.getReferences());
         }
         //返回值
         if(context.getResponseMeta().getResult() != null){
-            Object result = StandardMetaSerialize.deserialize(context.getResponseMeta().getResult(), context.getReferences());
+            Object result = StandardMetaSerialize.deserialize(
+                    context.getResponseMeta().getResult(),
+                    context.getMetaMethod().getReturnSerializeLang(),
+                    context.getReferences());
             context.setResult(result);
         }
     }
@@ -146,14 +153,17 @@ public abstract class Request implements IRequest {
         RequestMeta requestMeta = new RequestMeta();
         requestMeta.setMapping(metaClass.getName() + "/" + context.getMetaMethod().getName());
         //实例
-        requestMeta.setInstance(StandardMetaSerialize.serialize(instance,context.getReferences()));
+        requestMeta.setInstance(StandardMetaSerialize.serialize(instance,
+                context.getMetaMethod().getInstanceSerializeLang(),
+                context.getReferences()));
         //参数
         requestMeta.setParams(new HashMap<>());
         int i = 0;
         for (Map.Entry<String,MetaParameter> keyValue : context.getMetaMethod().getParameters().entrySet()){
             String name = keyValue.getKey();
             context.getParams().put(name,args[i]);
-            requestMeta.getParams().put(name,StandardMetaSerialize.serialize(args[i],context.getReferences()));
+            requestMeta.getParams().put(name,
+                    StandardMetaSerialize.serialize(args[i], keyValue.getValue().getSerializeLang(), context.getReferences()));
             i++;
         }
         //缓冲池

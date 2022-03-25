@@ -1,5 +1,7 @@
 package com.qins.net.meta.annotation.instance;
 
+import com.qins.net.meta.core.MetaField;
+
 import java.lang.annotation.*;
 
 @Documented
@@ -8,4 +10,5 @@ import java.lang.annotation.*;
 public @interface Meta {
     String value() default "";
     String[] nodes() default {};
+    String names() default "";
 }
