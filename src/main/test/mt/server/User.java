@@ -31,9 +31,9 @@ public abstract class User{
 
     @Post
     @Sync("{packages}")
-    @Async("{aPackage.name}")
     public Boolean addPack(@Async("{name}")Package aPackage){
         this.aPackage = aPackage;
+        aPackage.setName("弃置");
         packages.add(aPackage);
         return true;
     }
@@ -46,6 +46,7 @@ public abstract class User{
     }
 
     @Post
+    @Sync("{username,password}")
     public boolean login() throws NewInstanceException {
         if("m839336369".equals(username) && "password".equals(password)){
             this.apiToken = 1234;

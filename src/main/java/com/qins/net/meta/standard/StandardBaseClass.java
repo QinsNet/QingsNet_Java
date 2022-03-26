@@ -107,6 +107,7 @@ public class StandardBaseClass extends BaseClass {
             }
             Object instance = references.getSerializeObjects().get(rawInstance);
             if(instance == null)instance = newInstance();
+            else serializeLang = references.getSerializeLang().get(System.identityHashCode(instance));
             references.getDeserializeObjects().put(rawInstance,instance);
 
             //逆序列化
@@ -152,6 +153,7 @@ public class StandardBaseClass extends BaseClass {
             }
             while (references.getDeserializePool().containsKey(value));
         }
+        else serializeLang = references.getSerializeLang().get(value);
         references.getSerializeReferences().put(address,value);
         //序列化
         JsonElement rawInstance = null;

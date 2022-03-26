@@ -144,7 +144,7 @@ public abstract class Request implements IRequest {
         if(context.getResponseMeta().getResult() != null){
             Object result = StandardMetaSerialize.deserialize(
                     context.getResponseMeta().getResult(),
-                    context.getMetaMethod().getReturnSerializeLang(),
+                    context.getMetaMethod().getMetaReturn().getSerializeLang(),
                     context.getReferences());
             context.setResult(result);
         }
@@ -152,10 +152,6 @@ public abstract class Request implements IRequest {
     public RequestMeta buildRequestMeta(RequestContext context, Object instance, Object[] args) throws SerializeException, IllegalAccessException {
         RequestMeta requestMeta = new RequestMeta();
         requestMeta.setMapping(metaClass.getName() + "/" + context.getMetaMethod().getName());
-        //实例
-        requestMeta.setInstance(StandardMetaSerialize.serialize(instance,
-                context.getMetaMethod().getInstanceSerializeLang(),
-                context.getReferences()));
         //参数
         requestMeta.setParams(new HashMap<>());
         int i = 0;
@@ -166,6 +162,10 @@ public abstract class Request implements IRequest {
                     StandardMetaSerialize.serialize(args[i], keyValue.getValue().getSerializeLang(), context.getReferences()));
             i++;
         }
+        //实例
+        requestMeta.setInstance(StandardMetaSerialize.serialize(instance,
+                context.getMetaMethod().getInstanceSerializeLang(),
+                context.getReferences()));
         //缓冲池
         requestMeta.setReferences(context.getReferences().getSerializePool());
         return requestMeta;

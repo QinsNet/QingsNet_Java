@@ -16,6 +16,5 @@ public class MethodPact {
         String name;
         Class<? extends Node> nodeClass;
         Set<String> nodes;
-        SerializeLang instanceSerializeLang;
-        SerializeLang returnSerializeLang;
+        SerializeLang serializeLang;
 }

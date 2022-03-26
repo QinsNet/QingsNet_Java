@@ -14,9 +14,7 @@ import lombok.experimental.Accessors;
 public abstract class Package {
     @Field
     String name;
-    @Field
-    User user;
+
     @Post
     public abstract void pack();
-
 }

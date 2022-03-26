@@ -12,8 +12,6 @@ import lombok.Setter;
 public abstract class Package {
     @Field
     String name;
-    @Field
-    User user;
     @Post
     public boolean pack(){
         if(name != null){

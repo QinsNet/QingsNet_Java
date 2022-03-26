@@ -20,6 +20,7 @@ public @interface Components {
     Class<? extends MetaField> metaField() default StandardMetaField.class;
     Class<? extends MetaMethod> metaMethod() default StandardMetaMethod.class;
     Class<? extends MetaParameter> metaParameter() default StandardMetaParameter.class;
+    Class<? extends MetaReturn> metaReturn() default StandardMetaReturn.class;
     Class<? extends Request> request() default StandardRequest.class;
     Class<? extends Service> service() default StandardService.class;
 }

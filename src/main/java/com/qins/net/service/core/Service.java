@@ -129,9 +129,9 @@ public abstract class Service implements IService {
         }
         //返回值
         MetaMethod returnMethod = context.getMetaMethod();
-        if(returnMethod.getMetaReturn().getInstanceClass() != void.class && returnMethod.getMetaReturn().getInstanceClass() != Void.class){
+        if(returnMethod.getMetaReturn().getBaseClass().getInstanceClass() != void.class && returnMethod.getMetaReturn().getBaseClass().getInstanceClass() != Void.class){
             responseMeta.setResult(StandardMetaSerialize.serialize(context.getResult(),
-                    returnMethod.getReturnSerializeLang(),
+                    returnMethod.getMetaReturn().getSerializeLang(),
                     context.getReferences()));
         }
         //缓冲池
@@ -141,9 +141,6 @@ public abstract class Service implements IService {
     public void handleRequestMeta(ServiceContext context) throws DeserializeException {
         //引用池
         context.getReferences().setDeserializePool(context.getRequestMeta().getReferences());
-        //实例
-        context.setInstance(StandardMetaSerialize.deserialize(context.getRequestMeta().getInstance(),
-                context.getMetaMethod().getInstanceSerializeLang(), context.getReferences()));
         //参数
         context.setParams(new HashMap<>());
         for (MetaParameter metaParameter : context.getMetaMethod().getParameters().values()){
@@ -151,5 +148,8 @@ public abstract class Service implements IService {
             Object param = StandardMetaSerialize.deserialize(rawParam,context.getMetaMethod().getInstanceSerializeLang(),context.getReferences());
             context.getParams().put(metaParameter.getName(),param);
         }
+        //实例
+        context.setInstance(StandardMetaSerialize.deserialize(context.getRequestMeta().getInstance(),
+                context.getMetaMethod().getInstanceSerializeLang(), context.getReferences()));
     }
 }
