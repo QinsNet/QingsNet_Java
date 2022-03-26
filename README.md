@@ -321,7 +321,7 @@ public abstract class User
   若无节点定义，则采用类节点中的*@Meta(nodes = "Shanghai")*作为默认节点
 
 ```java
-	@Meta(nodes = {"Server_2", "Server1"})
+    @Meta(nodes = {"Server_2", "Server1"})
     public abstract boolean addPack(@Meta Package aPackage);
 
     @Meta(nodes = "Server_2")
