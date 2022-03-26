@@ -33,7 +33,7 @@ public abstract class User{
     @Sync("{packages}")
     public Boolean addPack(@Async("{name}")Package aPackage){
         this.aPackage = aPackage;
-        aPackage.setName("弃置");
+        aPackage.setName("改名字不会传递回请求方");
         packages.add(aPackage);
         return true;
     }

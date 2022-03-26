@@ -14,6 +14,7 @@ import java.util.HashMap;
 public class Client {
     public static void main(String[] args) throws NewInstanceException {
         MetaApplication.run("client.yaml");
+
         MetaApplication.getContext().getMetaClassLoader().getScanner().getPaths().add("mt.client");
         MetaApplication.defineNode("User", "localhost:28017");
         MetaApplication.defineNode("Shanghai", "localhost:28003");
