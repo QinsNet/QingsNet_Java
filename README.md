@@ -271,7 +271,7 @@ public class Server {
 	"result": "java.lang.Boolean@true",
 	"references": {
 		"ServicePackage@73194df": {
-			"instance": {}//表示该实体属性并没有发生变更，无需同步
+			"instance": {}
 		},
 		"Package@335b5620": {
 			"instance": {}
