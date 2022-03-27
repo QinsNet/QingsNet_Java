@@ -1,12 +1,7 @@
 package cure.dto.service.service;
 
 import cure.dto.request.dto.*;
-import cure.dto.service.interfaces.IFeelPulse;
-import cure.dto.service.interfaces.IListen;
-import cure.dto.service.interfaces.ILook;
-import cure.dto.service.interfaces.IQuestion;
-
-public class PatientService extends UserService implements IListen, ILook, IFeelPulse, IQuestion {
+public class PatientService extends UserService  {
     public FeelPulseResponse feel(FeelPulseRequest request){
         FeelPulseResponse response = new FeelPulseResponse();
         if("123abc".equals(request.getApiToken())){

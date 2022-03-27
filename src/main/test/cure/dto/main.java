@@ -43,7 +43,7 @@ public class main {
             patient.setFeelPulseResult(lookResponse.getResult());
             System.out.println(patient.getLookResult());
         }
-        else System.out.println("切诊失败");
+        else System.out.println("望诊失败");
 
         QuestionRequest questionRequest = new QuestionRequest();
         questionRequest.setUsername(patient.getUsername());
@@ -53,7 +53,7 @@ public class main {
             patient.setFeelPulseResult(questionResponse.getResult());
             System.out.println(patient.getQuestionResult());
         }
-        else System.out.println("切诊失败");
+        else System.out.println("问诊失败");
 
         ListenRequest listenRequest = new ListenRequest();
         listenRequest.setUsername(patient.getUsername());
@@ -63,6 +63,6 @@ public class main {
             patient.setFeelPulseResult(listenResponse.getResult());
             System.out.println(patient.getListenResult());
         }
-        else System.out.println("切诊失败");
+        else System.out.println("闻诊失败");
     }
 }
