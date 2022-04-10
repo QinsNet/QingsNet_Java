@@ -28,6 +28,17 @@ NBO经过网络传输后，依旧保持业务方法特征。
 
 ④　NBO具备传输稳定性，NBO实体通过网络传输后，仍具备发起网络请求的能力，不会退化为BO。
 
+### 架构对比
+
+#### BO
+![image](https://user-images.githubusercontent.com/30934916/162615843-61c9b2a8-9b9c-4c67-92f1-aefd9aceaa67.png)
+
+#### Service+DTO+Entity
+![image](https://user-images.githubusercontent.com/30934916/162615803-1cf0006c-1f31-4679-96cc-96d98edab905.png)
+
+#### 性能比较
+![image](https://user-images.githubusercontent.com/30934916/162615868-b3259f42-4992-42df-8c3b-165f3b8dfe8c.png)
+
 ## 入门
 
 ### 一纸契约
