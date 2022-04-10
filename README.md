@@ -36,7 +36,7 @@ NBO经过网络传输后，依旧保持业务方法特征。
 #### Service+DTO+Entity
 ![image](https://user-images.githubusercontent.com/30934916/162615803-1cf0006c-1f31-4679-96cc-96d98edab905.png)
 
-#### 性能比较
+#### 数据比较
 ![image](https://user-images.githubusercontent.com/30934916/162615868-b3259f42-4992-42df-8c3b-165f3b8dfe8c.png)
 
 ## 入门
