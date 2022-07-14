@@ -5,6 +5,6 @@ import java.lang.annotation.*;
 @Documented
 @Target({ElementType.TYPE,ElementType.FIELD,ElementType.METHOD,ElementType.PARAMETER})
 @Retention(RetentionPolicy.RUNTIME)
-public @interface ServiceSync {
+public @interface SendSync {
     String value() default "";
 }

@@ -9,5 +9,5 @@ import lombok.experimental.Accessors;
 @Setter
 @Accessors(chain = true)
 public class ReturnPact {
-    private SerializeLang serializeLang;
+    private SerializeLang mutualSerialize;
 }

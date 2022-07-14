@@ -6,6 +6,7 @@ import lombok.experimental.Accessors;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.util.HashMap;
 import java.util.Map;
 
 @ToString
@@ -19,6 +20,10 @@ public class ResponseMeta {
     private String result;
     @Sync
     private String exception;
+    @Sync
+    private String instance;
+    @Sync
+    private Map<String,String> params = new HashMap<>();
     @Sync
     private Map<String,Object> references;
 

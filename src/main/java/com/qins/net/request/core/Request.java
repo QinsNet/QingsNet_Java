@@ -11,7 +11,6 @@ import com.qins.net.core.entity.NodeAddress;
 import com.qins.net.core.entity.RequestMeta;
 import com.qins.net.core.entity.ResponseMeta;
 import com.qins.net.core.exception.*;
-import com.qins.net.core.lang.serialize.ObjectLang;
 import com.qins.net.core.lang.serialize.SerializeLang;
 import com.qins.net.meta.annotation.Components;
 import com.qins.net.meta.annotation.method.MethodPact;
@@ -26,7 +25,6 @@ import com.qins.net.request.aop.context.ErrorEventContext;
 import com.qins.net.request.aop.context.SuccessEventContext;
 import com.qins.net.request.aop.context.TimeoutEventContext;
 import com.qins.net.util.AnnotationUtil;
-import javafx.util.Pair;
 import lombok.Getter;
 
 import java.lang.reflect.InvocationTargetException;
@@ -132,19 +130,26 @@ public abstract class Request implements IRequest {
             metaClass.onException(e);
         }
     }
-    public void handleResponseMeta(RequestContext context) throws NotFoundInstanceFieldException, DeserializeException, IllegalAccessException, NotFoundParameterException {
+    public void handleResponseMeta(RequestContext context) throws DeserializeException {
         //引用池
-        context.getReferences().setDeserializePool(context.getResponseMeta().getReferences());
-        //更新数据
-        for (Map.Entry<Integer,String> item : context.getReferences().getSerializeReferences().entrySet()){
-            SerializeLang serializeLang = context.getReferences().getSerializeLang().get(item.getKey());
-            StandardMetaSerialize.deserialize(item.getValue(),serializeLang, context.getReferences());
+        context.getReferences().setDeserializeDataPool(context.getResponseMeta().getReferences());
+        //更新参数
+        for (Map.Entry<String,String> item : context.getResponseMeta().getParams().entrySet()){
+            SerializeLang deserializeLang = context.getMetaMethod().getParameters().get(item.getKey()).getDeserializeLang();
+            StandardMetaSerialize.deserialize(item.getKey(),deserializeLang, context.getReferences());
+        }
+        //更新实例
+        StandardMetaSerialize.deserialize(context.getResponseMeta().getInstance(),context.getMetaMethod().getDeserializeLang(), context.getReferences());
+        //更新引用
+        for (Map.Entry<String,Object> item : context.getReferences().getSerializeObjectsPool().entrySet()){
+            SerializeLang serializeLang = context.getReferences().getDeserializeLang().get(item.getKey());
+            StandardMetaSerialize.deserialize(item.getKey(),serializeLang, context.getReferences());
         }
         //返回值
         if(context.getResponseMeta().getResult() != null){
             Object result = StandardMetaSerialize.deserialize(
                     context.getResponseMeta().getResult(),
-                    context.getMetaMethod().getMetaReturn().getSerializeLang(),
+                    context.getMetaMethod().getMetaReturn().getMutualSerialize(),
                     context.getReferences());
             context.setResult(result);
         }
@@ -164,10 +169,10 @@ public abstract class Request implements IRequest {
         }
         //实例
         requestMeta.setInstance(StandardMetaSerialize.serialize(instance,
-                context.getMetaMethod().getInstanceSerializeLang(),
+                context.getMetaMethod().getSerializeLang(),
                 context.getReferences()));
         //缓冲池
-        requestMeta.setReferences(context.getReferences().getSerializePool());
+        requestMeta.setReferences(context.getReferences().getSerializeDataPool());
         return requestMeta;
     }
 

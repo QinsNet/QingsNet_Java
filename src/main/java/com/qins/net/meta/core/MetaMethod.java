@@ -1,6 +1,5 @@
 package com.qins.net.meta.core;
 
-import com.qins.net.core.boot.MetaApplication;
 import com.qins.net.core.exception.NewInstanceException;
 import com.qins.net.meta.annotation.Components;
 import com.qins.net.meta.annotation.method.MethodPact;
@@ -25,7 +24,8 @@ public abstract class MetaMethod {
     private MetaReturn metaReturn;
     private int timeout;
     private Class<? extends Node> nodeClass;
-    private SerializeLang instanceSerializeLang;
+    SerializeLang serializeLang;
+    SerializeLang deserializeLang;
 
     public MetaMethod(Method method,Components components) throws NewInstanceException {
         try {
@@ -34,7 +34,8 @@ public abstract class MetaMethod {
             assert pact != null;
             this.name = pact.getName();
             this.nodeClass = pact.getNodeClass();
-            this.instanceSerializeLang = pact.getSerializeLang();
+            this.serializeLang = pact.getSerializeLang();
+            this.deserializeLang = pact.getDeserializeLang();
 
             if(pact.getNodes() != null){
                 nodes = pact.getNodes();

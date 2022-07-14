@@ -12,8 +12,6 @@ import lombok.experimental.Accessors;
 @AllArgsConstructor
 @Accessors(chain = true)
 public class SerializeLang {
-        ObjectLang requestSync;
-        ObjectLang requestAsync;
-        ObjectLang serviceSync;
-        ObjectLang serviceAsync;
+        ObjectLang sync;
+        ObjectLang async;
 }

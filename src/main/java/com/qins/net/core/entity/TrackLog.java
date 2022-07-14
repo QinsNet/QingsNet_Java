@@ -13,8 +13,11 @@ import lombok.experimental.Accessors;
 public class TrackLog {
 
     public enum LogCode { Core, Runtime }
+    @Sync
     private String message;
+    @Sync
     private LogCode code;
+    @Sync
     private Object sender;
     public TrackLog(LogCode code,String message) {
         this.message = message;

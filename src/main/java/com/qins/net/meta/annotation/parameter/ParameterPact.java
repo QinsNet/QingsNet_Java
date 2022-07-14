@@ -10,5 +10,6 @@ import lombok.experimental.Accessors;
 @Accessors(chain = true)
 public class ParameterPact {
     private String name;
-    private SerializeLang serializeLang;
+    SerializeLang serializeLang;
+    SerializeLang deserializeLang;
 }

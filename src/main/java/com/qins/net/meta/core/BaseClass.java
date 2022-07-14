@@ -10,7 +10,6 @@ import com.qins.net.request.core.RequestReferences;
 import com.qins.net.service.core.ServiceReferences;
 import lombok.Getter;
 import lombok.Setter;
-import lombok.extern.log4j.Log4j;
 
 import java.lang.reflect.InvocationTargetException;
 
@@ -29,7 +28,7 @@ public abstract class BaseClass{
 
     public abstract String serialize(Object instance, SerializeLang serializeLang, RequestReferences references) throws SerializeException;
     public abstract Object deserialize(String rawInstance, SerializeLang serializeLang, RequestReferences references) throws DeserializeException;
-    public abstract String serialize(Object instance, SerializeLang serializeLang, ServiceReferences references) throws SerializeException;
+    public abstract String serialize(Object instance,SerializeLang serializeLang, ServiceReferences references) throws SerializeException;
     public abstract Object deserialize(String rawInstance, SerializeLang serializeLang, ServiceReferences references) throws DeserializeException;
 
     public void onException(TrackException.ExceptionCode code, String message) {

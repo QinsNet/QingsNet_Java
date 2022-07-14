@@ -122,34 +122,40 @@ public abstract class Service implements IService {
     public ResponseMeta buildResponseMeta(ServiceContext context) throws SerializeException {
         ResponseMeta responseMeta = new ResponseMeta();
         context.setResponseMeta(responseMeta);
-        //更新数据
-        for (Map.Entry<String,Object> item : context.getReferences().getDeserializeObjects().entrySet()){
-            SerializeLang serializeLang = context.getReferences().getSerializeLang().get(item.getKey());
-            StandardMetaSerialize.serialize(item.getValue(),serializeLang, context.getReferences());
+        //更新参数
+        for (Map.Entry<String,MetaParameter> item : context.getMetaMethod().getParameters().entrySet()){
+            responseMeta.getParams().put(item.getKey(),StandardMetaSerialize.serialize(context.getParams().get(item.getKey()),item.getValue().getSerializeLang(), context.getReferences()));
         }
+        //更新实例
+        responseMeta.setInstance(StandardMetaSerialize.serialize(context.getInstance(),context.getMetaMethod().getSerializeLang(), context.getReferences()));
         //返回值
         MetaMethod returnMethod = context.getMetaMethod();
         if(returnMethod.getMetaReturn().getBaseClass().getInstanceClass() != void.class && returnMethod.getMetaReturn().getBaseClass().getInstanceClass() != Void.class){
             responseMeta.setResult(StandardMetaSerialize.serialize(context.getResult(),
-                    returnMethod.getMetaReturn().getSerializeLang(),
+                    returnMethod.getMetaReturn().getMutualSerialize(),
                     context.getReferences()));
         }
+        //更新引用
+        for (Map.Entry<String,Object> item : context.getReferences().getDeserializeObjectsPool().entrySet()){
+            SerializeLang serializeLang = context.getReferences().getSerializeLang().get(item.getKey());
+            StandardMetaSerialize.serialize(item.getValue(),serializeLang, context.getReferences());
+        }
         //缓冲池
-        responseMeta.setReferences(context.getReferences().getSerializePool());
+        responseMeta.setReferences(context.getReferences().getSerializeDataPool());
         return responseMeta;
     }
     public void handleRequestMeta(ServiceContext context) throws DeserializeException {
         //引用池
-        context.getReferences().setDeserializePool(context.getRequestMeta().getReferences());
+        context.getReferences().setDeserializeDataPool(context.getRequestMeta().getReferences());
         //参数
         context.setParams(new HashMap<>());
         for (MetaParameter metaParameter : context.getMetaMethod().getParameters().values()){
             String rawParam = context.getRequestMeta().getParams().get(metaParameter.getName());
-            Object param = StandardMetaSerialize.deserialize(rawParam,context.getMetaMethod().getInstanceSerializeLang(),context.getReferences());
+            Object param = StandardMetaSerialize.deserialize(rawParam,context.getMetaMethod().getDeserializeLang(),context.getReferences());
             context.getParams().put(metaParameter.getName(),param);
         }
         //实例
         context.setInstance(StandardMetaSerialize.deserialize(context.getRequestMeta().getInstance(),
-                context.getMetaMethod().getInstanceSerializeLang(), context.getReferences()));
+                context.getMetaMethod().getDeserializeLang(), context.getReferences()));
     }
 }

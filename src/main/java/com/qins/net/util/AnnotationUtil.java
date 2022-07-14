@@ -9,12 +9,11 @@ import com.qins.net.meta.annotation.instance.MetaPact;
 import com.qins.net.meta.annotation.method.MethodPact;
 import com.qins.net.meta.annotation.parameter.MetaParam;
 import com.qins.net.meta.annotation.parameter.ParameterPact;
-import com.qins.net.meta.annotation.returnval.ReturnAsync;
+import com.qins.net.meta.annotation.serialize.ReturnAsync;
 import com.qins.net.meta.annotation.returnval.ReturnPact;
-import com.qins.net.meta.annotation.returnval.ReturnSync;
+import com.qins.net.meta.annotation.serialize.ReturnSync;
 import com.qins.net.meta.annotation.serialize.*;
 import com.qins.net.core.lang.serialize.SerializeLang;
-import com.qins.net.meta.core.MetaReturn;
 import com.qins.net.node.annotation.Post;
 
 import java.lang.annotation.Annotation;
@@ -111,28 +110,19 @@ public class AnnotationUtil {
                     .setTimeout(annotation.timeout())
                     .setNodes(new HashSet<>(Arrays.asList(annotation.nodes())))
                     .setNodeClass(annotation.node())
-                    .setSerializeLang(new SerializeLang());
-            if(method.getAnnotation(Sync.class) != null){
-                ObjectLang objectLang = ObjectLang.process(method.getAnnotation(Sync.class).value());
-                pact.getSerializeLang().setRequestSync(objectLang);
-                pact.getSerializeLang().setServiceSync(objectLang);
+                    .setSerializeLang(new SerializeLang())
+                    .setDeserializeLang(new SerializeLang());
+            if(method.getAnnotation(SendSync.class) != null){
+                pact.getSerializeLang().setSync(ObjectLang.process(method.getAnnotation(SendSync.class).value()));
             }
-            if(method.getAnnotation(Async.class) != null){
-                ObjectLang objectLang = ObjectLang.process(method.getAnnotation(Async.class).value());
-                pact.getSerializeLang().setRequestAsync(objectLang);
-                pact.getSerializeLang().setServiceAsync(objectLang);
+            if(method.getAnnotation(SendAsync.class) != null){
+                pact.getSerializeLang().setAsync(ObjectLang.process(method.getAnnotation(SendAsync.class).value()));
             }
-            if(method.getAnnotation(RequestSync.class) != null){
-                pact.getSerializeLang().setRequestSync(ObjectLang.process(method.getAnnotation(RequestSync.class).value()));
+            if(method.getAnnotation(ReceiveSync.class) != null){
+                pact.getDeserializeLang().setSync(ObjectLang.process(method.getAnnotation(ReceiveSync.class).value()));
             }
-            if(method.getAnnotation(RequestAsync.class) != null){
-                pact.getSerializeLang().setRequestAsync(ObjectLang.process(method.getAnnotation(RequestAsync.class).value()));
-            }
-            if(method.getAnnotation(ServiceSync.class) != null){
-                pact.getSerializeLang().setServiceSync(ObjectLang.process(method.getAnnotation(ServiceSync.class).value()));
-            }
-            if(method.getAnnotation(ServiceAsync.class) != null){
-                pact.getSerializeLang().setServiceSync(ObjectLang.process(method.getAnnotation(ServiceAsync.class).value()));
+            if(method.getAnnotation(ReceiveAsync.class) != null){
+                pact.getDeserializeLang().setAsync(ObjectLang.process(method.getAnnotation(ReceiveAsync.class).value()));
             }
             return pact;
         }
@@ -142,40 +132,31 @@ public class AnnotationUtil {
     public static ParameterPact getParameterPact(Parameter parameter) throws ObjectLangException {
         ParameterPact pact = new ParameterPact()
                 .setName(Optional.ofNullable(parameter.getAnnotation(MetaParam.class)).map(MetaParam::value).orElse(parameter.getName()))
-                .setSerializeLang(new SerializeLang());
-        if(parameter.getAnnotation(Sync.class) != null){
-            ObjectLang objectLang = ObjectLang.process(parameter.getAnnotation(Sync.class).value());
-            pact.getSerializeLang().setRequestSync(objectLang);
-            pact.getSerializeLang().setServiceSync(objectLang);
+                .setSerializeLang(new SerializeLang())
+                .setDeserializeLang(new SerializeLang());
+        if(parameter.getAnnotation(SendSync.class) != null){
+            pact.getSerializeLang().setSync(ObjectLang.process(parameter.getAnnotation(SendSync.class).value()));
         }
-        if(parameter.getAnnotation(Async.class) != null){
-            ObjectLang objectLang = ObjectLang.process(parameter.getAnnotation(Async.class).value());
-            pact.getSerializeLang().setRequestAsync(objectLang);
-            pact.getSerializeLang().setServiceAsync(objectLang);
+        if(parameter.getAnnotation(SendAsync.class) != null){
+            pact.getSerializeLang().setAsync(ObjectLang.process(parameter.getAnnotation(SendAsync.class).value()));
         }
-        if(parameter.getAnnotation(RequestSync.class) != null){
-            pact.getSerializeLang().setRequestSync(ObjectLang.process(parameter.getAnnotation(RequestSync.class).value()));
+        if(parameter.getAnnotation(ReceiveSync.class) != null){
+            pact.getDeserializeLang().setSync(ObjectLang.process(parameter.getAnnotation(ReceiveSync.class).value()));
         }
-        if(parameter.getAnnotation(RequestAsync.class) != null){
-            pact.getSerializeLang().setRequestAsync(ObjectLang.process(parameter.getAnnotation(RequestAsync.class).value()));
-        }
-        if(parameter.getAnnotation(ServiceSync.class) != null){
-            pact.getSerializeLang().setServiceSync(ObjectLang.process(parameter.getAnnotation(ServiceSync.class).value()));
-        }
-        if(parameter.getAnnotation(ServiceAsync.class) != null){
-            pact.getSerializeLang().setServiceSync(ObjectLang.process(parameter.getAnnotation(ServiceAsync.class).value()));
+        if(parameter.getAnnotation(ReceiveAsync.class) != null){
+            pact.getDeserializeLang().setAsync(ObjectLang.process(parameter.getAnnotation(ReceiveAsync.class).value()));
         }
         return pact;
     }
 
     public static ReturnPact getMethodReturnPact(Method method) throws ObjectLangException {
         ReturnPact pact = new ReturnPact()
-                .setSerializeLang(new SerializeLang());
+                .setMutualSerialize(new SerializeLang());
         if(method.getAnnotation(ReturnSync.class) != null){
-            pact.getSerializeLang().setServiceSync(ObjectLang.process(method.getAnnotation(ReturnSync.class).value()));
+            pact.getMutualSerialize().setSync(ObjectLang.process(method.getAnnotation(ReturnSync.class).value()));
         }
         if(method.getAnnotation(ReturnAsync.class) != null){
-            pact.getSerializeLang().setRequestAsync(ObjectLang.process(method.getAnnotation(ReturnAsync.class).value()));
+            pact.getMutualSerialize().setAsync(ObjectLang.process(method.getAnnotation(ReturnAsync.class).value()));
         }
         return pact;
     }

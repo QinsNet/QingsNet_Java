@@ -1,4 +1,4 @@
-package com.qins.net.meta.annotation.returnval;
+package com.qins.net.meta.annotation.serialize;
 
 import java.lang.annotation.*;
 

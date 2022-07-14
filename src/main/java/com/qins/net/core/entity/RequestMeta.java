@@ -1,8 +1,6 @@
 package com.qins.net.core.entity;
 
-import com.google.gson.annotations.Expose;
 import com.qins.net.meta.annotation.serialize.Sync;
-import com.qins.net.request.aop.annotation.ExceptionEvent;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
@@ -20,9 +18,9 @@ public class RequestMeta {
     @Sync
     private String mapping;
     @Sync
+    private String instance;
+    @Sync
     private Map<String,String> params;
     @Sync
     private Map<String,Object> references;
-    @Sync
-    private String instance;
 }

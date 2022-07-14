@@ -63,15 +63,24 @@ public class StandardBaseClass extends BaseClass {
 
     @Override
     public String serialize(Object instance, SerializeLang serializeLang, RequestReferences references) throws SerializeException {
-        Integer address = System.identityHashCode(instance);
-        //检查是否已经序列化
-        if(references.getSerializeReferences().containsKey(address)){
-            return references.getSerializeReferences().get(address);
-        }
         //获取引用地址
+        int address = System.identityHashCode(instance);
         String value = this.getName()  + "@" +  Integer.toHexString(address);
-        references.getSerializeReferences().put(address,value);
-        references.getSerializeObjects().put(value,instance);
+        //检查是否已经序列化
+        if(references.getSerializeDataPool().containsKey(value)){
+            //Hash相同，对象不一定相同.
+            if(references.getSerializeDataPool().get(value).equals(instance)){
+                return value;
+            }
+            else {
+                //说明是新对象,创建时要注意避免引用池冲突
+                do {
+                    value = this.getName()  + "@" +  Integer.toHexString(random.nextInt());
+                }
+                while (references.getDeserializeDataPool().containsKey(value));
+            }
+        }
+        references.getSerializeObjectsPool().put(value,instance);
         //序列化
         JsonElement rawInstance = null;
         if(instance instanceof Collection){
@@ -94,7 +103,7 @@ public class StandardBaseClass extends BaseClass {
                 else jsonObject.add(rawKey, new JsonPrimitive(rawValue));
             }
         }
-        references.getSerializePool().put(value,rawInstance);
+        references.getSerializeDataPool().put(value,rawInstance);
         return value;
     }
 
@@ -102,16 +111,13 @@ public class StandardBaseClass extends BaseClass {
     public Object deserialize(String rawInstance, SerializeLang serializeLang, RequestReferences references) throws DeserializeException {
         try {
             //检查是否已经逆序列化
-            if(references.getDeserializeObjects().containsKey(rawInstance)){
-                return references.getDeserializeObjects().get(rawInstance);
+            if(references.getDeserializeObjectsPool().containsKey(rawInstance)){
+                return references.getDeserializeObjectsPool().get(rawInstance);
             }
-            Object instance = references.getSerializeObjects().get(rawInstance);
-            if(instance == null)instance = newInstance();
-            else serializeLang = references.getSerializeLang().get(System.identityHashCode(instance));
-            references.getDeserializeObjects().put(rawInstance,instance);
-
+            Object instance = newInstance();
+            references.getDeserializeObjectsPool().put(rawInstance,instance);
             //逆序列化
-            JsonElement jsonElement = (JsonElement) references.getDeserializePool().get(rawInstance);
+            JsonElement jsonElement = (JsonElement) references.getDeserializeDataPool().get(rawInstance);
             if(jsonElement == null)return instance;
             if(jsonElement.isJsonArray() && Collection.class.isAssignableFrom(instanceClass)){
                 Collection collection = (Collection) instance;
@@ -139,121 +145,64 @@ public class StandardBaseClass extends BaseClass {
 
     @Override
     public String serialize(Object instance, SerializeLang serializeLang, ServiceReferences references) throws SerializeException {
-        Integer address = System.identityHashCode(instance);
-        //检查是否已经序列化
-        if(references.getSerializeReferences().containsKey(address)){
-            return references.getSerializeReferences().get(address);
-        }
-        //获取引用地址
-        String value = references.getDeserializeReferences().get(address);
-        if(value == null){
-            //说明是新对象,创建时要注意避免引用池冲突
+        //先获得ID
+        String id = references.getIds().get(instance);
+        if(id == null){
+            //说明是新对象，需要生成一个新的ID
             do {
-                value = this.getName()  + "@" +  Integer.toHexString(random.nextInt());
+                id = this.getName()  + "@" +  Integer.toHexString(random.nextInt());
             }
-            while (references.getDeserializePool().containsKey(value));
+            while (references.getIds().containsKey(id));
+            references.getIds().put(instance,id);
         }
-        else serializeLang = references.getSerializeLang().get(value);
-        references.getSerializeReferences().put(address,value);
+        //检查是否已经序列化
+        if(references.getSerializeObjectsPool().containsKey(id)){
+            return id;
+        }
+        references.getSerializeObjectsPool().put(id,instance);
         //序列化
         JsonElement rawInstance = null;
         if(instance instanceof Collection){
-            boolean update = false;
-            List<String> oldArray = SerializeUtil.gson.fromJson((JsonElement) references.getDeserializePool().get(value),List.class);
-            Object[] newArray = ((Collection<Object>) instance).toArray();
-            if(oldArray != null){
-                if(oldArray.size() == ((Collection<?>) instance).size()){
-                    for(int i = 0; i< oldArray.size(); i++){
-                        String newRef = references.getDeserializeReferences().get(System.identityHashCode(newArray[i]));
-                        if(newRef == null)newRef = StandardMetaSerialize.serialize(newArray[i], serializeLang, references);
-                        if(!Objects.equals(newRef, oldArray.get(i))){
-                            update=true;
-                            break;
-                        }
-                    }
-                }
-                else update = true;
-            }
-            else update = true;
-            if(update){
-                JsonArray jsonArray = new JsonArray();
-                rawInstance = jsonArray;
-                for (Object item : ((Iterable)instance)){
-                    String rawItem = StandardMetaSerialize.serialize(item, serializeLang, references);
-                    if(rawItem == null)jsonArray.add((String) null);
-                    else jsonArray.add(new JsonPrimitive(rawItem));
-                }
+            JsonArray jsonArray = new JsonArray();
+            rawInstance = jsonArray;
+            for (Object item : ((Iterable)instance)){
+                String rawItem = StandardMetaSerialize.serialize(item, null,references);
+                if(rawItem == null)jsonArray.add((String) null);
+                else jsonArray.add(new JsonPrimitive(rawItem));
             }
         }
         else if(instance instanceof Map){
-            boolean update = false;
-            Map<String,String> oldJsonObject = SerializeUtil.gson.fromJson((JsonElement) references.getDeserializePool().get(value), LinkedHashMap.class);
-            if(oldJsonObject != null){
-                //Key
-                String[] oldKeys = oldJsonObject.keySet().toArray(new String[0]);
-                Object[] newKeys = ((Map<Object, ?>) instance).keySet().toArray();
-                if(oldKeys.length == newKeys.length){
-                    for(int i=0;i<oldKeys.length;i++){
-                        String newRef = references.getDeserializeReferences().get(System.identityHashCode(newKeys[i]));
-                        if(newRef == null)newRef = StandardMetaSerialize.serialize(newKeys[i], serializeLang, references);
-                        if(!Objects.equals(newRef, oldKeys[i])){
-                            update=true;
-                            break;
-                        }
-                    }
-                }
-                else update = true;
-                if(!update){
-                    //Key
-                    String[] oldValues = oldJsonObject.values().toArray(new String[0]);
-                    Object[] newValues = ((Map<?, Object>) instance).values().toArray();
-                    if(oldValues.length == newValues.length){
-                        for(int i=0;i<oldValues.length;i++){
-                            String newRef = references.getDeserializeReferences().get(System.identityHashCode(newValues[i]));
-                            if(newRef == null)newRef = StandardMetaSerialize.serialize(newValues[i], serializeLang, references);
-                            if(!Objects.equals(newRef, oldValues[i])){
-                                update=true;
-                                break;
-                            }
-                        }
-                    }
-                    else update = true;
-                }
-            }
-            else update = true;
-            if(update){
-                JsonObject jsonObject = new JsonObject();
-                rawInstance = jsonObject;
-                for (Map.Entry<Object,Object> item : ((Map<Object,Object>) instance).entrySet()){
-                    String rawKey = StandardMetaSerialize.serialize(item, serializeLang, references);
-                    String rawValue = StandardMetaSerialize.serialize(item, serializeLang, references);
-                    assert rawKey != null;
-                    if(rawValue == null)jsonObject.add(rawKey, null);
-                    else jsonObject.add(rawKey, new JsonPrimitive(rawValue));
-                }
+            JsonObject jsonObject = new JsonObject();
+            rawInstance = jsonObject;
+            for (Map.Entry<Object,Object> item : ((Map<Object,Object>) instance).entrySet()){
+                String rawKey = StandardMetaSerialize.serialize(item, serializeLang, references);
+                String rawValue = StandardMetaSerialize.serialize(item, serializeLang, references);
+                assert rawKey != null;
+                if(rawValue == null)jsonObject.add(rawKey, null);
+                else jsonObject.add(rawKey, new JsonPrimitive(rawValue));
             }
         }
-        references.getSerializePool().put(value,rawInstance);
-        return value;
+        references.getSerializeDataPool().put(id,rawInstance);
+        return id;
     }
 
     @Override
     public Object deserialize(String rawInstance, SerializeLang serializeLang, ServiceReferences references) throws DeserializeException {
         try {
             //检查是否已经逆序列化
-            if(references.getDeserializeObjects().containsKey(rawInstance)){
-                return references.getDeserializeObjects().get(rawInstance);
+            if(references.getDeserializeObjectsPool().containsKey(rawInstance)){
+                return references.getDeserializeObjectsPool().get(rawInstance);
             }
             Object instance = newInstance();
-            Integer address = System.identityHashCode(instance);
-            references.getDeserializeObjects().put(rawInstance,instance);
-            references.getDeserializeReferences().put(address,rawInstance);
-
+            references.getDeserializeObjectsPool().put(rawInstance,instance);
+            references.getIds().put(instance,rawInstance);
+            references.getSerializeLang().put(rawInstance,serializeLang);
             //逆序列化
-            JsonElement jsonElement = (JsonElement) references.getDeserializePool().get(rawInstance);
+            JsonElement jsonElement = (JsonElement) references.getDeserializeDataPool().get(rawInstance);
+            if(jsonElement == null)return instance;
             if(jsonElement.isJsonArray() && Collection.class.isAssignableFrom(instanceClass)){
                 Collection collection = (Collection) instance;
-                collection.clear();
+                ((Collection<?>) instance).clear();
                 for (JsonElement rawItem : jsonElement.getAsJsonArray()){
                     Object item = StandardMetaSerialize.deserialize(rawItem.getAsString(), serializeLang, references);
                     collection.add(item);
@@ -261,7 +210,7 @@ public class StandardBaseClass extends BaseClass {
             }
             else if(jsonElement.isJsonObject() && Map.class.isAssignableFrom(instanceClass)){
                 Map map = (Map) instance;
-                map.clear();
+                ((Map<?, ?>) instance).clear();
                 for (Map.Entry<String,JsonElement> rawItem : jsonElement.getAsJsonObject().entrySet()){
                     Object key = StandardMetaSerialize.deserialize(rawItem.getKey(), serializeLang, references);
                     Object value = StandardMetaSerialize.deserialize(rawItem.getValue().getAsString(), serializeLang, references);

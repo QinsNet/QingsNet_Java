@@ -17,7 +17,8 @@ public abstract class MetaParameter{
     protected BaseClass baseClass;
     protected Parameter parameter;
     protected String name;
-    protected SerializeLang serializeLang;
+    SerializeLang serializeLang;
+    SerializeLang deserializeLang;
 
     public MetaParameter(Parameter parameter, Components components) throws NewInstanceException {
         try {
@@ -26,6 +27,7 @@ public abstract class MetaParameter{
             assert pact != null;
             this.name = pact.getName();
             this.serializeLang = pact.getSerializeLang();
+            this.deserializeLang = pact.getDeserializeLang();
         }
         catch (Exception e){
             throw new NewInstanceException(e);

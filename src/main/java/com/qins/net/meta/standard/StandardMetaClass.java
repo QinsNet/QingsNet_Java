@@ -79,20 +79,28 @@ public class StandardMetaClass extends MetaClass {
 
     @Override
     public String serialize(Object instance, SerializeLang serializeLang, RequestReferences references) throws SerializeException {
-        Integer address = System.identityHashCode(instance);
-        //检查是否已经序列化
-        if(references.getSerializeReferences().containsKey(address)){
-            return references.getSerializeReferences().get(address);
-        }
         //获取引用地址
+        int address = System.identityHashCode(instance);
         String value = this.getName()  + "@" +  Integer.toHexString(address);
-        references.getSerializeReferences().put(address,value);
-        references.getSerializeObjects().put(value,instance);
-        references.getSerializeLang().put(address,serializeLang);
+        //检查是否已经序列化
+        if(references.getSerializeObjectsPool().containsKey(value)){
+            //Hash相同，对象不一定相同.
+            if(references.getSerializeObjectsPool().get(value).equals(instance)){
+                return value;
+            }
+            else {
+                //说明是新对象,创建时要注意避免引用池冲突
+                do {
+                    value = this.getName()  + "@" +  Integer.toHexString(random.nextInt());
+                }
+                while (references.getSerializeObjectsPool().containsKey(value));
+            }
+        }
+        references.getSerializeObjectsPool().put(value,instance);
         //序列化
         try {
             JsonObject rawInstance = new JsonObject();
-            for (Map.Entry<MetaField,SerializeLang> item: requestFilter(serializeLang,fields).entrySet()){
+            for (Map.Entry<MetaField,SerializeLang> item: serializeFilter(serializeLang,fields).entrySet()){
                 MetaField metaField = item.getKey();
                 SerializeLang childLang = item.getValue();
                 Object object = metaField.getField().get(instance);
@@ -104,7 +112,7 @@ public class StandardMetaClass extends MetaClass {
             JsonObject jsonObject = new JsonObject();
             jsonObject.add("instance",rawInstance);
             jsonObject.add("nodes", SerializeUtil.gson.toJsonTree(interceptor.getNodes()));
-            references.getSerializePool().put(value,jsonObject);
+            references.getSerializeDataPool().put(value,jsonObject);
             return value;
         }
         catch (IllegalAccessException e){
@@ -115,29 +123,28 @@ public class StandardMetaClass extends MetaClass {
     public Object deserialize(String rawInstance, SerializeLang serializeLang, RequestReferences references) throws DeserializeException {
         try {
             //检查是否已经逆序列化
-            if(references.getDeserializeObjects().containsKey(rawInstance)){
-                return references.getDeserializeObjects().get(rawInstance);
+            if(references.getDeserializeObjectsPool().containsKey(rawInstance)){
+                return references.getDeserializeObjectsPool().get(rawInstance);
             }
-            Object instance = references.getSerializeObjects().get(rawInstance);
+            Object instance = references.getSerializeObjectsPool().get(rawInstance);
             if(instance == null)instance = newInstance();
-            else serializeLang = references.getSerializeLang().get(System.identityHashCode(instance));
-            references.getDeserializeObjects().put(rawInstance,instance);
+            references.getDeserializeObjectsPool().put(rawInstance,instance);
             //逆序列化
-            JsonObject jsonObject = (JsonObject) references.getDeserializePool().get(rawInstance);
+            JsonObject jsonObject = (JsonObject) references.getDeserializeDataPool().get(rawInstance);
             if(jsonObject == null)return instance;
             JsonElement jsonElement = jsonObject.get("instance");
             if(jsonElement != null){
-                JsonObject rawFields = jsonElement.getAsJsonObject();
-                for (Map.Entry<MetaField,SerializeLang> item: requestFilter(serializeLang,fields).entrySet()){
+                JsonObject rawFieldsID = jsonElement.getAsJsonObject();
+                for (Map.Entry<MetaField,SerializeLang> item: serializeFilter(serializeLang,fields).entrySet()){
                     MetaField metaField = item.getKey();
                     SerializeLang childLang = item.getValue();
-                    JsonElement rawField = rawFields.get(metaField.getName());
-                    if(rawField != null){
-                        if(rawField.isJsonNull()){
+                    JsonElement rawFieldID = rawFieldsID.get(metaField.getName());
+                    if(rawFieldID != null){
+                        if(rawFieldID.isJsonNull()){
                             metaField.getField().set(instance,null);
                         }
                         else {
-                            Object value = StandardMetaSerialize.deserialize(rawField.getAsString(), childLang, references);
+                            Object value = StandardMetaSerialize.deserialize(rawFieldID.getAsString(), childLang, references);
                             metaField.getField().set(instance,value);
                         }
                     }
@@ -157,92 +164,40 @@ public class StandardMetaClass extends MetaClass {
 
     @Override
     public String serialize(Object instance, SerializeLang serializeLang, ServiceReferences references) throws SerializeException {
-        Integer address = System.identityHashCode(instance);
-        //检查是否已经序列化
-        if(references.getSerializeReferences().containsKey(address)){
-            return references.getSerializeReferences().get(address);
-        }
-        //获取引用地址
-        String value = references.getDeserializeReferences().get(address);
-        if(value == null){
-            //说明是新对象,创建时要注意避免引用池冲突
+        //先获得ID
+        String id = references.getIds().get(instance);
+        if(id == null){
+            //说明是新对象，需要生成一个新的ID
             do {
-                value = this.getName()  + "@" +  Integer.toHexString(random.nextInt());
+                id = this.getName()  + "@" +  Integer.toHexString(random.nextInt());
             }
-            while (references.getDeserializePool().containsKey(value));
+            while (references.getIds().containsKey(id));
+            references.getIds().put(instance,id);
         }
-        else serializeLang = references.getSerializeLang().get(value);
-        references.getSerializeReferences().put(address,value);
-
+        //检查是否已经序列化
+        if(references.getSerializeObjectsPool().containsKey(id)){
+            return id;
+        }
+        references.getSerializeObjectsPool().put(id,instance);
+        references.getSerializeLang().put(id,serializeLang);
         //序列化
         try {
-            JsonObject oldRawMeta = (JsonObject) references.getDeserializePool().get(value);
             JsonObject rawMeta = new JsonObject();
             JsonObject rawInstance = new JsonObject();
             rawMeta.add("instance",rawInstance);
-            if(oldRawMeta != null){//是否存在旧Meta
-                JsonObject oldRawInstance = (JsonObject) oldRawMeta.get("instance");
-                if(oldRawInstance != null){//是否存在旧Instance
-                    for (Map.Entry<MetaField,SerializeLang> item: serviceFilter(serializeLang,fields).entrySet()){
-                        MetaField metaField = item.getKey();
-                        SerializeLang childLang = item.getValue();
-                        Object field = metaField.getField().get(instance);
-                        String newRawField = references.getDeserializeReferences().get(System.identityHashCode(field));
-                        if(newRawField == null) newRawField = StandardMetaSerialize.serialize(field, childLang, references);
-                        String oldRawField = SerializeUtil.getStringOrNull(oldRawInstance.get(metaField.getName()));
-                        if(!Objects.equals(newRawField, oldRawField)){
-                            String rawField = StandardMetaSerialize.serialize(field, childLang, references);
-                            if(rawField == null)rawInstance.add(metaField.getName(),null);
-                            else rawInstance.add(metaField.getName(),new JsonPrimitive(rawField));
-                        }
-                    }
-                }
-                else {//生成新的Instance
-                    for (Map.Entry<MetaField,SerializeLang> item: serviceFilter(serializeLang,fields).entrySet()){
-                        MetaField metaField = item.getKey();
-                        SerializeLang childLang = item.getValue();
-                        Object field = metaField.getField().get(instance);
-                        String rawField = StandardMetaSerialize.serialize(field, childLang, references);
-                        if(rawField == null)rawInstance.add(metaField.getName(),null);
-                        else rawInstance.add(metaField.getName(),new JsonPrimitive(rawField));
-                    }
-                }
-                Object oldRawNodes = oldRawMeta.get("nodes");
-                if(oldRawNodes != null){//是否存在旧Nodes
-                    RequestInterceptor interceptor = (RequestInterceptor) ((Factory)instance).getCallback(1);
-                    Map<String,String> oldNodes = SerializeUtil.gson.fromJson(oldRawMeta.get("nodes"),HashMap.class);
-                    Map<String,String> newNodes = interceptor.getNodes();
-                    if(newNodes != null && oldNodes != null){//是否存在新Nodes
-                        for(Map.Entry<String,String> item : oldNodes.entrySet()){
-                            if(!newNodes.containsKey(item.getKey()) || !Objects.equals(newNodes.get(item.getKey()),item.getValue())){
-                                rawMeta.add("nodes", SerializeUtil.gson.toJsonTree(newNodes));
-                                break;
-                            }
-                        }
-                    }
-                    else rawMeta.add("nodes",null);
-                }
-                else {//生成新Nodes
-                    RequestInterceptor interceptor = (RequestInterceptor) ((Factory)instance).getCallback(1);
-                    Map<String,String> newNodes = interceptor.getNodes();
-                    rawMeta.add("nodes", SerializeUtil.gson.toJsonTree(newNodes));
-                }
+            RequestInterceptor interceptor = (RequestInterceptor) ((Factory)instance).getCallback(1);
+            Map<String,String> newNodes = interceptor.getNodes();
+            rawMeta.add("nodes", SerializeUtil.gson.toJsonTree(newNodes));
+            for (Map.Entry<MetaField,SerializeLang> item: serializeFilter(serializeLang,fields).entrySet()){
+                MetaField metaField = item.getKey();
+                SerializeLang childLang = item.getValue();
+                Object field = metaField.getField().get(instance);
+                String rawField = StandardMetaSerialize.serialize(field, childLang, references);
+                if(rawField == null)rawInstance.add(metaField.getName(),null);
+                else rawInstance.add(metaField.getName(),new JsonPrimitive(rawField));
             }
-            else {//生成新Meta
-                for (Map.Entry<MetaField,SerializeLang> item: serviceFilter(serializeLang,fields).entrySet()){
-                    MetaField metaField = item.getKey();
-                    SerializeLang childLang = item.getValue();
-                    Object field = metaField.getField().get(instance);
-                    String rawField = StandardMetaSerialize.serialize(field, childLang, references);
-                    if(rawField == null)rawInstance.add(metaField.getName(),null);
-                    else rawInstance.add(metaField.getName(),new JsonPrimitive(rawField));
-                }
-                RequestInterceptor interceptor = (RequestInterceptor) ((Factory)instance).getCallback(1);
-                Map<String,String> newNodes = interceptor.getNodes();
-                rawMeta.add("nodes", SerializeUtil.gson.toJsonTree(newNodes));
-            }
-            references.getSerializePool().put(value,rawMeta);
-            return value;
+            references.getSerializeDataPool().put(id,rawMeta);
+            return id;
         }
         catch (IllegalAccessException e){
             throw new SerializeException(e);
@@ -253,21 +208,20 @@ public class StandardMetaClass extends MetaClass {
     public Object deserialize(String rawInstance, SerializeLang serializeLang, ServiceReferences references) throws DeserializeException {
         try {
             //检查是否已经逆序列化
-            if(references.getDeserializeObjects().containsKey(rawInstance)){
-                return references.getDeserializeObjects().get(rawInstance);
+            if(references.getDeserializeObjectsPool().containsKey(rawInstance)){
+                return references.getDeserializeObjectsPool().get(rawInstance);
             }
             Object instance = newInstance();
-            Integer address = System.identityHashCode(instance);
-            references.getDeserializeObjects().put(rawInstance,instance);
-            references.getDeserializeReferences().put(address,rawInstance);
+            references.getDeserializeObjectsPool().put(rawInstance,instance);
+            references.getIds().put(instance,rawInstance);
             references.getSerializeLang().put(rawInstance,serializeLang);
             //逆序列化
-            JsonObject jsonObject = (JsonObject) references.getDeserializePool().get(rawInstance);
+            JsonObject jsonObject = (JsonObject) references.getDeserializeDataPool().get(rawInstance);
             if(jsonObject == null)return instance;
             JsonElement jsonElement = jsonObject.get("instance");
             if(jsonElement != null){
                 JsonObject rawFields = jsonElement.getAsJsonObject();
-                for (Map.Entry<MetaField,SerializeLang> item: serviceFilter(serializeLang,fields).entrySet()){
+                for (Map.Entry<MetaField,SerializeLang> item: serializeFilter(serializeLang,fields).entrySet()){
                     MetaField metaField = item.getKey();
                     SerializeLang childLang = item.getValue();
                     JsonElement rawField = rawFields.get(metaField.getName());
@@ -275,6 +229,7 @@ public class StandardMetaClass extends MetaClass {
                         Object value = StandardMetaSerialize.deserialize(rawField.getAsString(), childLang, references);
                         metaField.getField().set(instance,value);
                     }
+                    else metaField.getField().set(instance,null);
                 }
             }
             JsonElement rawNodes = jsonObject.get("nodes");
@@ -290,83 +245,34 @@ public class StandardMetaClass extends MetaClass {
     }
 
 
-    public Map<MetaField,SerializeLang> requestFilter(SerializeLang serializeLang,Map<String,MetaField> fields){
+    public Map<MetaField,SerializeLang> serializeFilter(SerializeLang serializeLang,Map<String,MetaField> fields){
         Map<MetaField,SerializeLang> fieldsFilter = new LinkedHashMap<>();
-        ObjectLang requestSync = Optional.ofNullable(serializeLang).map(SerializeLang::getRequestSync).orElse(null);
-        ObjectLang requestAsync = Optional.ofNullable(serializeLang).map(SerializeLang::getRequestAsync).orElse(null);
-        ObjectLang serviceSync = Optional.ofNullable(serializeLang).map(SerializeLang::getServiceSync).orElse(null);
-        ObjectLang serviceAsync = Optional.ofNullable(serializeLang).map(SerializeLang::getServiceAsync).orElse(null);
+        ObjectLang sync = Optional.ofNullable(serializeLang).map(SerializeLang::getSync).orElse(null);
+        ObjectLang async = Optional.ofNullable(serializeLang).map(SerializeLang::getAsync).orElse(null);
         for (Map.Entry<String,MetaField> item: fields.entrySet()){
-            ObjectLang requestChildSync = null;
-            ObjectLang requestChildAsync = null;
-            ObjectLang serviceChildSync = null;
-            ObjectLang serviceChildAsync = null;
+            ObjectLang childSync = null;
+            ObjectLang childAsync = null;
             boolean isSync = false;
             String name = item.getKey();
-            if(requestSync == null)isSync = true;
-            else if(requestSync instanceof PrimitiveLang){
+            if(sync == null)isSync = true;
+            else if(sync instanceof PrimitiveLang){
                 isSync = true;
             }
-            else if(requestSync instanceof FieldLang && ((FieldLang) requestSync).getChildren().containsKey(name)){
+            else if(sync instanceof FieldLang && ((FieldLang) sync).getChildren().containsKey(name)){
                 isSync = true;
-                requestChildSync = ((FieldLang) requestSync).getChildren().get(name);
+                childSync = ((FieldLang) sync).getChildren().get(name);
             }
-            if(requestAsync instanceof PrimitiveLang){
+            if(async instanceof PrimitiveLang){
                 isSync = false;
             }
-            else if(requestAsync instanceof FieldLang && ((FieldLang) requestAsync).getChildren().containsKey(name)){
-                requestChildAsync = ((FieldLang) requestAsync).getChildren().get(name);
+            else if(async instanceof FieldLang && ((FieldLang) async).getChildren().containsKey(name)){
+                isSync = false;
+                childAsync = ((FieldLang) async).getChildren().get(name);
             }
-            if(serviceSync instanceof FieldLang && ((FieldLang) serviceSync).getChildren().containsKey(name)){
-                serviceChildSync = ((FieldLang) serviceSync).getChildren().get(name);
-            }
-            if(serviceAsync instanceof FieldLang && ((FieldLang) serviceAsync).getChildren().containsKey(name)){
-                serviceChildAsync = ((FieldLang) serviceAsync).getChildren().get(name);
-            }
-            if(isSync)fieldsFilter.put(item.getValue(),new SerializeLang(requestChildSync,requestChildAsync,serviceChildSync,serviceChildAsync));
+            if(isSync)fieldsFilter.put(item.getValue(),new SerializeLang(childSync,childAsync));
         }
         return fieldsFilter;
     }
-
-    public Map<MetaField,SerializeLang> serviceFilter(SerializeLang serializeLang,Map<String,MetaField> fields){
-        Map<MetaField,SerializeLang> fieldsFilter = new LinkedHashMap<>();
-        ObjectLang requestSync = Optional.ofNullable(serializeLang).map(SerializeLang::getRequestSync).orElse(null);
-        ObjectLang requestAsync = Optional.ofNullable(serializeLang).map(SerializeLang::getRequestAsync).orElse(null);
-        ObjectLang serviceSync = Optional.ofNullable(serializeLang).map(SerializeLang::getServiceSync).orElse(null);
-        ObjectLang serviceAsync = Optional.ofNullable(serializeLang).map(SerializeLang::getServiceAsync).orElse(null);
-        for (Map.Entry<String,MetaField> item: fields.entrySet()){
-            ObjectLang requestChildSync = null;
-            ObjectLang requestChildAsync = null;
-            ObjectLang serviceChildSync = null;
-            ObjectLang serviceChildAsync = null;
-            boolean isSync = false;
-            String name = item.getKey();
-            if(requestSync instanceof FieldLang && ((FieldLang) requestSync).getChildren().containsKey(name)){
-                requestChildSync = ((FieldLang) requestSync).getChildren().get(name);
-            }
-            if(requestAsync instanceof FieldLang && ((FieldLang) requestAsync).getChildren().containsKey(name)){
-                requestChildAsync = ((FieldLang) requestAsync).getChildren().get(name);
-            }
-
-            if(serviceSync == null)isSync = true;
-            else if(serviceSync instanceof PrimitiveLang){
-                isSync = true;
-            }
-            else if(serviceSync instanceof FieldLang && ((FieldLang) serviceSync).getChildren().containsKey(name)){
-                isSync = true;
-                serviceChildSync = ((FieldLang) serviceSync).getChildren().get(name);
-            }
-            if(serviceAsync instanceof PrimitiveLang){
-                isSync = false;
-            }
-            else if(serviceAsync instanceof FieldLang && ((FieldLang) serviceAsync).getChildren().containsKey(name)){
-                serviceChildAsync = ((FieldLang) serviceAsync).getChildren().get(name);
-            }
-            if(isSync)fieldsFilter.put(item.getValue(),new SerializeLang(requestChildSync,requestChildAsync,serviceChildSync,serviceChildAsync));
-        }
-        return fieldsFilter;
-    }
-
     @Override
     public <T> T newInstance() throws NewInstanceException {
         try {

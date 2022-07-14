@@ -5,8 +5,10 @@ import com.qins.net.core.exception.TrackException;
 import com.qins.net.core.exception.NewInstanceException;
 import com.qins.net.meta.annotation.field.Field;
 import com.qins.net.meta.annotation.instance.Meta;
-import com.qins.net.meta.annotation.serialize.Async;
-import com.qins.net.meta.annotation.serialize.Sync;
+import com.qins.net.meta.annotation.serialize.ReceiveAsync;
+import com.qins.net.meta.annotation.serialize.ReceiveSync;
+import com.qins.net.meta.annotation.serialize.SendAsync;
+import com.qins.net.meta.annotation.serialize.SendSync;
 import com.qins.net.node.annotation.Post;
 import com.qins.net.node.util.NodeUtil;
 import lombok.Getter;
@@ -30,8 +32,8 @@ public abstract class User{
     Package aPackage;
 
     @Post
-    @Sync("{packages}")
-    public Boolean addPack(@Async("{name}")Package aPackage){
+    @SendSync("{packages}")
+    public Boolean addPack(@SendAsync("{name}") Package aPackage){
         this.aPackage = aPackage;
         aPackage.setName("改名字不会传递回请求方");
         packages.add(aPackage);
@@ -39,6 +41,7 @@ public abstract class User{
     }
 
     @Post(nodes = "Shanghai")
+    @SendSync("{packages}")
     public void hello(){
         for (Package item : packages){
             item.pack();
@@ -46,8 +49,8 @@ public abstract class User{
     }
 
     @Post
-    @Sync("{username,password}")
-    public boolean login() throws NewInstanceException {
+    @SendSync("{password,apiToken}")
+    public boolean login() {
         if("m839336369".equals(username) && "password".equals(password)){
             this.apiToken = 1234;
             this.password = "***";
@@ -57,6 +60,7 @@ public abstract class User{
     }
 
     @Post(nodes = {"Server_2","Server1"})
+    @SendSync("{packages}")
     public boolean newPack(){
         try {
             Package aPackage = MetaApplication.create(Package.class);
