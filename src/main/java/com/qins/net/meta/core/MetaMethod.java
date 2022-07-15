@@ -25,7 +25,6 @@ public abstract class MetaMethod {
     private int timeout;
     private Class<? extends Node> nodeClass;
     SerializeLang serializeLang;
-    SerializeLang deserializeLang;
 
     public MetaMethod(Method method,Components components) throws NewInstanceException {
         try {
@@ -35,7 +34,6 @@ public abstract class MetaMethod {
             this.name = pact.getName();
             this.nodeClass = pact.getNodeClass();
             this.serializeLang = pact.getSerializeLang();
-            this.deserializeLang = pact.getDeserializeLang();
 
             if(pact.getNodes() != null){
                 nodes = pact.getNodes();

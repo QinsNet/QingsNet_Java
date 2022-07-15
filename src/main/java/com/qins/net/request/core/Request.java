@@ -135,11 +135,11 @@ public abstract class Request implements IRequest {
         context.getReferences().setDeserializeDataPool(context.getResponseMeta().getReferences());
         //更新参数
         for (Map.Entry<String,String> item : context.getResponseMeta().getParams().entrySet()){
-            SerializeLang deserializeLang = context.getMetaMethod().getParameters().get(item.getKey()).getDeserializeLang();
+            SerializeLang deserializeLang = context.getMetaMethod().getParameters().get(item.getKey()).getSerializeLang();
             StandardMetaSerialize.deserialize(item.getKey(),deserializeLang, context.getReferences());
         }
         //更新实例
-        StandardMetaSerialize.deserialize(context.getResponseMeta().getInstance(),context.getMetaMethod().getDeserializeLang(), context.getReferences());
+        StandardMetaSerialize.deserialize(context.getResponseMeta().getInstance(),context.getMetaMethod().getSerializeLang(), context.getReferences());
         //更新引用
         for (Map.Entry<String,Object> item : context.getReferences().getSerializeObjectsPool().entrySet()){
             SerializeLang serializeLang = context.getReferences().getDeserializeLang().get(item.getKey());

@@ -18,7 +18,6 @@ public abstract class MetaParameter{
     protected Parameter parameter;
     protected String name;
     SerializeLang serializeLang;
-    SerializeLang deserializeLang;
 
     public MetaParameter(Parameter parameter, Components components) throws NewInstanceException {
         try {
@@ -27,7 +26,6 @@ public abstract class MetaParameter{
             assert pact != null;
             this.name = pact.getName();
             this.serializeLang = pact.getSerializeLang();
-            this.deserializeLang = pact.getDeserializeLang();
         }
         catch (Exception e){
             throw new NewInstanceException(e);

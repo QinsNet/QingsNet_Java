@@ -135,7 +135,7 @@ public class StandardMetaClass extends MetaClass {
             JsonElement jsonElement = jsonObject.get("instance");
             if(jsonElement != null){
                 JsonObject rawFieldsID = jsonElement.getAsJsonObject();
-                for (Map.Entry<MetaField,SerializeLang> item: serializeFilter(serializeLang,fields).entrySet()){
+                for (Map.Entry<MetaField,SerializeLang> item: deserializeFilter(serializeLang,fields).entrySet()){
                     MetaField metaField = item.getKey();
                     SerializeLang childLang = item.getValue();
                     JsonElement rawFieldID = rawFieldsID.get(metaField.getName());
@@ -221,7 +221,7 @@ public class StandardMetaClass extends MetaClass {
             JsonElement jsonElement = jsonObject.get("instance");
             if(jsonElement != null){
                 JsonObject rawFields = jsonElement.getAsJsonObject();
-                for (Map.Entry<MetaField,SerializeLang> item: serializeFilter(serializeLang,fields).entrySet()){
+                for (Map.Entry<MetaField,SerializeLang> item: deserializeFilter(serializeLang,fields).entrySet()){
                     MetaField metaField = item.getKey();
                     SerializeLang childLang = item.getValue();
                     JsonElement rawField = rawFields.get(metaField.getName());
@@ -247,29 +247,81 @@ public class StandardMetaClass extends MetaClass {
 
     public Map<MetaField,SerializeLang> serializeFilter(SerializeLang serializeLang,Map<String,MetaField> fields){
         Map<MetaField,SerializeLang> fieldsFilter = new LinkedHashMap<>();
-        ObjectLang sync = Optional.ofNullable(serializeLang).map(SerializeLang::getSync).orElse(null);
-        ObjectLang async = Optional.ofNullable(serializeLang).map(SerializeLang::getAsync).orElse(null);
+        ObjectLang serializeSync = Optional.ofNullable(serializeLang).map(SerializeLang::getSerializeSync).orElse(null);
+        ObjectLang serializeAsync = Optional.ofNullable(serializeLang).map(SerializeLang::getSerializeAsync).orElse(null);
+        ObjectLang deserializeSync = Optional.ofNullable(serializeLang).map(SerializeLang::getDeserializeSync).orElse(null);
+        ObjectLang deserializeAsync = Optional.ofNullable(serializeLang).map(SerializeLang::getDeserializeAsync).orElse(null);
         for (Map.Entry<String,MetaField> item: fields.entrySet()){
-            ObjectLang childSync = null;
-            ObjectLang childAsync = null;
+            ObjectLang serializeChildSync = null;
+            ObjectLang serializeChildAsync = null;
+            ObjectLang deserializeChildSync = null;
+            ObjectLang deserializeChildAsync = null;
             boolean isSync = false;
             String name = item.getKey();
-            if(sync == null)isSync = true;
-            else if(sync instanceof PrimitiveLang){
+            if(serializeSync == null)isSync = true;
+            else if(serializeSync instanceof PrimitiveLang){
                 isSync = true;
             }
-            else if(sync instanceof FieldLang && ((FieldLang) sync).getChildren().containsKey(name)){
+            else if(serializeSync instanceof FieldLang && ((FieldLang) serializeSync).getChildren().containsKey(name)){
                 isSync = true;
-                childSync = ((FieldLang) sync).getChildren().get(name);
+                serializeChildSync = ((FieldLang) serializeSync).getChildren().get(name);
             }
-            if(async instanceof PrimitiveLang){
+            if(serializeAsync instanceof PrimitiveLang){
                 isSync = false;
             }
-            else if(async instanceof FieldLang && ((FieldLang) async).getChildren().containsKey(name)){
+            else if(serializeAsync instanceof FieldLang && ((FieldLang) serializeAsync).getChildren().containsKey(name)){
                 isSync = false;
-                childAsync = ((FieldLang) async).getChildren().get(name);
+                serializeChildAsync = ((FieldLang) serializeAsync).getChildren().get(name);
             }
-            if(isSync)fieldsFilter.put(item.getValue(),new SerializeLang(childSync,childAsync));
+            if(deserializeSync instanceof FieldLang && ((FieldLang) deserializeSync).getChildren().containsKey(name)){
+                deserializeChildSync = ((FieldLang) deserializeSync).getChildren().get(name);
+            }
+            if(deserializeAsync instanceof FieldLang && ((FieldLang) deserializeAsync).getChildren().containsKey(name)){
+                deserializeChildAsync = ((FieldLang) deserializeAsync).getChildren().get(name);
+            }
+            if(isSync)fieldsFilter.put(item.getValue(),
+                    new SerializeLang(serializeChildSync,serializeChildAsync,deserializeChildSync,deserializeChildAsync));
+        }
+        return fieldsFilter;
+    }
+
+    public Map<MetaField,SerializeLang> deserializeFilter(SerializeLang serializeLang,Map<String,MetaField> fields){
+        Map<MetaField,SerializeLang> fieldsFilter = new LinkedHashMap<>();
+        ObjectLang serializeSync = Optional.ofNullable(serializeLang).map(SerializeLang::getSerializeSync).orElse(null);
+        ObjectLang serializeAsync = Optional.ofNullable(serializeLang).map(SerializeLang::getSerializeAsync).orElse(null);
+        ObjectLang deserializeSync = Optional.ofNullable(serializeLang).map(SerializeLang::getDeserializeSync).orElse(null);
+        ObjectLang deserializeAsync = Optional.ofNullable(serializeLang).map(SerializeLang::getDeserializeAsync).orElse(null);
+        for (Map.Entry<String,MetaField> item: fields.entrySet()){
+            ObjectLang serializeChildSync = null;
+            ObjectLang serializeChildAsync = null;
+            ObjectLang deserializeChildSync = null;
+            ObjectLang deserializeChildAsync = null;
+            boolean isSync = false;
+            String name = item.getKey();
+            if(serializeSync instanceof FieldLang && ((FieldLang) serializeSync).getChildren().containsKey(name)){
+                serializeChildSync = ((FieldLang) serializeSync).getChildren().get(name);
+            }
+            if(serializeAsync instanceof FieldLang && ((FieldLang) serializeAsync).getChildren().containsKey(name)){
+                serializeChildAsync = ((FieldLang) serializeAsync).getChildren().get(name);
+            }
+
+            if(deserializeSync == null)isSync = true;
+            else if(deserializeSync instanceof PrimitiveLang){
+                isSync = true;
+            }
+            else if(deserializeSync instanceof FieldLang && ((FieldLang) deserializeSync).getChildren().containsKey(name)){
+                isSync = true;
+                deserializeChildSync = ((FieldLang) deserializeSync).getChildren().get(name);
+            }
+            if(deserializeAsync instanceof PrimitiveLang){
+                isSync = false;
+            }
+            else if(deserializeAsync instanceof FieldLang && ((FieldLang) deserializeAsync).getChildren().containsKey(name)){
+                isSync = false;
+                deserializeChildAsync = ((FieldLang) deserializeAsync).getChildren().get(name);
+            }
+            if(isSync)fieldsFilter.put(item.getValue(),
+                    new SerializeLang(serializeChildSync,serializeChildAsync,deserializeChildSync,deserializeChildAsync));
         }
         return fieldsFilter;
     }

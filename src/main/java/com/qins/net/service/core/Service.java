@@ -151,11 +151,11 @@ public abstract class Service implements IService {
         context.setParams(new HashMap<>());
         for (MetaParameter metaParameter : context.getMetaMethod().getParameters().values()){
             String rawParam = context.getRequestMeta().getParams().get(metaParameter.getName());
-            Object param = StandardMetaSerialize.deserialize(rawParam,context.getMetaMethod().getDeserializeLang(),context.getReferences());
+            Object param = StandardMetaSerialize.deserialize(rawParam,context.getMetaMethod().getSerializeLang(),context.getReferences());
             context.getParams().put(metaParameter.getName(),param);
         }
         //实例
         context.setInstance(StandardMetaSerialize.deserialize(context.getRequestMeta().getInstance(),
-                context.getMetaMethod().getDeserializeLang(), context.getReferences()));
+                context.getMetaMethod().getSerializeLang(), context.getReferences()));
     }
 }
